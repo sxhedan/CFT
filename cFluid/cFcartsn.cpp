@@ -3858,7 +3858,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 {
 
         int i, j, k;
-        int index0, index1, index2, index3, index4, index5, index6, index_copy;
+        int index0, index1, index2, index3, index4, index5, index6;
         int index000, index100, index010, index110, index001, index101, index011, index111;
         double *u, *v, *w;
         double ux, uy, uz, vx, vy, vz, wx, wy, wz;
@@ -3875,7 +3875,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         double *cs, *ci, *prt, *sct0, *sct;
         int    ii, jj, kk, iiii, jjjj, kkkk;
         int    NB = 2.0;
-        int    NBC = pow(NB, 2);
+        int    NBC = pow(NB, 3);
         double CS_deno, CS_nume, CI_deno, CI_nume, Prt_nume, Prt_deno, Sct0_nume, Sct0_deno, Sct_nume, Sct_deno;
         double delta2, tdelta2;
 
@@ -4006,7 +4006,9 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    s13[index0] = 0.5*(uz + wx);
 	    s23[index0] = 0.5*(vz + wy);
             s33[index0] = wz;	
-            s[index0] = sqrt(2*( sqr(s11[index0]) + sqr(s22[index0]) + sqr(s33[index0]) + 2.0*(sqr(s12[index0]) + sqr(s13[index0]) + sqr(s23[index0]))  ) );
+            s[index0] = sqrt(2*( sqr(s11[index0]) + sqr(s22[index0])  \
+                          + sqr(s33[index0]) + 2.0*(sqr(s12[index0])  \
+                          + sqr(s13[index0]) + sqr(s23[index0]))  ) );
 
         }
 
@@ -4019,10 +4021,12 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             ii = (NB*i);
 
             sum_rho = 0.0;
+            sum_u = 0.0;
+            sum_cp = 0.0;
             sum_rho_u = sum_rho_v = sum_rho_w = 0.0;
             sum_rho_uu = sum_rho_vv = sum_rho_ww = sum_rho_uv = sum_rho_uw = sum_rho_vw = 0.0;
             sum_s11 = sum_s12 =  sum_s22 = sum_s23 = sum_s13 = sum_s33 = 0.0;
-            sum_rhoss11 = sum_rhoss12 = sum_rhoss = 0.0;
+            sum_rhoss11 = sum_rhoss12 = sum_rhoss22 = sum_rhoss13 = sum_rhoss23 = sum_rhoss = 0.0;
             sum_s = sum_ss = 0.0;
             sum_tx = sum_ty = sum_tz = 0.0;
             sum_rho_t = 0.0;
@@ -4031,7 +4035,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    
 	    sum_cx = sum_cy = sum_cz = sum_cx0 = sum_cy0 = sum_cz0 = 0.0;
             sum_rho_s_cx = sum_rho_s_cy = sum_rho_s_cz = sum_rho_s_cx0 = sum_rho_s_cy0 = sum_rho_s_cz0 = 0.0;
-            sum_rho_cp_tu = sum_rho_cp_tv = sum_rho_cp_tw = 0.0;
             sum_rho_uc =  sum_rho_vc = sum_rho_wc = sum_rho_uc0 = sum_rho_vc0 = sum_rho_wc0 = 0.0;
             sum_rho_c = sum_rho_c0 = 0.0;
 
@@ -4064,8 +4067,11 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 		sum_s13 += s13[index0];
 		sum_s23 += s23[index0];
 		sum_s33 += (1.0/3.0)*(2.0*s33[index0]-s11[index0]-s22[index0]);
-                sum_rhoss11 += rho[index0]*s[index0]*0.5*(s11[index0]-s22[index0]);
+                sum_rhoss11 += rho[index0]*s[index0]*(1.0/3.0)*(2.0*s11[index0]-s22[index0]-s33[index0]);
                 sum_rhoss12 += rho[index0]*s[index0]*s12[index0];
+                sum_rhoss22 += rho[index0]*s[index0]*(1.0/3.0)*(2.0*s22[index0]-s11[index0]-s33[index0]);
+                sum_rhoss13 += rho[index0]*s[index0]*s13[index0];
+                sum_rhoss23 += rho[index0]*s[index0]*s23[index0];
                 sum_rhoss += rho[index0]*s[index0]*s[index0];
                 sum_s += s[index0];
                 sum_ss += s[index0]*s[index0];
@@ -4109,15 +4115,15 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             }
 
 	// anistropic and independent part of M
-            MA11 = (2.0*delta2*(sum_rhoss11/(NBC)))
+            MA11 = (2.0*delta2*(sum_rhoss11/(NBC)))  \
                         - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s11/(NBC))); 
-            MA12 = (2.0*delta2*(sum_rhoss12/(NBC)))
+            MA12 = (2.0*delta2*(sum_rhoss12/(NBC)))  \
                         - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s12/(NBC)));
-	    MA22 = (2.0*delta2*(sum_rhoss22/(NBC)))
+	    MA22 = (2.0*delta2*(sum_rhoss22/(NBC)))  \
                         - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s22/(NBC))); 
-            MA13 = (2.0*delta2*(sum_rhoss13/(NBC)))
+            MA13 = (2.0*delta2*(sum_rhoss13/(NBC)))  \
                         - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s13/(NBC)));
-            MA23 = (2.0*delta2*(sum_rhoss23/(NBC)))
+            MA23 = (2.0*delta2*(sum_rhoss23/(NBC)))  \
                         - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s23/(NBC)));
 
 	// isotropic part of M
@@ -4146,7 +4152,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 
             LH1 = (sum_rho_cp_tu/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_u/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
             LH2 = (sum_rho_cp_tv/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_v/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
-	    LH2 = (sum_rho_cp_tw/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_w/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+	    LH3 = (sum_rho_cp_tw/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_w/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
 
 	    MC1 = delta2*(sum_rho_s_cx/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx/NBC);
             MC2 = delta2*(sum_rho_s_cy/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy/NBC);
