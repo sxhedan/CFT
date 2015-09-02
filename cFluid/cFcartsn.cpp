@@ -3848,7 +3848,7 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 
          
 	 
-} //end of compSGS() 
+} //end of compSGS2D() 
 
 
 
