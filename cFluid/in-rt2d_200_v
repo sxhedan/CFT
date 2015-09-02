@@ -32,20 +32,24 @@ Enter frequency of mode 1: 1
 Enter amplitude of mode 1: 0.05
 Enter phase of mode 1: 270
 
-Enter gamma, pinf, einf, et of the fluid with comp 2: 1.4 0 0 0
-Enter gamma, pinf, einf, et of the fluid with comp 3: 1.4 0 0 0
+Type yes to have MULTI_COMP_NON_REACTIVE: n
+Enter the number of components: 2
+Enter EOS type of the fluid with comp 2: P
+Enter gamma, pinf, einf, et, R of the fluid with comp 2: 1.4 0 0 0 2.0e9
+Enter EOS type of the fluid with comp 3: P
+Enter gamma, pinf, einf, et, R of the fluid with comp 3: 1.4 0 0 0 2.0e10
 Enter density of top fluid: 1.0e-3
 Enter density of bottom fluid: 1.0e-2
-Enter gravity: 0 1.4e5
+Enter gravity: 0 1.4e-5
 Enter pressure at interface: 5.0e5
 Type yes to track the interface: y
 
-Type y to turn the parabolic step on: n
-Enter NS viscosity coefficient (default 0): 0.0001 
-Enter NS thermal conductivity coefficient (default 0): 0.0001
+Type y to turn the parabolic step on: y
+Enter NS viscosity coefficient (default 0): 0.0
+Enter NS thermal conductivity coefficient (default 0): 0.0
 Enter NS mass diffusivity coefficient (default 0): 0.0
-Type y to turn the subgrid step on: n
-Type y to have the subgrid viscosity (default n): n
+Type y to turn the subgrid step on: y
+Type y to have the subgrid viscosity (default n): y
 Type y to have the subgrid conductivity (default n): n
 Type y to have the subgrid mass diffusivity (default n): n
 

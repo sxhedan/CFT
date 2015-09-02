@@ -356,29 +356,38 @@ void G_CARTESIAN::setRayleiTaylorParams(char *inname)
             (eqn_params->eos[GAS_COMP1]).eos_type = MULTI_COMP_POLYTROPIC;
         assert((eqn_params->eos[GAS_COMP1]).eos_type != ERROR_EOSTYPE);
 
-        sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
-                     GAS_COMP1);
-        CursorAfterString(infile,str);
-        fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
-        (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
-        (eqn_params->eos[GAS_COMP1]).mgamma[0] = mgamma[0];
-        (eqn_params->eos[GAS_COMP1]).M[0] = M[0];
-        (eqn_params->eos[GAS_COMP1]).mgamma[1] = mgamma[1];
-        (eqn_params->eos[GAS_COMP1]).M[1] = M[1];
-	if (R == '\0')
-	    (eqn_params->eos[GAS_COMP1]).R = 1.0;
-	else
+    if ((eqn_params->eos[GAS_COMP1]).eos_type == MULTI_COMP_POLYTROPIC)
+	{
+	    sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
+		    GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+	    (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+	    (eqn_params->eos[GAS_COMP1]).mgamma[0] = mgamma[0];
+	    (eqn_params->eos[GAS_COMP1]).M[0] = M[0];
+	    (eqn_params->eos[GAS_COMP1]).mgamma[1] = mgamma[1];
+	    (eqn_params->eos[GAS_COMP1]).M[1] = M[1];
 	    (eqn_params->eos[GAS_COMP1]).R = R;
-
-	sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:", 
-	             GAS_COMP1);
-	CursorAfterString(infile,str);
-	fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
-	(void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
-	(eqn_params->eos[GAS_COMP1]).gamma = gamma;
-	(eqn_params->eos[GAS_COMP1]).pinf = pinf;
-	(eqn_params->eos[GAS_COMP1]).einf = einf;
-	(eqn_params->eos[GAS_COMP1]).et = et;
+	}
+	else if ((eqn_params->eos[GAS_COMP1]).eos_type == POLYTROPIC || 
+		 (eqn_params->eos[GAS_COMP1]).eos_type == STIFFENED_POLYTROPIC)
+	{
+	    sprintf(str, "Enter gamma, pinf, einf, et, R of the fluid with comp %d:", 
+		    GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&gamma,&pinf,&einf,&et,&R);
+	    (void) printf("%f %f %f %f %f\n",gamma,pinf,einf,et,R);
+	    (eqn_params->eos[GAS_COMP1]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP1]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP1]).einf = einf;
+	    (eqn_params->eos[GAS_COMP1]).et = et;
+            (eqn_params->eos[GAS_COMP1]).R = R;
+	}
+	else
+	{
+	    printf("Error EOS type!\n");
+	    clean_up(ERROR);
+	}
         
         (eqn_params->eos[GAS_COMP2]).eos_type = ERROR_EOSTYPE;
         CursorAfterString(infile,"Enter EOS type of the fluid with comp 3:");
@@ -392,30 +401,38 @@ void G_CARTESIAN::setRayleiTaylorParams(char *inname)
             (eqn_params->eos[GAS_COMP2]).eos_type = MULTI_COMP_POLYTROPIC;
         assert((eqn_params->eos[GAS_COMP2]).eos_type != ERROR_EOSTYPE);
 
-        sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
-                     GAS_COMP2);
-        CursorAfterString(infile,str);
-        fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
-        (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
-        (eqn_params->eos[GAS_COMP2]).mgamma[0] = mgamma[0];
-        (eqn_params->eos[GAS_COMP2]).M[0] = M[0];
-        (eqn_params->eos[GAS_COMP2]).mgamma[1] = mgamma[1];
-        (eqn_params->eos[GAS_COMP2]).M[1] = M[1];
-	if (R == '\0')
-	    (eqn_params->eos[GAS_COMP2]).R = 1.0;
-	else
+      if ((eqn_params->eos[GAS_COMP2]).eos_type == MULTI_COMP_POLYTROPIC)
+	{
+	    sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
+		    GAS_COMP2);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+	    (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+	    (eqn_params->eos[GAS_COMP2]).mgamma[0] = mgamma[0];
+	    (eqn_params->eos[GAS_COMP2]).M[0] = M[0];
+	    (eqn_params->eos[GAS_COMP2]).mgamma[1] = mgamma[1];
+	    (eqn_params->eos[GAS_COMP2]).M[1] = M[1];
 	    (eqn_params->eos[GAS_COMP2]).R = R;
-
-	sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:", 
-		     GAS_COMP2);
-	CursorAfterString(infile,str);
-	fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
-	(void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
-	(eqn_params->eos[GAS_COMP2]).gamma = gamma;
-	(eqn_params->eos[GAS_COMP2]).pinf = pinf;
-	(eqn_params->eos[GAS_COMP2]).einf = einf;
-	(eqn_params->eos[GAS_COMP2]).et = et;
-        
+	}
+	else if ((eqn_params->eos[GAS_COMP2]).eos_type == POLYTROPIC || 
+		 (eqn_params->eos[GAS_COMP2]).eos_type == STIFFENED_POLYTROPIC)
+	{
+	    sprintf(str, "Enter gamma, pinf, einf, et, R of the fluid with comp %d:", 
+		    GAS_COMP2);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&gamma,&pinf,&einf,&et, &R);
+	    (void) printf("%f %f %f %f %f\n",gamma,pinf,einf,et,R);
+	    (eqn_params->eos[GAS_COMP2]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP2]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP2]).einf = einf;
+	    (eqn_params->eos[GAS_COMP2]).et = et;
+            (eqn_params->eos[GAS_COMP2]).R = R;
+	}
+	else
+	{
+	    printf("Error EOS type!\n");
+	    clean_up(ERROR);
+	}
 
 	CursorAfterString(infile,"Enter density of top fluid:");
 	fscanf(infile,"%lf",&eqn_params->rho2);
@@ -521,7 +538,8 @@ void G_CARTESIAN::setRayleiTaylorParams(char *inname)
           eqn_params->parabolic_step =  false;
         }
 	fclose(infile);
-}	/* end initRayleiTaylorParams */
+}	/* end setRayleiTaylorParams */
+     
 
 void G_CARTESIAN::initRayleiTaylorStates()
 {
