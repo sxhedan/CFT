@@ -3427,7 +3427,7 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 {
 
         int i, j;
-        int index0, index1, index2, index3, index4, index_copy;
+        int index0, index1, index2, index3, index4;
         int index00, index10, index01, index11;
         double *u, *v;
         double ux, uy, vx, vy;
@@ -3559,10 +3559,12 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
         for (i = 0; i <= ((imax[0]-imin[0]+1)/NB)-1; i++)
         {
 
-            jj = (NB*j);
-            ii = (NB*i);
+            jj = (NB*j) + imin[1];
+            ii = (NB*i) + imin[0];
 
             sum_rho = 0.0;
+            sum_u = 0.0;
+            sum_cp = 0.0;
             sum_rho_u = sum_rho_v = 0.0;
             sum_rho_uu = sum_rho_vv = sum_rho_uv = 0.0;
             sum_s11 = sum_s12 = 0.0;
