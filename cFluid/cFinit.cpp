@@ -474,7 +474,7 @@ void G_CARTESIAN::setRayleiTaylorParams(char *inname)
           eqn_params->mass_diffusion = true;
           if (eqn_params->D == '\0')
           {
-            eqn_params->D = false;
+            eqn_params->mass_diffusion = false;
           }
 
 
@@ -938,7 +938,7 @@ void G_CARTESIAN::setVSTRMParams(char *inname)
 	    eqn_params->mass_diffusion = true;
 	    if (eqn_params->D == '\0')
 	    {
-		eqn_params->D = false;
+		eqn_params->mass_diffusion = false;
 	    }
 	    
 	    CursorAfterString(infile,"Type y to turn the subgrid step on:");
