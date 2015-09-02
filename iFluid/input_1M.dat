@@ -1,0 +1,68 @@
+Domain limit in 0-th dimension: 0 0.628
+Domain limit in 1-th dimension: 0 1.256
+Domain limit in 2-th dimension: 2.538 3.166
+Computational grid: 128 128 64
+Lower boundary in 0-th dimension: PERIODIC_BOUNDARY
+Upper boundary in 0-th dimension: PERIODIC_BOUNDARY
+Lower boundary in 1-th dimension: PERIODIC_BOUNDARY
+Upper boundary in 1-th dimension: PERIODIC_BOUNDARY
+Lower boundary in 2-th dimension: REFLECTION_BOUNDARY
+Upper boundary in 2-th dimension: REFLECTION_BOUNDARY
+
+Max time: 1000000.0
+Max step: 1000000
+Print interval: 0.5
+Movie frame interval: 0.5
+CFL factor: 0.45
+Type y to use the Fast Merge Algorithm: n
+Redistribution interval: 5
+
+Problem type can be
+        TWO_FLUID_BUBBLE
+        TWO_FLUID_RT
+        TWO_FLUID_KH
+        FLUID_SOLID_CIRCLE
+        TWO_FLUID_TC
+Enter problem type: TWO_FLUID_TC
+Projection type can be
+        SIMPLE
+        BELL_COLELLA
+        KIM_MOIN
+        PEROT_BOTELLA
+Enter projection type: BELL_COLELLA
+Enter mean position of fluid interface: 2.9
+Enter the minimum mode numbers: 2
+Enter the maximum mode numbers: 4
+Enter the amplitude standard deviation: 0.0049
+Enter the average phase: 0
+Enter the phase standard deviation: 90
+Enter density and viscosity of fluid 1: 1.03 0.0000102
+Enter density and viscosity of fluid 2: 0.811 0.000016
+Enter inner velocoty: 0.6641 0.0 0.0
+Enter outer velocoty: 0.0 0.0 0.0
+Enter gravity: 0.0 0.0 0.0
+Enter surface tension: 0.00002
+Enter factor of smoothing radius: 1
+
+Type y to make movie of phase 1: y
+Type y to make movie of phase 2: y
+Type y to make movie of pressure: y
+Type y to make movie of vorticity: y
+Type y to make movie of velocity: y
+Type y to make movie of component: y
+Type y to make movie of density: y
+
+Type y to make movie of pressure error: y
+Type y to make movie of divergence of velocity: y
+Type y to make movie of rho_t: y
+Type y to make movie of mass balance residual: y
+
+Type y to output triangle diameter information: n
+Type y to output error with exact solution: n
+Type y to output connectivity information: y
+
+Enter yes for debugging: yes
+Enter the debugging string: trace
+Enter the debugging string: step_size
+Enter the debugging string: PETSc
+Enter the debugging string: CLOCK

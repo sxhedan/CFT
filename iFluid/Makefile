@@ -1,0 +1,90 @@
+CC=mpicc -g -pedantic -Wno-long-long
+CXX=mpicxx -g -pedantic -Wno-long-long
+F77=mpif77 -g
+F77_LIBS=
+libext = 
+incs =   -I.. -I../util -g   -DDEBUG_CROSSING -DDEBUG_NODE_PROPAGATE -DDEBUG_TRI_GRID  -DONED -DTWOD -DTHREED  -DHAS_FENV    -D__MPI__ -I/usr/local/pkg/openmpi/include  
+libincs =  -L/usr/local/pkg/openmpi/lib 
+libs =  -lmpi -lmpi_cxx  
+build_cpu = x86_64
+incsloc = -I. -I../include
+
+PETSC = yes
+PETSC_ARCH=
+PETSC_DIR=/usr/local/pkg/petsc-3.1-p7
+
+Petsc_Include=-I/usr/local/pkg/petsc-3.1-p7/include
+Petsc_Lib=-L/usr/local/pkg/petsc-3.1-p7/lib -lpetsc -llapack -lblas -ldl -lm -L/usr/X11R6/lib -lX11
+
+Volcomp_Include = -I./volcomp/include
+Volcomp_Dir = ./volcomp/src/
+
+all: ./volcomp/libvolcomp.a ../lib/libiF.a iFluid
+
+iFluid : FT_libs
+./volcomp/call_triangle.o : ./volcomp/src/call_triangle.c
+	${CC} -c ./volcomp/src/call_triangle.c $(Volcomp_Include) -o $@
+./volcomp/compute_volume_usingtets.o : ./volcomp/src/compute_volume_usingtets.c
+	${CC} -c ./volcomp/src/compute_volume_usingtets.c $(Volcomp_Include) -o $@
+./volcomp/volumecompfnc.o : ./volcomp/src/volumecompfnc.c 
+	${CC} -c ./volcomp/src/volumecompfnc.c $(Volcomp_Include) -o $@
+./volcomp/predicates.o : ./volcomp/src/predicates.cpp
+	${CXX} -c ./volcomp/src/predicates.cpp $(Volcomp_Include) -o $@
+./volcomp/call_tetgen.o : ./volcomp/src/call_tetgen.cpp
+	${CXX} -c ./volcomp/src/call_tetgen.cpp $(Volcomp_Include) -o $@
+Graph.o : iFluid.h Graph.h Graph.cpp
+	${CXX} -c Graph.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFDroplet.o : iFluid.h Graph.h iFDroplet.cpp
+	${CXX} -c iFDroplet.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFbasic.o : iFluid.h iFbasic.cpp
+	${CXX} -c iFbasic.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFcartsn2d.o : iFluid.h iFcartsn2d.cpp
+	${CXX} -c iFcartsn2d.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFcartsn3d.o : iFluid.h iFcartsn3d.cpp
+	${CXX} -c iFcartsn3d.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFcylin3d.o : iFluid.h iFcylin3d.cpp
+	${CXX} -c iFcylin3d.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFdebug2d.o: iFluid_debug.h iFdebug2d.cpp
+	${CXX} -c iFdebug2d.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFdebug3d.o: iFluid_debug.h iFdebug3d.cpp
+	${CXX} -c iFdebug3d.cpp $(incsloc) $(incs) ${Petsc_Include}
+solver.o : solver.h solver.cpp
+	${CXX} -c solver.cpp $(incsloc) $(incs) ${Petsc_Include}
+ellip.o : solver.h ellip.cpp
+	${CXX} -c ellip.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFsub.o : iFluid.h ifluid_basic.h iFsub.cpp
+	${CXX} -c iFsub.cpp $(incsloc) $(incs) ${Petsc_Include}
+iFinit.o : iFluid.h ifluid_basic.h iFinit.cpp
+	${CXX} -c iFinit.cpp $(incsloc) $(incs) ${Petsc_Include}
+
+
+iFluid: iFluid.h ifluid_basic.h iFluid.cpp iFsub.o iFinit.o Graph.o iFDroplet.o ../lib/libiF.a
+	${CXX} -c iFluid.cpp -I../include $(incs) ${Petsc_Include}
+	$(CXX) -o iFluid iFluid.o iFsub.o iFinit.o Graph.o iFDroplet.o -I../include -L./volcomp -lvolcomp -L../lib/${build_cpu} -liF  ${Petsc_Lib} -L../lib/${build_cpu} -lFronTier $(libincs) -lmpi_f90 -lmpi_f77 $(libs) ${F77_LIBS}
+
+../lib/libiF.a: solver.o ellip.o iFbasic.o iFcartsn2d.o iFcartsn3d.o iFcylin3d.o iFdebug2d.o iFdebug3d.o
+	$(AR) cru libiF.a $^
+	ranlib libiF.a; mv libiF.a ../lib/$(build_cpu)/libiF.a
+
+./volcomp/libvolcomp.a: ./volcomp/call_triangle.o  ./volcomp/predicates.o ./volcomp/call_tetgen.o ./volcomp/compute_volume_usingtets.o  ./volcomp/volumecompfnc.o
+	$(AR) cru ./volcomp/libvolcomp.a $^
+	ranlib ./volcomp/libvolcomp.a
+
+-include ../devel-deps.inc
+
+clean:
+	rm -rf *.o iFluid ./volcomp/libvolcomp.a ./volcomp/*.o ../lib/$(build_cpu)/libiF.a
+output :
+	rm -rf out/*
+
+gif :
+	hdf2gif out/intfc.hdf out/intfc.gif
+
+TagsFile:
+	ctags *.h *.cpp ../src/front/*.[ch] ../src/intfc/*.[ch] ../src/util/*.[ch]
+
+tagsfile:
+	ctags *.h *.cpp ../src/front/*.[ch] ../src/intfc/*.[ch] ../src/util/*.[ch]
+
+etagsfile:
+	etags *.h *.cpp ../src/front/*.[ch] ../src/intfc/*.[ch] ../src/util/*.[ch]

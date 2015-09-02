@@ -1,0 +1,76 @@
+Domain limit in 0-th dimension: 0 0.628
+Domain limit in 1-th dimension: 0 0.628
+Domain limit in 2-th dimension: 2.538 3.166
+Computational grid: 20 20 20 
+Lower boundary in 0-th dimension: PERIODIC_BOUNDARY
+Upper boundary in 0-th dimension: PERIODIC_BOUNDARY
+Lower boundary in 1-th dimension: PERIODIC_BOUNDARY
+Upper boundary in 1-th dimension: PERIODIC_BOUNDARY
+Lower boundary in 2-th dimension: DIRICHLET_BOUNDARY
+Upper boundary in 2-th dimension: DIRICHLET_BOUNDARY
+
+Max time: 1.0 
+Max step: 20000000
+Print interval: 0.5
+Movie frame interval: 0.1
+CFL factor: 0.45
+Redistribution interval: 5
+
+Problem type can be
+        TWO_FLUID_BUBBLE
+        TWO_FLUID_RT
+        TWO_FLUID_KH
+        FLUID_SOLID_CIRCLE
+Enter problem type: TWO_FLUID_RT
+Projection type can be
+        SIMPLE
+        BELL_COLELLA
+        KIM_MOIN
+        PEROT_BOTELLA
+Enter projection type: BELL_COLELLA 
+Enter mean position of fluid interface: 2.8
+Enter number of sine modes: 4
+Enter frequency of mode 1: 2 0
+Enter amplitude of mode 1: 0.01
+Enter phase of mode 1: 270
+Enter frequency of mode 2: 1 0
+Enter amplitude of mode 2: 0.0
+Enter phase of mode 2: 270
+Enter frequency of mode 3: 3 0
+Enter amplitude of mode 3: 0.0
+Enter phase of mode 3: 270
+Enter frequency of mode 4: 0 4
+Enter amplitude of mode 4: 0.005
+Enter phase of mode 4: 270
+Enter density and viscosity of fluid 1: 1.0 0.0089
+Enter density and viscosity of fluid 2: 1.0 0.0089
+Enter gravity: 0.0 0.0 0.0
+Enter surface tension: 0.0
+Enter factor of smoothing radius: 2
+
+For lower boundary in 2-th dimension
+Enter type of Dirichlet boundary: CONSTANT_STATE
+Enter velocity: 0.1269 0 0
+Enter pressure:0
+For upper boundary in 2-th dimension
+Enter type of Dirichlet boundary: CONSTANT_STATE
+Enter velocity: 0 0 0
+Enter pressure:0
+
+Type y to make movie of pressure: y
+Type y to make movie of vorticity: y
+Type y to make movie of velocity: y
+Type y to make yz cross section movie: n 
+Type y to make xz cross section movie: n
+Type y to make xy cross section movie: n
+Type y to make cross sectional component movie: n
+Type y to make vector velocity field movie: y
+
+************Debugging options*****************
+
+Enter yes for debugging: yes
+Enter the debugging string: trace
+Enter the debugging string: CLOCK
+Enter the debugging string: step_size
+Enter the debugging string: PETSc 
+

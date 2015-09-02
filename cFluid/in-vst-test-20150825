@@ -1,0 +1,99 @@
+Domain limit in 0-th dimension: 0.0 6.8
+Domain limit in 1-th dimension: 0.0 6.8
+Domain limit in 2-th dimension: -4.0 4.0
+Computational grid: 50 50 100
+Lower boundary in 0-th dimension: REFLECTION_BOUNDARY
+Upper boundary in 0-th dimension: REFLECTION_BOUNDARY
+Lower boundary in 1-th dimension: REFLECTION_BOUNDARY
+Upper boundary in 1-th dimension: REFLECTION_BOUNDARY
+Lower boundary in 2-th dimension: DIRICHLET_BOUNDARY
+Upper boundary in 2-th dimension: REFLECTION_BOUNDARY
+
+Max time: 15
+Max step: 10000
+Print interval: 2
+Movie frame interval: 0.1
+CFL factor: 0.45
+Redistribution interval: 5
+
+Problem type can be
+	TWO_FLUID_BUBBLE
+	TWO_FLUID_RT
+	TWO_FLUID_RM
+	FLUID_SOLID_CIRCLE
+	TWO_FLUID_VST_RM
+Enter problem type: TWO_FLUID_VST_RM
+Numerical scheme for interior solver can be
+        TVD_1st_ORDER
+        TVD_2nd_ORDER
+        TVD_4th_ORDER
+Enter numerical scheme for interior solver: WENO_4th_ORDER
+Point propagator order can be (1,2,4)
+Enter order of point propagator: 2
+
+Enter mean position of fluid interface: 0.0
+Enter number of modes in x direction: 1
+Enter number of modes in y direction: 1
+Enter the name of the file containing the initial interface perturbation data in the x - direction: /nfs/user01/dshe/FTI_20150807/cFluid/rmic1_x_test.txt
+Enter the name of the file containing the initial interface perturbation data in the y - direction: /nfs/user01/dshe/FTI_20150807/cFluid/rmic1_y_test.txt
+
+Type yes to have MULTI_COMP_NON_REACTIVE: yes
+Enter the number of components: 2
+Enter EOS type of the fluid with comp 2: M
+Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp 2: 1.26 146.06 1.1 32.46 83.1623
+Enter gamma, pinf, einf, et of the fluid with comp 2: 1.26 0 0 0
+Enter EOS type of the fluid with comp 3: M
+Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp 3: 1.1 32.46 1.26 146.06 83.1623
+Enter gamma, pinf, einf, et of the fluid with comp 3: 1.1 0 0 0
+
+
+Enter density of top fluid: 0.00617
+Enter density of bottom fluid: 0.00091
+Enter pressure at interface: 0.7805
+Enter Mach number of shock: 1.3
+Enter position of shock: -3.0
+Enter direction of shock: 1
+Enter contact velocity after shock interaction: 0.0
+Type yes to track the interface: y
+Enter thickness of initial diffusion layer: 2.0
+
+Type y to turn the parabolic step on: n
+Enter NS viscosity coefficient (default 0):
+Enter NS thermal conductivity coefficient (default 0):
+Enter NS mass diffusivity coefficient (default 0):
+Type y to turn the subgrid step on: n
+Type y to have the subgrid viscosity (default n): n
+Type y to have the subgrid conductivity (default n): n
+Type y to have the subgrid mass diffusivity (default n): n
+
+Type y to turn the turbulent boundary layer on: y
+Enter viscosity of the fluid with comp 2: 0.000000181
+Enter thermal conductivity of the fluid with comp 2: 0.0
+Enter viscosity of the fluid with comp 3: 0.00000013771
+Enter thermal conductivity of the fluid with comp 3: 0.0
+
+For lower boundary in 2-th dimension
+Enter type of Dirichlet boundary: FLOW_THROUGH
+
+Type y to make movie of density: y
+Type y to make movie of pressure: y
+Type y to make movie of vorticity: y
+Type y to make movie of velocity: y
+Type y to make yz cross section movie: y
+Type y to make xz cross section movie: n
+Type y to make xy cross section movie: n
+
+************Debugging options*****************
+
+Enter yes for debugging: no
+Enter the debugging string: trace
+Enter the debugging string: CLOCK
+Enter the debugging string: step_size
+Enter the debugging string: sample_velocity
+
+************Statistics options****************
+
+For the averaging of the ambient state at the interface extrema:
+Enter a sub-grid refinement factor: 2
+Type y to get data for 1%-99% levels: n
+Type y to get data for 5%-95% levels: n
