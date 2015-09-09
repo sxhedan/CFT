@@ -3433,17 +3433,23 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
         double ux, uy, vx, vy;
         double *tx, *ty, *cx, *cy, *cx0, *cy0;
         double *s, *s11, *s12, *s22;
-        double *rho,  *cp, *temp, *conc, *conc0;
+        double *cp, *temp, *conc, *conc0;
         double sum_rho_u, sum_rho_v, sum_rho_uu, sum_rho_vv, sum_rho_uv;
-        double sum_s11, sum_s12, sum_rhoss11, sum_rhoss12, sum_rhoss, sum_rho, sum_s, sum_ss, sum_cp, sum_tx, sum_ty, sum_rho_t, sum_rho_cp, sum_rho_cp_s_tx, sum_rho_cp_s_ty, sum_rho_cp_tu, sum_rho_cp_tv, sum_cx, sum_cy, sum_cx0, sum_cy0, sum_rho_s_cx, sum_rho_s_cy, sum_rho_s_cx0, sum_rho_s_cy0, sum_rho_uc,sum_rho_vc, sum_rho_uc0, sum_rho_vc0, sum_rho_c, sum_rho_c0, sum_u;
-        double MA11, MA12, L11, L12, L22, LA1, LA2, LI, MI, MH1, MH2, LH1, LH2;
+        double sum_s11, sum_s12, sum_rhoss11, sum_rhoss12, sum_rhoss, sum_rho, \
+               sum_s, sum_ss, sum_cp, sum_tx, sum_ty, sum_rho_t, sum_rho_cp,\
+               sum_rho_cp_s_tx, sum_rho_cp_s_ty, sum_rho_cp_tu, sum_rho_cp_tv, \
+               sum_cx, sum_cy, sum_cx0, sum_cy0, sum_rho_s_cx, sum_rho_s_cy, \
+               sum_rho_s_cx0, sum_rho_s_cy0, sum_rho_uc,sum_rho_vc, sum_rho_uc0, \
+               sum_rho_vc0, sum_rho_c, sum_rho_c0, sum_u;
+        double MA11, MA12, L11, L12, L22, LA11, LI, MI, MH1, MH2, LH1, LH2;
         double MC1, MC2, MC10, MC20, LC1, LC2, LC10, LC20;
 	double CS, CI, Prt, Sct, Sct0;
         double *cs, *ci, *prt, *sct, *sct0;
         int    ii, jj, iiii, jjjj;
         int    NB = 2.0;
         int    NBC = pow(NB, 2);
-        double CS_deno, CS_nume, CI_deno, CI_nume, Prt_nume, Prt_deno, Sct_nume, Sct_deno, Sct0_nume, Sct0_deno;
+        double CS_deno, CS_nume, CI_deno, CI_nume, Prt_nume, Prt_deno, Sct_nume, \
+               Sct_deno, Sct0_nume, Sct0_deno;
         double delta2, tdelta2;
 
         delta2 = sqr(pow((top_h[0]*top_h[1]),(1.0/2.0)));  // filter width 
@@ -3462,7 +3468,6 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 	FT_VectorMemoryAlloc((POINTER*)&cx,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&cy0,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&cy,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&rho,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&cp,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&temp,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&conc0,size,sizeof(double));
@@ -3518,7 +3523,6 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 	    v[index0] = momn[1][index0]/dens[index0];
 	    conc0[index0] = pdens[0][index0]/dens[index0];
 	    conc[index0]  = pdens[1][index0]/dens[index0];
-            rho[index0] = dens[index0];
             cp[index0] = EosCP(&st);
             temp[index0] = EosTemperature(&st);
         }
@@ -3592,87 +3596,92 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 
                 index0 = d_index2d(iiii, jjjj, top_gmax);
                 sum_u += u[index0];
-                sum_rho_u += rho[index0]*u[index0];
-                sum_rho_v += rho[index0]*v[index0];
-                sum_rho_uu += rho[index0]*u[index0]*u[index0];
-                sum_rho_vv += rho[index0]*v[index0]*v[index0];
-                sum_rho_uv += rho[index0]*u[index0]*v[index0];
+                sum_rho_u += dens[index0]*u[index0];
+                sum_rho_v += dens[index0]*v[index0];
+                sum_rho_uu += dens[index0]*u[index0]*u[index0];
+                sum_rho_vv += dens[index0]*v[index0]*v[index0];
+                sum_rho_uv += dens[index0]*u[index0]*v[index0];
                 sum_s11 += 0.5*(s11[index0]-s22[index0]);
                 sum_s12 += s12[index0];
-                sum_rhoss11 += rho[index0]*s[index0]*0.5*(s11[index0]-s22[index0]);
-                sum_rhoss12 += rho[index0]*s[index0]*s12[index0];
-                sum_rhoss += rho[index0]*s[index0]*s[index0];
+                sum_rhoss11 += dens[index0]*s[index0]*0.5*(s11[index0]-s22[index0]);
+                sum_rhoss12 += dens[index0]*s[index0]*s12[index0];
+                sum_rhoss += dens[index0]*s[index0]*s[index0];
                 sum_s += s[index0];
                 sum_ss += s[index0]*s[index0];
-                sum_rho += rho[index0];
+                sum_rho += dens[index0];
 
                 sum_cp += cp[index0];
                 sum_tx += tx[index0];
                 sum_ty += ty[index0];
-                sum_rho_t += rho[index0]*temp[index0];
-                sum_rho_cp += rho[index0]*cp[index0];
-                sum_rho_cp_s_tx += rho[index0]*cp[index0]*s[index0]*tx[index0];
-                sum_rho_cp_s_ty += rho[index0]*cp[index0]*s[index0]*ty[index0];
-                sum_rho_cp_tu += rho[index0]*cp[index0]*temp[index0]*u[index0];
-                sum_rho_cp_tv += rho[index0]*cp[index0]*temp[index0]*v[index0];
+                sum_rho_t += dens[index0]*temp[index0];
+                sum_rho_cp += dens[index0]*cp[index0];
+                sum_rho_cp_s_tx += dens[index0]*cp[index0]*s[index0]*tx[index0];
+                sum_rho_cp_s_ty += dens[index0]*cp[index0]*s[index0]*ty[index0];
+                sum_rho_cp_tu += dens[index0]*cp[index0]*temp[index0]*u[index0];
+                sum_rho_cp_tv += dens[index0]*cp[index0]*temp[index0]*v[index0];
 
 		sum_cx += cx[index0];
                 sum_cy += cy[index0];
                 sum_cx0 += cx0[index0];
                 sum_cy0 += cy0[index0];
-                sum_rho_s_cx += rho[index0]*s[index0]*cx[index0];
-                sum_rho_s_cy += rho[index0]*s[index0]*cy[index0];
-                sum_rho_s_cx0 += rho[index0]*s[index0]*cx0[index0];
-                sum_rho_s_cy0 += rho[index0]*s[index0]*cy0[index0];
-                sum_rho_uc += rho[index0]*u[index0]*conc[index0];
-                sum_rho_vc += rho[index0]*v[index0]*conc[index0];
-                sum_rho_uc0 += rho[index0]*u[index0]*conc0[index0];
-                sum_rho_vc0 += rho[index0]*v[index0]*conc0[index0];
-                sum_rho_c += rho[index0]*conc[index0];
-                sum_rho_c0 += rho[index0]*conc0[index0];
-
-
+                sum_rho_s_cx += dens[index0]*s[index0]*cx[index0];
+                sum_rho_s_cy += dens[index0]*s[index0]*cy[index0];
+                sum_rho_s_cx0 += dens[index0]*s[index0]*cx0[index0];
+                sum_rho_s_cy0 += dens[index0]*s[index0]*cy0[index0];
+                sum_rho_uc += dens[index0]*u[index0]*conc[index0];
+                sum_rho_vc += dens[index0]*v[index0]*conc[index0];
+                sum_rho_uc0 += dens[index0]*u[index0]*conc0[index0];
+                sum_rho_vc0 += dens[index0]*v[index0]*conc0[index0];
+                sum_rho_c += dens[index0]*conc[index0];
+                sum_rho_c0 += dens[index0]*conc0[index0];
 
             }
 
-            MA11 = (2.0*delta2*(sum_rhoss11/(NBC)))
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s11/(NBC)));
-            MA12 = (2.0*delta2*(sum_rhoss12/(NBC)))
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s12/(NBC)));
+            MA11 = 2.0*delta2*(sum_rhoss11/NBC)
+                        - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s11/NBC);
+            MA12 = 2.0*delta2*sum_rhoss12/(NBC)
+                        - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s12/NBC);
 
-            MI = (-2.0*delta2*(sum_rhoss)/(NBC)) + (2.0*tdelta2*(sum_rho/(NBC))*(sum_ss)/(NBC));
+            MI = -2.0*delta2*(sum_rhoss/NBC) + 2.0*tdelta2*(sum_rho/NBC)*(sum_ss/NBC);
 
-            L11 = (sum_rho_uu/(NBC))-((sum_rho_u/(NBC))*(sum_rho_u/(NBC))) /(sum_rho/ NBC);
-            L12 = (sum_rho_uv/(NBC))-((sum_rho_u/(NBC))*(sum_rho_v/(NBC)))/(sum_rho/ NBC);
-            L22 = (sum_rho_vv/(NBC))-((sum_rho_v/(NBC))*(sum_rho_v/(NBC)))/(sum_rho/ NBC);
-            LA1 = 0.5*(L11 - L22);
-            LA2 = L12 ;
+            L11 = sum_rho_uu/NBC - (sum_rho_u/NBC)*(sum_rho_u/NBC)/(sum_rho/NBC);
+            L12 = sum_rho_uv/NBC - (sum_rho_u/NBC)*(sum_rho_v/NBC)/(sum_rho/NBC);
+            L22 = sum_rho_vv/NBC - (sum_rho_v/NBC)*(sum_rho_v/NBC)/(sum_rho/NBC);
+            LA11 = 0.5*(L11 - L22);
             LI = 0.5*(L11 + L22);
-            MH1 = delta2*(sum_rho_cp_s_tx/NBC) - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tx/NBC); 
-            MH2 = delta2*(sum_rho_cp_s_ty/NBC) - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_ty/NBC);
-            LH1 = (sum_rho_cp_tu/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_u/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
-            LH2 = (sum_rho_cp_tv/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_v/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+            MH1 = delta2*(sum_rho_cp_s_tx/NBC) \
+                    - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tx/NBC); 
+            MH2 = delta2*(sum_rho_cp_s_ty/NBC) \
+                    - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_ty/NBC);
+            LH1 = sum_rho_cp_tu/NBC  \
+                    - (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_u/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+            LH2 = sum_rho_cp_tv/NBC  \
+                    - (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_v/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
 
-	    MC1 = delta2*(sum_rho_s_cx/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx/NBC);
-            MC2 = delta2*(sum_rho_s_cy/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy/NBC);
-            MC10 = delta2*(sum_rho_s_cx0/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx0/NBC);
-            MC20 = delta2*(sum_rho_s_cy0/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy0/NBC);
+	    MC1 = delta2*(sum_rho_s_cx/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx/NBC);
+            MC2 = delta2*(sum_rho_s_cy/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy/NBC);
+            MC10 = delta2*(sum_rho_s_cx0/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx0/NBC);
+            MC20 = delta2*(sum_rho_s_cy0/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy0/NBC);
 
-	    LC1 = (sum_rho_uc/NBC) - (sum_rho_u/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
-            LC2 = (sum_rho_vc/NBC) - (sum_rho_v/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
-            LC10 = (sum_rho_uc0/NBC) - (sum_rho_u/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
-            LC20 = (sum_rho_vc0/NBC) - (sum_rho_v/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
+	    LC1 = sum_rho_uc/NBC - (sum_rho_u/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
+            LC2 = sum_rho_vc/NBC - (sum_rho_v/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
+            LC10 = sum_rho_uc0/NBC - (sum_rho_u/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
+            LC20 = sum_rho_vc0/NBC - (sum_rho_v/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
 
-            CS_deno = (MA11*MA11) + (MA12*MA12);
-            CS_nume = (LA1*MA11) + (LA2*MA12);
+            CS_deno = MA11*MA11 + MA12*MA12;
+            CS_nume = LA11*MA11 + L12*MA12;
             CI_deno = MI;
             CI_nume = LI;
-            Prt_nume = (LH1*MH1) + (LH2*MH2);
-            Prt_deno = (MH1*MH1) + (MH2*MH2);
-	    Sct_nume  = (LC1*MC1) + (LC2*MC2);
-            Sct_deno = (MC1*MC1) + (MC2*MC2);
-            Sct0_nume = (LC10*MC10) + (LC20*MC20);
-            Sct0_deno = (MC10*MC10) + (MC20*MC20);
+            Prt_nume = LH1*MH1 + LH2*MH2;
+            Prt_deno = MH1*MH1 + MH2*MH2;
+	    Sct_nume  = LC1*MC1 + LC2*MC2;
+            Sct_deno = MC1*MC1 + MC2*MC2;
+            Sct0_nume = LC10*MC10 + LC20*MC20;
+            Sct0_deno = MC10*MC10 + MC20*MC20;
 
             CS = CS_nume/CS_deno;
             CI = CI_nume/CI_deno;
@@ -3753,26 +3762,25 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
             index3 = d_index2d(i,j-1,top_gmax);
             index4 = d_index2d(i,j+1,top_gmax);
  
-            tau[0][0][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*((s11[index0]/2.0)-(s22[index0]/2.0)) + (2.0/2.0)*ci[index0]*delta2*rho[index0]*s[index0]*s[index0];
-            tau[0][1][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s12[index0]);
-            tau[1][0][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s12[index0]);
-            tau[1][1][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*0.5*(s22[index0]-s11[index0]) - (2.0/2.0)*ci[index0]*delta2*rho[index0]*s[index0]*s[index0];
+            tau[0][0][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*0.5*(s11[index0]-s22[index0]) + (2.0/2.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
+            tau[0][1][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*s12[index0];
+            tau[1][1][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*0.5*(s22[index0]-s11[index0]) + (2.0/2.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
 
 
-            dtemx = (temp[index2]-temp[index1])/(2.0*top_h[0]);
-            dtemy = (temp[index4]-temp[index3])/(2.0*top_h[1]);
+            dtemx = (temp[index2] - temp[index1])/(2.0*top_h[0]);
+            dtemy = (temp[index4] - temp[index3])/(2.0*top_h[1]);
 	    concx = (conc[index2] - conc[index1])/(2.0*top_h[0]);
             concy = (conc[index4] - conc[index3])/(2.0*top_h[1]);
             conc0x = (conc0[index2] - conc0[index1])/(2.0*top_h[0]);
             conc0y = (conc0[index4] - conc0[index3])/(2.0*top_h[1]);
 
-            qt1[index0] = -(rho[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
-            qt2[index0] = -(rho[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
+            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
+            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
 	 
-	    qp1[index0] = -(rho[index0]*sct[index0]*delta2*s[index0])*concx;
-            qp2[index0] = -(rho[index0]*sct[index0]*delta2*s[index0])*concy;
-            qp3[index0] = -(rho[index0]*sct0[index0]*delta2*s[index0])*conc0x;
-            qp4[index0] = -(rho[index0]*sct0[index0]*delta2*s[index0])*conc0y;
+	    qp1[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concx;
+            qp2[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concy;
+            qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0x;
+            qp4[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0y;
 
 
         }
@@ -3792,9 +3800,12 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
             index3 = d_index2d(i,j-1,top_gmax);
             index4 = d_index2d(i,j+1,top_gmax);
 
-            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0]) + (qt2[index4]-qt2[index3])/(2.0*top_h[1]);
-	    qc[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0]) + (qp2[index4]-qp2[index3])/(2.0*top_h[1]);
-            qc0[index0] = (qp3[index2]-qp3[index1])/(2.0*top_h[0]) + (qp4[index4]-qp4[index3])/(2.0*top_h[1]);
+            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
+                           + (qt2[index4]-qt2[index3])/(2.0*top_h[1]);
+	    qc[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
+                           + (qp2[index4]-qp2[index3])/(2.0*top_h[1]);
+            qc0[index0] = (qp3[index2]-qp3[index1])/(2.0*top_h[0])  \
+                           + (qp4[index4]-qp4[index3])/(2.0*top_h[1]);
 		
 	    if(subgrid_con == true)
             {
@@ -3807,7 +3818,6 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
                pdens[0][index0] += -m_dt*qc0[index0];
                pdens[1][index0] += -m_dt*qc[index0];
             }
-
 
 	}
 
@@ -3830,9 +3840,12 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
                t1 = (taukkr*u[index2] - taukkl*u[index1])/(2*top_h[0]);
                t2 = (taukkr*v[index4] - taukkl*v[index3])/(2*top_h[1]);
 
-               momn[0][index0] += -m_dt*( ((tau[0][0][index2] - tau[0][0][index1])/(2.0*top_h[0])) + ((tau[1][0][index4] - tau[1][0][index3])/(2.0*top_h[1])) );
+	       // tau is a symmetric tensor
+               momn[0][index0] += -m_dt*( (tau[0][0][index2]-tau[0][0][index1])/(2.0*top_h[0])  \
+                                          + (tau[0][1][index4]-tau[0][1][index3])/(2.0*top_h[1]) );
 
-               momn[1][index0] += -m_dt*( ((tau[0][1][index2] - tau[0][1][index1])/(2.0*top_h[0])) + ((tau[1][1][index4] - tau[1][1][index3])/(2.0*top_h[1])) );
+               momn[1][index0] += -m_dt*( (tau[0][1][index2]-tau[0][1][index1])/(2.0*top_h[0]) \
+                                          + (tau[1][1][index4]-tau[1][1][index3])/(2.0*top_h[1]) );
 
                engy[index0] += m_dt*0.5*(t1 + t2);
              }
@@ -3840,13 +3853,13 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
                 
 	}  
 
-	 
         FT_FreeThese(2, u, v);
         FT_FreeThese(4, s, s11, s12, s22);
         FT_FreeThese(6, tx, ty, cx, cy, cx0, cy0);
-        FT_FreeThese(5, rho, cp, temp, conc, conc0);
+        FT_FreeThese(4, cp, temp, conc, conc0);
         FT_FreeThese(5, cs, ci, prt, sct, sct0);
         FT_FreeThese(6, qt1, qt2, qp1, qp2, qp3, qp4);
+        FT_FreeThese(1, tau);
 
          
 	 
@@ -3859,24 +3872,35 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 
         int i, j, k;
         int index0, index1, index2, index3, index4, index5, index6;
-        int index000, index100, index010, index110, index001, index101, index011, index111;
+        int index000, index100, index010, index110, index001, index101, index011, \
+            index111;
         double *u, *v, *w;
         double ux, uy, uz, vx, vy, vz, wx, wy, wz;
         double *tx, *ty, *tz;
         double *cx, *cy, *cz, *cx0, *cy0, *cz0;
         double *s, *s11, *s12, *s22, *s13, *s23, *s33;
-        double *rho,  *cp, *temp, *conc, *conc0;
-        double sum_rho_u, sum_rho_v, sum_rho_w, sum_rho_uu, sum_rho_vv, sum_rho_ww, sum_rho_uv, sum_rho_uw, sum_rho_vw;
-        double sum_s11, sum_s12, sum_s22, sum_s13, sum_s23, sum_s33, sum_rhoss11, sum_rhoss12, sum_rhoss22, sum_rhoss13, sum_rhoss23, sum_rhoss, sum_rho, sum_s, sum_ss, sum_cp, sum_tx, sum_ty, sum_tz, sum_rho_t, sum_rho_cp, sum_rho_cp_s_tx, sum_rho_cp_s_ty, sum_rho_cp_s_tz, sum_rho_cp_tu, sum_rho_cp_tv, sum_rho_cp_tw, sum_u;
-	double sum_cx, sum_cy, sum_cz, sum_cx0, sum_cy0, sum_cz0, sum_rho_s_cx, sum_rho_s_cy, sum_rho_s_cz, sum_rho_s_cx0, sum_rho_s_cy0, sum_rho_s_cz0, sum_rho_uc, sum_rho_vc, sum_rho_wc, sum_rho_uc0, sum_rho_vc0, sum_rho_wc0, sum_rho_c, sum_rho_c0;
-        double MA11, MA12, MA22, MA13, MA23, L11, L12, L22, L13, L23, L33, LA11, LA12, LA22, LA13, LA23, LI, MI, MH1, MH2, MH3, LH1, LH2, LH3;
+        double *cp, *temp, *conc, *conc0;
+        double sum_rho_u, sum_rho_v, sum_rho_w, sum_rho_uu, sum_rho_vv, sum_rho_ww, \
+               sum_rho_uv, sum_rho_uw, sum_rho_vw;
+        double sum_s11, sum_s12, sum_s22, sum_s13, sum_s23, sum_s33, sum_rhoss11, \
+               sum_rhoss12, sum_rhoss22, sum_rhoss13, sum_rhoss23, sum_rhoss, \
+               sum_rho, sum_s, sum_ss, sum_cp, sum_tx, sum_ty, sum_tz, sum_rho_t, \
+               sum_rho_cp, sum_rho_cp_s_tx, sum_rho_cp_s_ty, sum_rho_cp_s_tz, \
+               sum_rho_cp_tu, sum_rho_cp_tv, sum_rho_cp_tw, sum_u;
+	double sum_cx, sum_cy, sum_cz, sum_cx0, sum_cy0, sum_cz0, sum_rho_s_cx, \
+               sum_rho_s_cy, sum_rho_s_cz, sum_rho_s_cx0, sum_rho_s_cy0, \
+               sum_rho_s_cz0, sum_rho_uc, sum_rho_vc, sum_rho_wc, sum_rho_uc0, \
+               sum_rho_vc0, sum_rho_wc0, sum_rho_c, sum_rho_c0;
+        double MA11, MA12, MA22, MA13, MA23, L11, L12, L22, L13, L23, L33, \
+               LA11, LA22, LI, MI, MH1, MH2, MH3, LH1, LH2, LH3;
         double MC1, MC2, MC3, MC01, MC02, MC03, LC1, LC2, LC3, LC01, LC02, LC03;
 	double CS, CI, Prt, Sct0, Sct;
         double *cs, *ci, *prt, *sct0, *sct;
         int    ii, jj, kk, iiii, jjjj, kkkk;
         int    NB = 2.0;
         int    NBC = pow(NB, 3);
-        double CS_deno, CS_nume, CI_deno, CI_nume, Prt_nume, Prt_deno, Sct0_nume, Sct0_deno, Sct_nume, Sct_deno;
+        double CS_deno, CS_nume, CI_deno, CI_nume, Prt_nume, Prt_deno, Sct0_nume, \
+               Sct0_deno, Sct_nume, Sct_deno;
         double delta2, tdelta2;
 
 	delta2 = sqr( pow( top_h[0]*top_h[1]*top_h[2], 1.0/3.0 ) ); //filter width 
@@ -3902,7 +3926,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	FT_VectorMemoryAlloc((POINTER*)&cx,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&cy,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&cz,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&rho,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&cp,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&temp,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&conc0,size,sizeof(double));
@@ -3961,7 +3984,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             w[index0] = momn[2][index0]/dens[index0];
             conc0[index0] = pdens[0][index0]/dens[index0];
             conc[index0]  = pdens[1][index0]/dens[index0];
-            rho[index0] = dens[index0];
             cp[index0] = EosCP(&st);
 	    temp[index0] = EosTemperature(&st);
         }
@@ -4006,9 +4028,9 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    s13[index0] = 0.5*(uz + wx);
 	    s23[index0] = 0.5*(vz + wy);
             s33[index0] = wz;	
-            s[index0] = sqrt(2*( sqr(s11[index0]) + sqr(s22[index0])  \
+            s[index0] = sqrt( 2*( sqr(s11[index0]) + sqr(s22[index0])  \
                           + sqr(s33[index0]) + 2.0*(sqr(s12[index0])  \
-                          + sqr(s13[index0]) + sqr(s23[index0]))  ) );
+                          + sqr(s13[index0]) + sqr(s23[index0])) ) );
 
         }
 
@@ -4016,17 +4038,19 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         for (j = 0; j <= ((imax[1]-imin[1]+1)/NB)-1; j++)
         for (i = 0; i <= ((imax[0]-imin[0]+1)/NB)-1; i++)
         {
-	    kk = (NB*k);
-            jj = (NB*j);
-            ii = (NB*i);
+	    kk = (NB*k) + imin[2];
+            jj = (NB*j) + imin[1];
+            ii = (NB*i) + imin[0];
 
             sum_rho = 0.0;
             sum_u = 0.0;
             sum_cp = 0.0;
             sum_rho_u = sum_rho_v = sum_rho_w = 0.0;
-            sum_rho_uu = sum_rho_vv = sum_rho_ww = sum_rho_uv = sum_rho_uw = sum_rho_vw = 0.0;
+            sum_rho_uu = sum_rho_vv = sum_rho_ww = sum_rho_uv = sum_rho_uw  \
+                       = sum_rho_vw = 0.0;
             sum_s11 = sum_s12 =  sum_s22 = sum_s23 = sum_s13 = sum_s33 = 0.0;
-            sum_rhoss11 = sum_rhoss12 = sum_rhoss22 = sum_rhoss13 = sum_rhoss23 = sum_rhoss = 0.0;
+            sum_rhoss11 = sum_rhoss12 = sum_rhoss22 = sum_rhoss13 = sum_rhoss23 \
+                        = sum_rhoss = 0.0;
             sum_s = sum_ss = 0.0;
             sum_tx = sum_ty = sum_tz = 0.0;
             sum_rho_t = 0.0;
@@ -4034,8 +4058,10 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             sum_rho_cp_tu = sum_rho_cp_tv = sum_rho_cp_tw = 0.0;
 	    
 	    sum_cx = sum_cy = sum_cz = sum_cx0 = sum_cy0 = sum_cz0 = 0.0;
-            sum_rho_s_cx = sum_rho_s_cy = sum_rho_s_cz = sum_rho_s_cx0 = sum_rho_s_cy0 = sum_rho_s_cz0 = 0.0;
-            sum_rho_uc =  sum_rho_vc = sum_rho_wc = sum_rho_uc0 = sum_rho_vc0 = sum_rho_wc0 = 0.0;
+            sum_rho_s_cx = sum_rho_s_cy = sum_rho_s_cz = sum_rho_s_cx0 \
+                       = sum_rho_s_cy0 = sum_rho_s_cz0 = 0.0;
+            sum_rho_uc =  sum_rho_vc = sum_rho_wc = sum_rho_uc0 = sum_rho_vc0 \
+                       = sum_rho_wc0 = 0.0;
             sum_rho_c = sum_rho_c0 = 0.0;
 
             double max_CS = 0.0;
@@ -4052,43 +4078,45 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 
                 index0 = d_index3d(iiii, jjjj, kkkk, top_gmax);
                 sum_u += u[index0];
-                sum_rho_u += rho[index0]*u[index0];
-                sum_rho_v += rho[index0]*v[index0];
-		sum_rho_w += rho[index0]*w[index0];
-                sum_rho_uu += rho[index0]*u[index0]*u[index0];
-                sum_rho_vv += rho[index0]*v[index0]*v[index0];
-                sum_rho_uv += rho[index0]*u[index0]*v[index0];
-		sum_rho_uw += rho[index0]*u[index0]*w[index0];
-		sum_rho_vw += rho[index0]*v[index0]*w[index0];
-		sum_rho_ww += rho[index0]*w[index0]*w[index0];
+                sum_rho_u += dens[index0]*u[index0];
+                sum_rho_v += dens[index0]*v[index0];
+		sum_rho_w += dens[index0]*w[index0];
+                sum_rho_uu += dens[index0]*u[index0]*u[index0];
+                sum_rho_vv += dens[index0]*v[index0]*v[index0];
+                sum_rho_uv += dens[index0]*u[index0]*v[index0];
+		sum_rho_uw += dens[index0]*u[index0]*w[index0];
+		sum_rho_vw += dens[index0]*v[index0]*w[index0];
+		sum_rho_ww += dens[index0]*w[index0]*w[index0];
                 sum_s11 += (1.0/3.0)*(2.0*s11[index0]-s22[index0]-s33[index0]); 
                 sum_s12 += s12[index0];
 		sum_s22 += (1.0/3.0)*(2.0*s22[index0]-s11[index0]-s33[index0]);
 		sum_s13 += s13[index0];
 		sum_s23 += s23[index0];
 		sum_s33 += (1.0/3.0)*(2.0*s33[index0]-s11[index0]-s22[index0]);
-                sum_rhoss11 += rho[index0]*s[index0]*(1.0/3.0)*(2.0*s11[index0]-s22[index0]-s33[index0]);
-                sum_rhoss12 += rho[index0]*s[index0]*s12[index0];
-                sum_rhoss22 += rho[index0]*s[index0]*(1.0/3.0)*(2.0*s22[index0]-s11[index0]-s33[index0]);
-                sum_rhoss13 += rho[index0]*s[index0]*s13[index0];
-                sum_rhoss23 += rho[index0]*s[index0]*s23[index0];
-                sum_rhoss += rho[index0]*s[index0]*s[index0];
+                sum_rhoss11 += dens[index0]*s[index0]  \
+                                  *(1.0/3.0)*(2.0*s11[index0]-s22[index0]-s33[index0]);
+                sum_rhoss12 += dens[index0]*s[index0]*s12[index0];
+                sum_rhoss22 += dens[index0]*s[index0]  \
+                                  *(1.0/3.0)*(2.0*s22[index0]-s11[index0]-s33[index0]);
+                sum_rhoss13 += dens[index0]*s[index0]*s13[index0];
+                sum_rhoss23 += dens[index0]*s[index0]*s23[index0];
+                sum_rhoss += dens[index0]*s[index0]*s[index0];
                 sum_s += s[index0];
                 sum_ss += s[index0]*s[index0];
-                sum_rho += rho[index0];
+                sum_rho += dens[index0];
 
                 sum_cp += cp[index0];
                 sum_tx += tx[index0];
                 sum_ty += ty[index0];
 		sum_tz += tz[index0];
-                sum_rho_t += rho[index0]*temp[index0];
-                sum_rho_cp += rho[index0]*cp[index0];
-                sum_rho_cp_s_tx += rho[index0]*cp[index0]*s[index0]*tx[index0];
-                sum_rho_cp_s_ty += rho[index0]*cp[index0]*s[index0]*ty[index0];
-		sum_rho_cp_s_tz += rho[index0]*cp[index0]*s[index0]*tz[index0];
-                sum_rho_cp_tu += rho[index0]*cp[index0]*temp[index0]*u[index0];
-                sum_rho_cp_tv += rho[index0]*cp[index0]*temp[index0]*v[index0];
-		sum_rho_cp_tw += rho[index0]*cp[index0]*temp[index0]*w[index0];
+                sum_rho_t += dens[index0]*temp[index0];
+                sum_rho_cp += dens[index0]*cp[index0];
+                sum_rho_cp_s_tx += dens[index0]*cp[index0]*s[index0]*tx[index0];
+                sum_rho_cp_s_ty += dens[index0]*cp[index0]*s[index0]*ty[index0];
+		sum_rho_cp_s_tz += dens[index0]*cp[index0]*s[index0]*tz[index0];
+                sum_rho_cp_tu += dens[index0]*cp[index0]*temp[index0]*u[index0];
+                sum_rho_cp_tv += dens[index0]*cp[index0]*temp[index0]*v[index0];
+		sum_rho_cp_tw += dens[index0]*cp[index0]*temp[index0]*w[index0];
 
 		sum_cx += cx[index0];
                 sum_cy += cy[index0];
@@ -4096,63 +4124,67 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
                 sum_cx0 += cx0[index0];
                 sum_cy0 += cy0[index0];
 		sum_cz0 += cz0[index0];
-                sum_rho_s_cx += rho[index0]*s[index0]*cx[index0];
-                sum_rho_s_cy += rho[index0]*s[index0]*cy[index0];
-	        sum_rho_s_cz += rho[index0]*s[index0]*cz[index0];
-                sum_rho_s_cx0 += rho[index0]*s[index0]*cx0[index0];
-                sum_rho_s_cy0 += rho[index0]*s[index0]*cy0[index0];
-		sum_rho_s_cz0 += rho[index0]*s[index0]*cz0[index0];
-                sum_rho_uc += rho[index0]*u[index0]*conc[index0];
-                sum_rho_vc += rho[index0]*v[index0]*conc[index0];
-		sum_rho_wc += rho[index0]*w[index0]*conc[index0];
-                sum_rho_uc0 += rho[index0]*u[index0]*conc0[index0];
-                sum_rho_vc0 += rho[index0]*v[index0]*conc0[index0];
-		sum_rho_wc0 += rho[index0]*w[index0]*conc0[index0];
-                sum_rho_c += rho[index0]*conc[index0];
-                sum_rho_c0 += rho[index0]*conc0[index0];
+                sum_rho_s_cx += dens[index0]*s[index0]*cx[index0];
+                sum_rho_s_cy += dens[index0]*s[index0]*cy[index0];
+	        sum_rho_s_cz += dens[index0]*s[index0]*cz[index0];
+                sum_rho_s_cx0 += dens[index0]*s[index0]*cx0[index0];
+                sum_rho_s_cy0 += dens[index0]*s[index0]*cy0[index0];
+		sum_rho_s_cz0 += dens[index0]*s[index0]*cz0[index0];
+                sum_rho_uc += dens[index0]*u[index0]*conc[index0];
+                sum_rho_vc += dens[index0]*v[index0]*conc[index0];
+		sum_rho_wc += dens[index0]*w[index0]*conc[index0];
+                sum_rho_uc0 += dens[index0]*u[index0]*conc0[index0];
+                sum_rho_vc0 += dens[index0]*v[index0]*conc0[index0];
+		sum_rho_wc0 += dens[index0]*w[index0]*conc0[index0];
+                sum_rho_c += dens[index0]*conc[index0];
+                sum_rho_c0 += dens[index0]*conc0[index0];
 
 
             }
 
 	// anistropic and independent part of M
-            MA11 = (2.0*delta2*(sum_rhoss11/(NBC)))  \
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s11/(NBC))); 
-            MA12 = (2.0*delta2*(sum_rhoss12/(NBC)))  \
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s12/(NBC)));
-	    MA22 = (2.0*delta2*(sum_rhoss22/(NBC)))  \
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s22/(NBC))); 
-            MA13 = (2.0*delta2*(sum_rhoss13/(NBC)))  \
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s13/(NBC)));
-            MA23 = (2.0*delta2*(sum_rhoss23/(NBC)))  \
-                        - (2.0*tdelta2*(sum_rho/(NBC))*(sum_s/(NBC))*(sum_s23/(NBC)));
+            MA11 = 2.0*delta2*(sum_rhoss11/NBC)  \
+                      - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s11/NBC); 
+            MA12 = 2.0*delta2*(sum_rhoss12/NBC)  \
+                      - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s12/NBC);
+	    MA22 = 2.0*delta2*(sum_rhoss22/NBC)  \
+                      - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/(NBC))*(sum_s22/NBC); 
+            MA13 = 2.0*delta2*(sum_rhoss13/NBC)  \
+                      - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s13/NBC);
+            MA23 = 2.0*delta2*(sum_rhoss23/NBC)  \
+                      - 2.0*tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_s23/NBC);
 
 	// isotropic part of M
-            MI = (-2.0*delta2*(sum_rhoss)/(NBC)) + (2.0*tdelta2*(sum_rho/(NBC))*(sum_ss)/(NBC));
+            MI = -2.0*delta2*(sum_rhoss/NBC) + 2.0*tdelta2*(sum_rho/NBC)*(sum_ss/NBC);
 
 	// Leonard stress tensor
-            L11 = (sum_rho_uu/(NBC))-((sum_rho_u/(NBC))*(sum_rho_u/(NBC))) /(sum_rho/ NBC);
-            L12 = (sum_rho_uv/(NBC))-((sum_rho_u/(NBC))*(sum_rho_v/(NBC)))/(sum_rho/ NBC);
-            L22 = (sum_rho_vv/(NBC))-((sum_rho_v/(NBC))*(sum_rho_v/(NBC)))/(sum_rho/ NBC);
-	    L13 = (sum_rho_uw/(NBC))-((sum_rho_u/(NBC))*(sum_rho_w/(NBC)))/(sum_rho/ NBC);
-	    L23 = (sum_rho_vw/(NBC))-((sum_rho_v/(NBC))*(sum_rho_w/(NBC)))/(sum_rho/ NBC);
-	    L33 = (sum_rho_ww/(NBC))-((sum_rho_w/(NBC))*(sum_rho_w/(NBC)))/(sum_rho/ NBC);
+            L11 = sum_rho_uu/NBC - (sum_rho_u/NBC)*(sum_rho_u/NBC)/(sum_rho/NBC);
+            L12 = sum_rho_uv/NBC - (sum_rho_u/NBC)*(sum_rho_v/NBC)/(sum_rho/NBC);
+            L22 = sum_rho_vv/NBC - (sum_rho_v/NBC)*(sum_rho_v/NBC)/(sum_rho/NBC);
+	    L13 = sum_rho_uw/NBC - (sum_rho_u/NBC)*(sum_rho_w/NBC)/(sum_rho/NBC);
+	    L23 = sum_rho_vw/NBC - (sum_rho_v/NBC)*(sum_rho_w/NBC)/(sum_rho/NBC);
+	    L33 = sum_rho_ww/NBC - (sum_rho_w/NBC)*(sum_rho_w/NBC)/(sum_rho/NBC);
 	
-	 // Breaking L into anistropic components(that will be a part of the five independent relations for C_s) and isotropic part.
-            LA11 = (1.0/3.0)* (2.0*L11 - L22 - L33);
-            LA12 = L12;
-            LA22 = (1.0/3.0)* (2.0*L22 - L11 - L22);
-            LA13 = L13;
-            LA23 = L23;
+	 // Breaking L into anistropic components(that will be a part of the 
+         // five independent relations for C_s) and isotropic part.
+            LA11 = (2.0*L11 - L22 - L33)/3.0;
+            LA22 = (2.0*L22 - L11 - L22)/3.0;
             // isotropic part 
-            LI = (1.0/3.0)*(L11 + L22 + L33);
+            LI = (L11 + L22 + L33)/3.0;
 
-            MH1 = delta2*(sum_rho_cp_s_tx/NBC) - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tx/NBC);
-            MH2 = delta2*(sum_rho_cp_s_ty/NBC) - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_ty/NBC);
-	    MH3 = delta2*(sum_rho_cp_s_tz/NBC) - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tz/NBC);
+            MH1 = delta2*(sum_rho_cp_s_tx/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tx/NBC);
+            MH2 = delta2*(sum_rho_cp_s_ty/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_ty/NBC);
+	    MH3 = delta2*(sum_rho_cp_s_tz/NBC)  \
+                    - tdelta2*(sum_rho/NBC)*(sum_cp/NBC)*(sum_s/NBC)*(sum_tz/NBC);
 
-            LH1 = (sum_rho_cp_tu/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_u/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
-            LH2 = (sum_rho_cp_tv/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_v/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
-	    LH3 = (sum_rho_cp_tw/NBC)- (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_w/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+            LH1 = sum_rho_cp_tu/NBC  \
+                   - (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_u/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+            LH2 = sum_rho_cp_tv/NBC  \
+                   - (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_v/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
+	    LH3 = sum_rho_cp_tw/NBC  \
+                   - (sum_rho_cp/NBC)*(sum_rho_t/NBC)*(sum_rho_w/NBC)/((sum_rho/NBC)*(sum_rho/NBC));
 
 	    MC1 = delta2*(sum_rho_s_cx/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cx/NBC);
             MC2 = delta2*(sum_rho_s_cy/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy/NBC);
@@ -4161,23 +4193,23 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             MC02 = delta2*(sum_rho_s_cy0/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cy0/NBC);
 	    MC03 = delta2*(sum_rho_s_cz0/NBC) - tdelta2*(sum_rho/NBC)*(sum_s/NBC)*(sum_cz0/NBC);
 
-            LC1 = (sum_rho_uc/NBC) - (sum_rho_u/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
-            LC2 = (sum_rho_vc/NBC) - (sum_rho_v/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
-	    LC3 = (sum_rho_wc/NBC) - (sum_rho_w/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
-            LC01 = (sum_rho_uc0/NBC) - (sum_rho_u/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
-            LC02 = (sum_rho_vc0/NBC) - (sum_rho_v/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
-	    LC03 = (sum_rho_wc0/NBC) - (sum_rho_w/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
+            LC1 = sum_rho_uc/NBC - (sum_rho_u/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
+            LC2 = sum_rho_vc/NBC - (sum_rho_v/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
+	    LC3 = sum_rho_wc/NBC - (sum_rho_w/NBC)*(sum_rho_c/NBC)/(sum_rho/NBC);
+            LC01 = sum_rho_uc0/NBC - (sum_rho_u/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
+            LC02 = sum_rho_vc0/NBC - (sum_rho_v/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
+	    LC03 = sum_rho_wc0/NBC - (sum_rho_w/NBC)*(sum_rho_c0/NBC)/(sum_rho/NBC);
 
             CS_deno = MA11*MA11 + MA12*MA12 + MA22*MA22 + MA13*MA13 + MA23*MA23;
-            CS_nume = LA11*MA11 + LA12*MA12 + LA22*MA22 + LA13*MA13 + LA23*MA23;
+            CS_nume = LA11*MA11 + L12*MA12 + LA22*MA22 + L13*MA13 + L23*MA23;
             CI_deno = MI;
             CI_nume = LI;
-            Prt_nume = LH1*MH1 + LH2*MH2 + LH3*MH3; /* Cs is omitted to make the update to the energy equation simpler*/
+            Prt_nume = LH1*MH1 + LH2*MH2 + LH3*MH3; /* Cs is omitted to make the update to the energy equation simpler */
             Prt_deno = MH1*MH1 + MH2*MH2 + MH3*MH3;
-	    Sct0_nume  = (LC01*MC01) + (LC02*MC02) + (LC03*MC03);
-            Sct0_deno = (MC01*MC01) + (MC02*MC02) + (MC03*MC03);
-            Sct_nume = (LC1*MC1) + (LC2*MC2) + (LC3*MC3);
-            Sct_deno = (MC1*MC1) + (MC2*MC2) + (MC3*MC3);
+	    Sct0_nume  = LC01*MC01 + LC02*MC02 + LC03*MC03;
+            Sct0_deno = MC01*MC01 + MC02*MC02 + MC03*MC03;
+            Sct_nume = LC1*MC1 + LC2*MC2 + LC3*MC3;
+            Sct_deno = MC1*MC1 + MC2*MC2 + MC3*MC3;
 
             CS = CS_nume/CS_deno;
             CI = CI_nume/CI_deno;
@@ -4293,13 +4325,12 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    index5 = d_index3d(i,j,k-1,top_gmax);
 	    index6 = d_index3d(i,j,k+1,top_gmax);
  
-            tau[0][0][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(2.0*s11[index0]-s22[index0]- s22[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*rho[index0]*s[index0]*s[index0];
-            tau[0][1][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s12[index0]);
-            tau[1][0][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s12[index0]);
-            tau[1][1][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(2.0*s22[index0]-s11[index0]- s33[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*rho[index0]*s[index0]*s[index0];
-	    tau[0][2][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s13[index0]);
-	    tau[1][2][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(s23[index0]);
-            tau[2][2][index0] = - 2.0*cs[index0]*delta2*rho[index0]*s[index0]*(2.0*s33[index0]-s11[index0]- s22[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*rho[index0]*s[index0]*s[index0];
+            tau[0][0][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(2.0*s11[index0]-s22[index0]- s22[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
+            tau[0][1][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(s12[index0]);
+            tau[1][1][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(2.0*s22[index0]-s11[index0]- s33[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
+	    tau[0][2][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(s13[index0]);
+	    tau[1][2][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(s23[index0]);
+            tau[2][2][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(2.0*s33[index0]-s11[index0]- s22[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
 
             dtemx = (temp[index2]-temp[index1])/(2.0*top_h[0]);
             dtemy = (temp[index4]-temp[index3])/(2.0*top_h[1]);
@@ -4312,16 +4343,16 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             conc0y = (conc0[index4] - conc0[index3])/(2.0*top_h[1]); 
 	    conc0z = (conc[index6] - conc[index5])/(2.0*top_h[2]);
 
-            qt1[index0] = -(rho[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
-            qt2[index0] = -(rho[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
-	    qt3[index0] = -(rho[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemz;
+            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
+            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
+	    qt3[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemz;
 
-	    qp1[index0] = -(rho[index0]*sct0[index0]*delta2*s[index0])*conc0x;
-            qp2[index0] = -(rho[index0]*sct0[index0]*delta2*s[index0])*conc0y;
-	    qp3[index0] = -(rho[index0]*sct0[index0]*delta2*s[index0])*conc0z;
-            qp4[index0] = -(rho[index0]*sct[index0]*delta2*s[index0])*concx;
-            qp5[index0] = -(rho[index0]*sct[index0]*delta2*s[index0])*concy;
-	    qp6[index0] = -(rho[index0]*sct[index0]*delta2*s[index0])*concz;
+	    qp1[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0x;
+            qp2[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0y;
+	    qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0z;
+            qp4[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concx;
+            qp5[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concy;
+	    qp6[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concz;
 
         }
 
@@ -4344,10 +4375,16 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    index5 = d_index3d(i,j,k-1,top_gmax);
 	    index6 = d_index3d(i,j,k+1,top_gmax);
 
-            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0]) + (qt2[index4]-qt2[index3])/(2.0*top_h[1]) + (qt3[index6]-qt3[index5])/(2.0*top_h[2]);
+            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
+                           + (qt2[index4]-qt2[index3])/(2.0*top_h[1])  \
+                           + (qt3[index6]-qt3[index5])/(2.0*top_h[2]);
 	
-	    qc0[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0]) + (qp2[index4]-qp2[index3])/(2.0*top_h[1]) + (qp3[index6]-qp3[index5])/(2.0*top_h[2]);
-            qc[index0] = (qp4[index2]-qp4[index1])/(2.0*top_h[0]) + (qp5[index4]-qp5[index3])/(2.0*top_h[1]) + (qp6[index6]-qp6[index5])/(2.0*top_h[2]);
+	    qc0[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
+                            + (qp2[index4]-qp2[index3])/(2.0*top_h[1])  \
+                            + (qp3[index6]-qp3[index5])/(2.0*top_h[2]);
+            qc[index0] = (qp4[index2]-qp4[index1])/(2.0*top_h[0])  \
+                            + (qp5[index4]-qp5[index3])/(2.0*top_h[1])  \
+                            + (qp6[index6]-qp6[index5])/(2.0*top_h[2]);
 
 		
 	    if(subgrid_con == true)
@@ -4395,11 +4432,18 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
                 t3l = (tau[0][0][index5]+tau[1][1][index5]+tau[2][2][index5])*w[index5];
 		t3 = (t3r-t3l)/(2.0*top_h[2]);
 
-               momn[0][index0] += -m_dt*( (tau[0][0][index2] - tau[0][0][index1])/(2.0*top_h[0]) + (tau[1][0][index4] - tau[1][0][index3])/(2.0*top_h[1]) + (tau[2][0][index6] - tau[2][0][index5])/(2.0*top_h[2]) );
+               // tau is a symmetric tensor
+               momn[0][index0] += -m_dt*( (tau[0][0][index2]-tau[0][0][index1])/(2.0*top_h[0]) \
+                                             + (tau[0][1][index4]-tau[0][1][index3])/(2.0*top_h[1]) \
+                                             + (tau[2][0][index6]-tau[2][0][index5])/(2.0*top_h[2]) );
 
-               momn[1][index0] += -m_dt*( ((tau[0][1][index2] - tau[0][1][index1])/(2.0*top_h[0])) + ((tau[1][1][index4] - tau[1][1][index3])/(2.0*top_h[1])) + (tau[2][1][index6] - tau[2][1][index5])/(2.0*top_h[2]) );
+               momn[1][index0] += -m_dt*( (tau[0][1][index2]-tau[0][1][index1])/(2.0*top_h[0]) \
+                                             + (tau[1][1][index4]-tau[1][1][index3])/(2.0*top_h[1]) \
+                                             + (tau[1][2][index6]-tau[1][2][index5])/(2.0*top_h[2]) );
 
-	       momn[2][index0] += -m_dt*( (tau[0][2][index2] - tau[0][2][index1])/(2.0*top_h[0]) + (tau[1][2][index4] - tau[1][2][index3])/(2.0*top_h[1]) + (tau[2][2][index6] - tau[2][2][index5])/(2.0*top_h[2]) );
+	       momn[2][index0] += -m_dt*( (tau[0][2][index2]-tau[0][2][index1])/(2.0*top_h[0]) \
+                                             + (tau[1][2][index4]-tau[1][2][index3])/(2.0*top_h[1]) \
+                                             + (tau[2][2][index6]-tau[2][2][index5])/(2.0*top_h[2]) );
 
                engy[index0] += m_dt*0.5*(t1 + t2 + t3);
              }
@@ -4411,9 +4455,11 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         FT_FreeThese(3, u, v, w);
         FT_FreeThese(7, s, s11, s12, s22, s13, s23, s33);
         FT_FreeThese(9, tx, ty, tz, cx0, cy0, cz0, cx, cy, cz);
-        FT_FreeThese(5, rho, cp, temp, conc0, conc);
+        FT_FreeThese(4, cp, temp, conc0, conc);
         FT_FreeThese(5, cs, ci, prt, sct0, sct);
-        FT_FreeThese(10, qt1, qt2, qt3, qp1, qp2, qp3, qp4, qp5, qp6,tau);
+        FT_FreeThese(10, qt1, qt2, qt3, qp1, qp2, qp3, qp4, qp5, qp6, tau);
+        FT_FreeThese(3, qt, qc0, qc);
+        FT_FreeThese(1, tau); 
 
          
 	 
@@ -4451,14 +4497,13 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
 {
 	int size;
 	int i, j;
-	int index0, index1, index2, index3, index4, index_copy;
+	int index0, index1, index2, index3, index4;
 	double *u, *v;
-	double *rho, *temp, *conc0, *conc;
+        double *temp, *conc0, *conc;
 		
         size = (top_gmax[0]+1)*(top_gmax[1]+1);
         FT_VectorMemoryAlloc((POINTER*)&u,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&v,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&rho,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&temp,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&conc0,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&conc,size,sizeof(double));
@@ -4514,7 +4559,6 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
             v[index0] = momn[1][index0]/dens[index0];
             conc0[index0] = pdens[0][index0]/dens[index0];
             conc[index0]  = pdens[1][index0]/dens[index0];
-            rho[index0] = dens[index0];
             temp[index0] = EosTemperature(&st);
 	}
 
@@ -4553,8 +4597,8 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
                 momn[0][index0] += m_dt*mu*(uxx+uyy);
                 momn[1][index0] += m_dt*mu*(vxx+vyy);
                 
-		engy[index0] += m_dt*mu*(u[index0]*(uxx+uyy) + v[index0]*(vxx+vyy) + sqr(ux-vy) + sqr(vx+uy) );
-                
+		engy[index0] += m_dt*mu*( u[index0]*(uxx+uyy)  \
+                                    + v[index0]*(vxx+vyy) + sqr(ux-vy) + sqr(vx+uy) );
 	
             }
 
@@ -4567,8 +4611,8 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
 
 	  if (mass_diffusion == true)
             {
-                rhox = (rho[index2] - rho[index1]) / (2.0*top_h[0]);
-                rhoy = (rho[index4] - rho[index3]) / (2.0*top_h[1]);
+                rhox = (dens[index2] - dens[index1]) / (2.0*top_h[0]);
+                rhoy = (dens[index4] - dens[index3]) / (2.0*top_h[1]);
                 concx = (conc[index2] - conc[index1]) / (2.0*top_h[0]);
                 concy = (conc[index4] - conc[index3]) / (2.0*top_h[1]);
                 conc0x = (conc0[index2] - conc0[index1]) / (2.0*top_h[0]);
@@ -4577,13 +4621,13 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
                 concyy = (conc[index4] - 2.0*conc[index0] + conc[index3]) / (top_h[1]*top_h[1]);
                 conc0xx = (conc0[index2] - 2.0*conc0[index0] + conc0[index1]) / (top_h[0]*top_h[0]);
                 conc0yy = (conc0[index4] - 2.0*conc0[index0] + conc0[index3]) / (top_h[1]*top_h[1]);
-                pdens[0][index0] += m_dt*D* (rhox*conc0x + rho[index0]*conc0xx + rhoy*conc0y + rho[index0]*conc0yy);
-                pdens[1][index0] += m_dt*D* (rhox*concx + rho[index0]*concxx + rhoy*concy + rho[index0]*concyy);
+                pdens[0][index0] += m_dt*D* (rhox*conc0x + dens[index0]*conc0xx + rhoy*conc0y + dens[index0]*conc0yy);
+                pdens[1][index0] += m_dt*D* (rhox*concx + dens[index0]*concxx + rhoy*concy + dens[index0]*concyy);
              }
 
        	}
 
-        FT_FreeThese(6, u, v, rho, temp, conc0, conc);
+        FT_FreeThese(5, u, v, temp, conc0, conc);
 
 }
 
@@ -4591,16 +4635,15 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
 {
         int size;
         int i, j, k;
-        int index0, index1, index2, index3, index4, index5, index6, index_copy;
+        int index0, index1, index2, index3, index4, index5, index6;
         double *u, *v, *w;
-        double *rho, *temp, *conc0, *conc, *HDiff;
+        double *temp, *conc0, *conc, *HDiff;
 	double conc0x, conc0y, conc0z, concx, concy, concz;
 
         size = (top_gmax[0]+1)*(top_gmax[1]+1)*(top_gmax[2]+1);
         FT_VectorMemoryAlloc((POINTER*)&u,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&v,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&w,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&rho,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&temp,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&conc0,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&conc,size,sizeof(double));
@@ -4662,7 +4705,6 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
             w[index0] = momn[2][index0]/dens[index0];
             conc0[index0] = pdens[0][index0]/dens[index0];
             conc[index0]  = pdens[1][index0]/dens[index0];
-            rho[index0] = dens[index0];
             temp[index0] = EosTemperature(&st);
 	    HDiff[index0] = EosEnthalpyDifference(&st);
 	}
@@ -4674,7 +4716,8 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
 
         double rhox, rhoy, rhoz;
         double txx, tyy, tzz;
-        double ux, uy, uz, vx, vy, vz, wx, wy, wz, uxx, uyy, uzz, vxx, vyy, vzz, wxx, wyy, wzz;
+        double ux, uy, uz, vx, vy, vz, wx, wy, wz;
+        double uxx, uyy, uzz, vxx, vyy, vzz, wxx, wyy, wzz;
 	double vyx, wxz, uyx, wyz, vzy, uxz;
 	double term1, term2, term3, term4, term5;
 	int index_r12, index_r13, index_r23, index_l12, index_l13, index_l23;
@@ -4712,16 +4755,16 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
             concy = (conc[index4] - conc[index3])/(2.0*top_h[1]);
             concz = (conc[index6] - conc[index5])/(2.0*top_h[2]);
 
-	    d1[index0] = rho[index0]*D*conc0x;
-	    d2[index0] = rho[index0]*D*conc0y;
-	    d3[index0] = rho[index0]*D*conc0z;
-	    d4[index0] = rho[index0]*D*concx;
-            d5[index0] = rho[index0]*D*concy;
-            d6[index0] = rho[index0]*D*concz;
+	    d1[index0] = dens[index0]*D*conc0x;
+	    d2[index0] = dens[index0]*D*conc0y;
+	    d3[index0] = dens[index0]*D*conc0z;
+	    d4[index0] = dens[index0]*D*concx;
+            d5[index0] = dens[index0]*D*concy;
+            d6[index0] = dens[index0]*D*concz;
 	    
-	    e1[index0] = HDiff[index0]*rho[index0]*D*conc0x;
-	    e2[index0] = HDiff[index0]*rho[index0]*D*conc0y;
-	    e3[index0] = HDiff[index0]*rho[index0]*D*conc0z;
+	    e1[index0] = HDiff[index0]*dens[index0]*D*conc0x;
+	    e2[index0] = HDiff[index0]*dens[index0]*D*conc0y;
+	    e3[index0] = HDiff[index0]*dens[index0]*D*conc0z;
 	}
 
  	for (k = imin[2]; k <= imax[2]; k++)
@@ -4803,18 +4846,25 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
 
 	  if (mass_diffusion == true)
             {
-		dc0 = (d1[index2]-d1[index1])/(2*top_h[0]) + (d2[index4]-d2[index3])/(2*top_h[1]) + (d3[index6]-d3[index5])/(2.0*top_h[2]);
-		dc = (d4[index2]-d4[index1])/(2*top_h[0]) + (d5[index4]-d5[index3])/(2*top_h[1]) + (d6[index6]-d6[index5])/(2.0*top_h[2]);    
+		dc0 = (d1[index2]-d1[index1])/(2*top_h[0])   \
+                       + (d2[index4]-d2[index3])/(2*top_h[1])  \
+                        + (d3[index6]-d3[index5])/(2.0*top_h[2]);
+		dc = (d4[index2]-d4[index1])/(2*top_h[0])   \
+                       + (d5[index4]-d5[index3])/(2*top_h[1]) \
+                        + (d6[index6]-d6[index5])/(2.0*top_h[2]);    
          	pdens[0][index0] += m_dt*dc0;
 		pdens[1][index0] += m_dt*dc; 
                 //fprintf(stdout, "PRINT pdens0 pdens1 %e %e\n",pdens[0][index0],pdens[1][index0]);
 
-		ed = (e1[index2]-e1[index1])/(2*top_h[0]) + (e2[index4]-e2[index3])/(2*top_h[1]) + (e3[index6]-e3[index5])/(2.0*top_h[2]);
+		ed = (e1[index2]-e1[index1])/(2*top_h[0])   \
+                      + (e2[index4]-e2[index3])/(2*top_h[1])   \
+                      + (e3[index6]-e3[index5])/(2.0*top_h[2]);
 		engy[index0] += m_dt*ed;
 	    }
         }
 
-	FT_FreeThese(17, u, v, w, rho, temp, conc, conc0, HDiff, d1, d2, d3, d4, d5, d6, e1, e2, e3);
+	FT_FreeThese(7, u, v, w, temp, conc, conc0, HDiff); 
+        FT_FreeThese(9, d1, d2, d3, d4, d5, d6, e1, e2, e3);
 }
 
 void G_CARTESIAN::appendGhostBufferforParab2D(
