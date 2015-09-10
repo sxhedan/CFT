@@ -3860,6 +3860,8 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
         FT_FreeThese(5, cs, ci, prt, sct, sct0);
         FT_FreeThese(6, qt1, qt2, qp1, qp2, qp3, qp4);
         FT_FreeThese(1, tau);
+        FT_FreeThese(3, qt, qc0, qc);
+
 
          
 	 
