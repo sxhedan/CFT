@@ -2337,17 +2337,17 @@ void G_CARTESIAN::printInteriorVtk(char *out_name)
 	    fprintf(outfile,"%24.18g\n",dens[i]);
 	}
 
-	fprintf(outfile,"SCALARS PRESSURE double 1\nLOOKUP_TABLE default\n");
+	fprintf(outfile,"SCALARS XVEL double 1\nLOOKUP_TABLE default\n");
 	for(int i=0; i < data_size; ++i)
 	{
-	    fprintf(outfile,"%24.18g\n",pres[i]);
+	    fprintf(outfile,"%24.18g\n",momn[0][i]/dens[i]);
 	}
 
-	fprintf(outfile,"SCALARS COMPONENT int 1\nLOOKUP_TABLE default\n");
-	for(int i=0; i < data_size; ++i)
-	{
-	    fprintf(outfile,"%d\n",cell_center[i].comp);
-	}
+	fprintf(outfile,"SCALARS YVEL double 1\nLOOKUP_TABLE default\n");
+        for(int i=0; i < data_size; ++i)
+        {
+            fprintf(outfile,"%24.18g\n",momn[1][i]/dens[i]);
+        }
 
 	fclose(outfile);
 }
@@ -4459,7 +4459,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         FT_FreeThese(9, tx, ty, tz, cx0, cy0, cz0, cx, cy, cz);
         FT_FreeThese(4, cp, temp, conc0, conc);
         FT_FreeThese(5, cs, ci, prt, sct0, sct);
-        FT_FreeThese(10, qt1, qt2, qt3, qp1, qp2, qp3, qp4, qp5, qp6, tau);
+        FT_FreeThese(9, qt1, qt2, qt3, qp1, qp2, qp3, qp4, qp5, qp6);
         FT_FreeThese(3, qt, qc0, qc);
         FT_FreeThese(1, tau); 
 
