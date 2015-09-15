@@ -7264,7 +7264,7 @@ void G_CARTESIAN::appendGhostBuffer(
 					idir,nb,0,i);
 		    	break;
 		    case FIRST_PHYSICS_WAVE_TYPE:
-		    	GFMGhostState(icoords,ic,comp,&ghost_st,-1,m_vst,idir);
+		    	GFMGhostState(ic_next,ic,comp,&ghost_st,-1,m_vst,idir);
 		    	for (k = i; k <= nrad; ++k)
 		    	{
 		    	    vst->dens[nrad-k] = ghost_st.dens;
@@ -7365,7 +7365,7 @@ void G_CARTESIAN::appendGhostBuffer(
 						n,i);
 		    	break;
 		    case FIRST_PHYSICS_WAVE_TYPE:
-		    	GFMGhostState(icoords,ic,comp,&ghost_st,1,m_vst,idir);
+		    	GFMGhostState(ic_next,ic,comp,&ghost_st,1,m_vst,idir);
 		    	for (k = i; k <= nrad; ++k)
 		    	{
 		    	    vst->dens[n+nrad+k-1] = ghost_st.dens;
