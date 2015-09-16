@@ -555,7 +555,7 @@ void cF_flowThroughBoundaryState(
 //	newst->vort += - dt/dn*f_vort;
 	newst->pres += - dt/dn*f_pres;
 	newst->dens += - dt/dn*f_dens;
-	set_state_max_speed(front,newst,p0);
+//	set_state_max_speed(front,newst,p0);
 	if (debugging("flow_through"))
 	{
 	    printf("flow through boundary state:\n");
@@ -1320,7 +1320,7 @@ void readFrontStates(
 	    if(gas_comp(comp))
 	    	rstate->pres = EosPressure(rstate);
 	    lstate->dim = rstate->dim = dim;
-            fprintf(stdout, "In the readFrontStates %e %e\n",lstate->pres,rstate->pres);
+//            fprintf(stdout, "In the readFrontStates %e %e\n",lstate->pres,rstate->pres);
         }
 	FT_MakeGridIntfc(front);
 	fclose(infile);
