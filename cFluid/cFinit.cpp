@@ -1129,16 +1129,13 @@ void G_CARTESIAN::initVSTRMStates()
 	double *pres = field.pres;
 	double **momn = field.momn;
 
-//	printf("debugdan-1.\n");	//debugdan	FIXME
         next_point(intfc,NULL,NULL,NULL);
-//	printf("debugdan-2.\n");	//debugdan	FIXME
         while (next_point(intfc,&p,&hse,&hs))
         {
 	    FT_GetStatesAtPoint(p,hse,hs,(POINTER*)&sl,(POINTER*)&sr);
 	    getRMState(sl,eqn_params,Coords(p),negative_component(hs));
 	    getRMState(sr,eqn_params,Coords(p),positive_component(hs));
 	}
-//	printf("debugdan-3.\n");	//debugdan	FIXME
 	FT_MakeGridIntfc(front);
 	setDomain();
 

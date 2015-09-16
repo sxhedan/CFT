@@ -104,7 +104,6 @@ void G_CARTESIAN::initMesh(void)
 	    }
 	}
 	
-//	printf("debugdan - before setComponent().\n");	//debugdan	FIXME
 	setComponent();
 	FT_FreeGridIntfc(front);
 }
@@ -562,35 +561,28 @@ void G_CARTESIAN::solveRungeKutta(int order)
 
 	/* Compute flux and advance field */
 
-	printf("debugdan - before copyToMeshVst().\n");	//debugdan	FIXME
 	copyToMeshVst(&st_field[0]);
-	printf("debugdan - before computeMeshFlux().\n");	//debugdan	FIXME
 	computeMeshFlux(st_field[0],&st_flux[0],delta_t);
 	
 	for (i = 0; i < order-1; ++i)
 	{
-	    printf("debugdan - before copyMeshVst().\n");	//debugdan	FIXME
 	    copyMeshVst(st_field[0],&st_field[i+1]);
 	    for (j = 0; j <= i; ++j)
 	    {
 		if (a[i][j] != 0.0)
 		{
-		    printf("debugdan - before addMeshFluxToVst().\n");	//debugdan	FIXME
 		    addMeshFluxToVst(&st_field[i+1],st_flux[j],a[i][j]);
 		}
 	    }
-	    printf("debugdan - before computeMeshFlux().\n");	//debugdan	FIXME
 	    computeMeshFlux(st_field[i+1],&st_flux[i+1],delta_t);
 	}
 	for (i = 0; i < order; ++i)
 	{
 	    if (b[i] != 0.0)
 	    {
-		printf("debugdan - before addMeshFluxToVst().\n");	//debugdan	FIXME
 		addMeshFluxToVst(&st_field[0],st_flux[i],b[i]);
 	    }
 	}
-	printf("debugdan - before copyFromMeshVst().\n");	//debugdan	FIXME
 	copyFromMeshVst(st_field[0]);
 	stop_clock("solveRungeKutta");
 }	/* end solveRungeKutta */
@@ -600,29 +592,22 @@ void G_CARTESIAN::computeMeshFlux(
 	FSWEEP *m_flux,
 	double delta_t)
 {
-    	printf("debugdan - enter computeMeshFlux().\n");	//debugdan	FIXME
 	int dir;
 
 	if(eqn_params->tracked)
 	{
-	    printf("debugdan - before get_ghost_state().\n");	//debugdan	FIXME
 	    get_ghost_state(m_vst, 2, 0);
 	    get_ghost_state(m_vst, 3, 1);
-	    printf("debugdan - before scatMeshGhost().\n");	//debugdan	FIXME
 	    scatMeshGhost();
-	    printf("debugdan - before solve_exp_value().\n");	//debugdan	FIXME
 	    solve_exp_value();
 	}
 
 	resetFlux(m_flux);
 	for (dir = 0; dir < dim; ++dir)
 	{
-	    printf("debugdan - before addFluxInDirection().\n");	//debugdan	FIXME
 	    addFluxInDirection(dir,&m_vst,m_flux,delta_t);
 	}
-	printf("debugdan - before addSourceTerm().\n");
 	addSourceTerm(&m_vst,m_flux,delta_t);
-    	printf("debugdan - leave computeMeshFlux().\n");
 }	/* end computeMeshFlux */
 
 void G_CARTESIAN::resetFlux(FSWEEP *m_flux)
@@ -1767,7 +1752,6 @@ void G_CARTESIAN::solve(double dt)
 	start_clock("solve");
 	setDomain();
 
-	printf("debugdan - before setComponent().\n");	//debugdan	FIXME
 	setComponent();
 	
 	if (debugging("trace"))
@@ -1775,9 +1759,7 @@ void G_CARTESIAN::solve(double dt)
 
 	// 1) solve for intermediate velocity
 	start_clock("computeAdvection");
-	printf("debugdan - before computeAdvection().\n");	//debugdan	FIXME
 	computeAdvection();
-	printf("debugdan - after computeAdvection().\n");	//debugdan	FIXME
 	if (debugging("trace"))
 	    printf("max_speed after computeAdvection(): %20.14f\n",max_speed);
 	stop_clock("computeAdvection");
@@ -1786,7 +1768,6 @@ void G_CARTESIAN::solve(double dt)
 	//for now, it's only set for Kathy's simulation
 	if (eqn_params->TBL)
 	{
-	    printf("debugdan - before computeTBL().\n");	//debugdan	FIXME
 	    computeTBL();	//Dan
 	}
 	else
@@ -1810,7 +1791,6 @@ void G_CARTESIAN::solve(double dt)
 	setAdvectionDt();
 	stop_clock("solve");
 
-	printf("debugdan - leave solve().\n");	//debugdan	FIXME
 }	/* end solve */
 
 
@@ -2197,7 +2177,7 @@ void G_CARTESIAN::printFrontInteriorStates(char *out_name)
 	switch (dim)
 	{
 	case 1:
-	    for (i = 0; i <= top_gmax[0]; ++i)
+	    for (i = imin[0]; i <= imax[0]; ++i)
 	    {
 		index = d_index1d(i,top_gmax);
 	        fprintf(outfile,"%24.18g\n",dens[index]);
@@ -2215,8 +2195,8 @@ void G_CARTESIAN::printFrontInteriorStates(char *out_name)
 	    }
 	    break;
 	case 2:
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    for (j = 0; j <= top_gmax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    for (j = imin[1]; j <= imax[1]; ++j)
 	    {
 		index = d_index2d(i,j,top_gmax);
 	        fprintf(outfile,"%24.18g\n",dens[index]);
@@ -2234,9 +2214,9 @@ void G_CARTESIAN::printFrontInteriorStates(char *out_name)
 	    }
 	    break;
 	case 3:
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    for (j = 0; j <= top_gmax[1]; ++j)
-	    for (k = 0; k <= top_gmax[2]; ++k)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (k = imin[2]; k <= imax[2]; ++k)
 	    {
 		index = d_index3d(i,j,k,top_gmax);
 	        fprintf(outfile,"%24.18g\n",dens[index]);
@@ -2391,8 +2371,8 @@ void G_CARTESIAN::readInteriorStates(char *restart_name)
 	switch (dim)
 	{
 	case 2:
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    for (j = 0; j <= top_gmax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    for (j = imin[1]; j <= imax[1]; ++j)
 	    {
 		index = d_index2d(i,j,top_gmax);
 		comp = top_comp[index];
@@ -2411,9 +2391,9 @@ void G_CARTESIAN::readInteriorStates(char *restart_name)
 	    }
 	    break;
 	case 3:
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    for (j = 0; j <= top_gmax[1]; ++j)
-	    for (k = 0; k <= top_gmax[2]; ++k)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (k = imin[2]; k <= imax[2]; ++k)
 	    {
 		index = d_index3d(i,j,k,top_gmax);
 		comp = top_comp[index];
@@ -3177,9 +3157,7 @@ void G_CARTESIAN::TBLsolver(
         if(fabs(st_tmp.momn[0]) < 1e-12 && fabs(st_tmp.momn[1]) < 1e-12 && fabs(st_tmp.momn[2]) < 1e-12)
             return;        
 
-        fprintf(stdout, "PRINT-HK-0 %e %e %e %e %e %e\n",st_tmp.dens,st_tmp.engy,st_tmp.pres,st_tmp.momn[0],st_tmp.momn[1],st_tmp.momn[2]);
 	computeTBLflux(st_tmp,tblflux,y0,yw,idir);
-        fprintf(stdout, "PRINT-HK-2 %e %e %e %e\n",tblflux[2],tblflux[3],tblflux[1],tblflux[0]);
 
 	m_vst->momn[0][index_in] += tblflux[2]*dt/top_h[idir];
 	m_vst->momn[1][index_in] += tblflux[3]*dt/top_h[idir];
@@ -3276,17 +3254,14 @@ void G_CARTESIAN::computeTBLflux(
 	{
 	    Urans[i] = Umatch/ymatch*ycrans[i];
 	    Trans[i] = Tw + (Tmatch - Tw)/ymatch*ycrans[i];
-            fprintf(stdout, "PRINT-HK-11 %e %e %e %e %e\n",Tw,Tmatch,ymatch,ycrans[i],Trans[i]);
 	}
 //	dynamic_viscosity_thermalconduct(statep,Tw,&muw,&kw);	//get muw and kw	FIXME
 	EosViscTherm(&st,&muw,&kw);	//FIXME
 	tauw = muw*Urans[0]/ycrans[0];
 	rhow = rho0*Tmatch/Tw;
-        fprintf(stdout, "PRINT-HK-rhow %e %e %e\n", rho0,Tmatch,Tw);
 	utau = sqrt(tauw/rhow);
 	lv = muw/(rhow*utau);
 	qw = - kw*(Trans[0] - Tw)/ycrans[0];
-        fprintf(stdout, "PRINT-HK-1 %e %e %e %e %e %e %e %e %e\n",qw,kw,Trans[0],Tw,ycrans[0],Urans[0],muw);
 
 	int iter = 0;
 	double converged = HUGE_VAL;
@@ -3339,17 +3314,13 @@ void G_CARTESIAN::computeTBLflux(
 	    
 	    //  Auxiliary stuff
 	    tauw = muw * Urans[0] / ycrans[0];
-fprintf(stdout, "PRINT-HK-tauw %e %e %e %e\n", tauw,muw,Urans[0],ycrans[0]);
 	    utau = sqrt( tauw / rhow );
 	    lv = muw / ( rhow * utau );
-fprintf(stdout, "PRINT-HK-lv %e %e %e %e %e\n", lv,muw,rhow,utau,tauw);
 	    for (i = 0; i < NY; i++) 
 	    {
 		damping = 1.0 - exp(-ycrans[i] / ( lv * WALLMODEL_APLUS ));
 		damping = damping*damping;
 		MUTrans[i] = WALLMODEL_KAPPA * ycrans[i] * sqrt( Rrans[i] * tauw ) * damping;
-fprintf(stdout, "PRINT-HK-MUTrans %e %e %e %e %e\n", WALLMODEL_KAPPA,ycrans[i],Rrans[i],tauw,damping);
-fprintf(stdout, "PRINT-HK-damping %e %e %e %e\n", damping,ycrans[i],WALLMODEL_APLUS,lv);
 		ap[i] = 0.0;
 		qp[i] = 0.0;   //  if LHS not zero, then should set qp to LHS * dyrans[j]...
 	    }
@@ -3358,8 +3329,6 @@ fprintf(stdout, "PRINT-HK-damping %e %e %e %e\n", damping,ycrans[i],WALLMODEL_AP
 
 	    ap[0] = - kw/ycrans[0];
 	    qp[0] = - kw/ycrans[0]*Tw;
-
-fprintf(stdout, "PRINT-HK-77 %e %e %e %e %e \n",ap[0],qp[0],kw,ycrans[0],Tw);
 
 	    for (i = 1 ; i < NY ; i++) 
 	    {
@@ -3372,16 +3341,12 @@ fprintf(stdout, "PRINT-HK-77 %e %e %e %e %e \n",ap[0],qp[0],kw,ycrans[0],Tw);
 		ap[i] -= factor;
 		ae[i-1] = factor;
 		ap[i-1] -= factor;
-fprintf(stdout, "PRINT-HK-mutint %e %e %e %e\n",intfac,MUTrans[i-1],intfac,MUTrans[i]);
-fprintf(stdout, "PRINT-HK-88 %e %e %e %e %e \n",aw[i],ap[i],ae[i-1],ap[i-1],factor); 
-fprintf(stdout, "PRINT-HK-99 %e %e %e %e %e %e\n",kint,C_P,WALLMODEL_PRT,mutint,ycrans[i],ycrans[i-1]);
 		uint = ( 1.0 - intfac ) * Urans[i-1] + intfac * Urans[i];
 		factor = ( muint + mutint ) * uint * ( Urans[i] - Urans[i-1] ) / ( ycrans[i] - ycrans[i-1] );
 		qp[i] += factor;
 		qp[i-1] -= factor;
 	    }
 	    Trans[NY-1] = Tmatch;
-            fprintf(stdout, "PRINT-HK-44 %e\n",Trans[NY-1]);
 
 	    //  Solve energy equation by single TDMA sweep
 	    for (i = 1 ; i < NY-1 ; i++) 
@@ -3389,13 +3354,11 @@ fprintf(stdout, "PRINT-HK-99 %e %e %e %e %e %e\n",kint,C_P,WALLMODEL_PRT,mutint,
 		factor = aw[i] / ap[i-1];
 		ap[i] -= factor * ae[i-1];
 		qp[i] -= factor * qp[i-1];
-                fprintf(stdout, "PRINT-HK-66 %e %e %e %e %e %e %e\n",qp[i],qp[i-1],factor,ap[i],ae[i-1],ap[i-1],aw[i]);
 
 	    }
 	    for (i = NY-2 ; i >= 0 ; i--)
             {
 		Trans[i] = (qp[i] - ae[i] * Trans[i+1]) / ap[i];
-                fprintf(stdout, "PRINT-HK-55 %e %e %e %e\n",Trans[i],qp[i],ae[i],ap[i]);
             }
 
 	    if(Tmatch < Wall_Temp)
@@ -3406,7 +3369,6 @@ fprintf(stdout, "PRINT-HK-99 %e %e %e %e %e %e\n",kint,C_P,WALLMODEL_PRT,mutint,
 	    lv = muw / (rhow * utau);
 	    qw = kw * (Trans[0] - Tw) / ycrans[0];   // wall heat-flux
 
-fprintf(stdout, "PRINT-HK-33 %e %e %e %e %e\n",qw,kw,Trans[0],Tw,ycrans[0]);
 
 	    converged = fabs((tauw - tauwold) / (tauwold + MACH_EPS));
 
@@ -3419,7 +3381,6 @@ fprintf(stdout, "PRINT-HK-33 %e %e %e %e %e\n",qw,kw,Trans[0],Tw,ycrans[0]);
 	flux[1] = - tauw / Umatch * u;
 	flux[2] = - tauw / Umatch * v;
 	flux[3] = - muw * 4.0/3.0 * w/delta;
-        fprintf(stdout, "PRINT-HK-22 %e %e %e %e %e %e %e %e\n",qw,tauw,Umatch,u,v,w, muw,delta);
 
 }
 
@@ -7670,11 +7631,8 @@ void G_CARTESIAN::scatMeshGhost()
 		{
 		    index = d_index3d(i,j,n,top_gmax);
 		    array[index] = Gpdens[k][ii][index];
-//		    printf("array[%d] = %lf.\n", index, array[index]);	//debugdan	FIXME
 		}
-//		printf("debugdan - x.\n");	//debugdan	FIXME
 		scatMeshArray();
-//		printf("debugdan - xx.\n");	//debugdan	FIXME
 		for (n = 0; n <= top_gmax[2]; n++)
 		for (j = 0; j <= top_gmax[1]; j++)
 		for (i = 0; i <= top_gmax[0]; i++)
