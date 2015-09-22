@@ -2023,6 +2023,22 @@ LOCAL   void FT_InitIntfc3d(
 	COMPONENT neg_comp,pos_comp;
 	const double eps = 10.0*MACH_EPS;
 
+	PP_GRID	  *pp_grid = front->pp_grid;
+	int	   i, dim = intfc->dim;
+	int	   icoords[MAXD];
+	int	   myid = pp_mynode();
+	int        rbt[3][2];
+	find_Cartesian_coordinates(myid,pp_grid,icoords);
+	for (i = 0; i < dim; ++i)
+	{
+	    rbt[i][0] = rect_boundary_type(intfc,i,0);
+	    rbt[i][1] = rect_boundary_type(intfc,i,1);
+	    if (icoords[i] > 0)
+	        rect_boundary_type(intfc,i,0) = SUBDOMAIN_BOUNDARY;
+	    if (icoords[i] < (pp_grid->gmax[i]-1))
+	        rect_boundary_type(intfc,i,1) = SUBDOMAIN_BOUNDARY;
+	}
+	pp_clip_rect_grids(front,rbt);
 	copy_rect_grid(computational_grid(intfc),gr);
 
 	if (level_func_pack == NULL)

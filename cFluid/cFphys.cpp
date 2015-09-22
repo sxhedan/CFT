@@ -254,7 +254,7 @@ extern void read_statistics_options(
 
 	CursorAfterString(infile,"Enter a sub-grid refinement factor:");
 	fscanf(infile,"%lf",&iext->rfactor);
-	(void) printf("%lf %f\n",&iext->rfactor);
+	(void) printf("%lf\n",iext->rfactor);
 
 	CursorAfterString(infile,"Type y to get data for 1%-99% levels:");
 	fscanf(infile,"%s",string);
