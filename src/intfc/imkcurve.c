@@ -1872,6 +1872,98 @@ EXPORT double level_wave_func_random(
         return dist;
 }       /* end level_wave_func_random */
 
+EXPORT double level_linear2d_func(
+        POINTER func_params,
+        double *coords)
+{
+        LEGENDRE_POLY *wave_params = (LEGENDRE_POLY*)func_params;
+        int i;
+        double dist;
+        double *L = wave_params->L;
+        double *U = wave_params->U;
+
+        int degree = wave_params->max_degree;
+
+        double A[degree+1];
+        double pt[2][2];
+
+        A[0] = wave_params->A[0];
+        A[1] = wave_params->A[1];
+
+        //Check for where the line specified by the A coefficient vector
+        //intersects the Domain.  Need to check all 4 sides and stop once
+        //we have made two intersections, in case it intersects on a corner
+        int pts = 0;
+        if ((L[1] <= A[0]*L[0] + A[1]) && (U[1] >= A[0]*L[0] + A[1]))
+        {
+            pt[pts][0] = L[0];
+            pt[pts][1] = A[0]*L[0] + A[1];
+            pts++;
+        }
+        if ((L[1] <= A[0]*U[0] + A[1]) && (U[1] >= A[0]*U[0] + A[1]))
+        {
+            pt[pts][0] = U[0];
+            pt[pts][1] = A[0]*U[0] + A[1];
+            pts++;
+        }
+        if (pts < 2)
+        {
+            if ((L[0] <= (L[1] - A[1])/A[0]) && (U[0] >= (L[1] - A[1])/A[0]))
+            {
+                pt[pts][0] = (L[1] - A[1])/A[0];
+                pt[pts][1] = L[1];
+                pts++;
+            }
+        }
+        if (pts < 2)
+        {
+            if ((L[0] <= (U[1] - A[1])/A[0]) && (U[0] >= (U[1] - A[1])/A[0]))
+            {
+                pt[pts][0] = (U[1] - A[1])/A[0];
+                pt[pts][1] = U[1];
+                pts++;
+            }
+        }
+
+        //If you don't have two intersection pts, the line isnt in domain
+        if (pts < 2)
+        {
+            fprintf(stdout,"ERROR: interface line doesn't intersect domain\n");
+            clean_up(ERROR);
+        }
+
+        //Calculate the center point of the interface by avg x and y coords
+        double xc[2];
+        xc[0] = 0.0; xc[1] = 0.0;
+        for (i = 0; i < 2; ++i)
+        {
+            xc[0] += 0.5*pt[i][0];
+            xc[1] += 0.5*pt[i][1];
+        }
+
+        //Create vector for the interface and the coord to center of interf
+        double intvec[2];
+        double coordvec[2];
+        double tmp;
+        for (i = 0; i < 2; ++i)
+        {
+            intvec[i] = pt[1][i] - pt[0][i];
+            coordvec[i] = xc[i] - coords[i];
+        }
+
+        //Take the perpindicular vector to the interface vector
+        tmp = intvec[1];
+        intvec[1] = -1*intvec[0];
+        intvec[0] = tmp;
+
+        dist = 0.0;
+        //Dot the interface perp vector with the coord to center pt vector
+        for (i = 0; i <2; ++i)
+            dist += intvec[i]*coordvec[i];
+
+        return dist;
+}       /* end level_linear2d_func */
+
 EXPORT double level_wave_func(
         POINTER func_params,
         double *coords)

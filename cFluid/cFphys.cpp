@@ -46,6 +46,8 @@ extern void read_cFluid_params(
 	    else if (string[5] == 'B' || string[5] == 'b')
 	    	eqn_params->prob_type = ONED_BLAST;
 	}
+	else if (string[0] == 'S' || string[0] == 's')
+	    eqn_params->prob_type = SOD_OBLIQ;
 	CursorAfterString(infile,"Enter numerical scheme for interior solver:");
 	fscanf(infile,"%s",string);
 	(void) printf("%s\n",string);

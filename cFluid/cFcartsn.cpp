@@ -395,6 +395,9 @@ void G_CARTESIAN::setInitialIntfc(
 	case ONED_SSINE:
 	    initRiemannProb(level_func_pack,inname);
 	    break;
+	case SOD_OBLIQ:
+	    initSodObliqProb(level_func_pack,inname);
+	    break;
 	default:
 	    (void) printf("Problem type not implemented, code needed!\n");
 	    clean_up(ERROR);
@@ -436,6 +439,9 @@ void G_CARTESIAN::setProbParams(char *inname)
 	case ONED_SSINE:
 	    setOnedParams(inname);
 	    break;
+	case SOD_OBLIQ:
+	    setSodObliqParams(inname);
+	    break;
 	default:
 	    printf("In setProbParams(), unknown problem type!\n");
 	    clean_up(ERROR);
@@ -465,6 +471,7 @@ void G_CARTESIAN::setInitialStates()
 	case MT_FUSION:
 	    initMTFusionStates();
 	    break;
+	case SOD_OBLIQ:
 	case PROJECTILE:
 	    initProjectileStates();
 	    break;

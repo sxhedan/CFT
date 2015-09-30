@@ -33,7 +33,8 @@ enum _PROB_TYPE {
 	FLUID_CRYSTAL,
 	ONED_BLAST,
 	ONED_SSINE,
-	TWO_FLUID_VST_RM
+	TWO_FLUID_VST_RM,
+	SOD_OBLIQ
 };
 typedef enum _PROB_TYPE PROB_TYPE;
 
@@ -498,6 +499,7 @@ private:
 	void initProjectileIntfc(LEVEL_FUNC_PACK*,char*);
 	void initMTFusionIntfc(LEVEL_FUNC_PACK*,char*);
 	void initRiemannProb(LEVEL_FUNC_PACK*,char*);
+	void initSodObliqProb(LEVEL_FUNC_PACK*,char*);
 	void initRayleiTaylorStates();
 	void initRichtmyerMeshkovStates();
 	void initVSTRMStates();
@@ -508,6 +510,7 @@ private:
 	void initRiemProbStates();
 	void initBlastWaveStates();
 	void initShockSineWaveStates();
+	void setSodObliqParams(char*);
 	void setRayleiTaylorParams(char*);
 	void setRichtmyerMeshkovParams(char*);
 	void setVSTRMParams(char*);
