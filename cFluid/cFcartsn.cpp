@@ -4437,7 +4437,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
                // tau is a symmetric tensor
                momn[0][index0] += -m_dt*( (tau[0][0][index2]-tau[0][0][index1])/(2.0*top_h[0]) \
                                              + (tau[0][1][index4]-tau[0][1][index3])/(2.0*top_h[1]) \
-                                             + (tau[2][0][index6]-tau[2][0][index5])/(2.0*top_h[2]) );
+                                             + (tau[0][2][index6]-tau[0][2][index5])/(2.0*top_h[2]) );
 
                momn[1][index0] += -m_dt*( (tau[0][1][index2]-tau[0][1][index1])/(2.0*top_h[0]) \
                                              + (tau[1][1][index4]-tau[1][1][index3])/(2.0*top_h[1]) \
