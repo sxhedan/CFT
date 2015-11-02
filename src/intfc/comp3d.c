@@ -3220,7 +3220,15 @@ LOCAL void set_off_front_comp3d(
 		    jmax = min(iymax,iy+1);
 		    imin = ix;
 		    imax = min(ixmax,ix+1);
+			
+		    // This seems to cause a problem as it sets not just the adjacent
+		    // cell in the i,j,k direction but also the adjacent, adjacent as
+		    // a mix of cells in the i,j,k direction.  This can cause it to 
+		    // pass the wrong component across the front in 3D if the front
+		    // misses two diagonal cells.  Once the wrong component is passed
+		    // it propagates incorrectly from there
 
+		    /*
 		    for (k = kmin; k <= kmax; ++k)
 		    {
 		      compk = compon[k];
@@ -3241,6 +3249,17 @@ LOCAL void set_off_front_comp3d(
 		        }
 		      }
 		    }
+		    */
+
+		    // Replacing with just passing the comp to the adjacent cell in the
+		    // the i,j,k directions  -- JAM 10/27/15
+		    if (compon[iz+1][iy][ix] == NO_COMP)
+			compon[iz+1][iy][ix] = c;
+                    if (compon[iz][iy+1][ix] == NO_COMP)
+                        compon[iz][iy+1][ix] = c;
+                    if (compon[iz][iy][ix+1] == NO_COMP)
+                        compon[iz][iy][ix+1] = c;
+ 
 		    if(debugging("init_comp") && ( iz == 13 ))
 		    {
 		        printf("#izchk  %d \n", iz);
