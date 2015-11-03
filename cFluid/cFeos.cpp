@@ -116,7 +116,6 @@ extern double EosTemperature(STATE *state)
         if (eos->et!=0)
             temp = eos->et*pow(dens, Gamma(state)-1)/cv;
 
-        fprintf(stdout, "PRINT-HK-temperature %e %e %e %e %e\n", R(state),Gamma(state),dens,eos->pinf,pres,eos->et);
         return temp;
 }       /* end EosTemperature */
 
@@ -142,7 +141,6 @@ extern double EosSoundSpeedSqr(
             soundspeedsqr = Gamma(state)*EosPressure(state)/dens; //same as Gamma(state)*pres/dens NEED TO CHECK
             break;
         default:
-//	    soundspeedsqr = 0;	//debugdan	FIXME
 	    screen("ERROR in EosSoundSpeedSqr() "
 	    "Unknown equation of state\n");
 	    clean_up(ERROR);
@@ -178,7 +176,6 @@ extern double EosInternalEnergy(
             internalenergy = (pres+Gamma(state)*eos->pinf)/(Gamma(state)-1) - dens*eos->einf;
             break;
         default:
-//	    internalenergy = 0;	//debugdan	FIXME
             screen("ERROR in EosInternalEnergy() "
                    "Unknown equation of state\n");
             clean_up(ERROR);
@@ -224,7 +221,6 @@ extern double EosEnthalpyDifference(
              se = se1 - se2;
              break;
         default:
-//	     se = 0;	//debugdan	FIXME
             screen("ERROR in EosEnthalpyDifference() "
                    "Unknown equation of state\n");
             clean_up(ERROR);
@@ -304,7 +300,6 @@ LOCAL double Gamma(
                 cv += w/(mgam[i] - 1.0);
             }
             gam = 1.0 + mole_dens/cv;
-            //fprintf(stdout, "PRINT-HK In the Gamma %e %e %e %e %d\n",M[0],M[1],mgam[0],mgam[1],nc);
             break;
         default:
 	    gam = 0;
@@ -340,7 +335,6 @@ extern double R(
             for (i = 0; i < nc; ++i)
                 n += pdens[i]/M[i];
             r = eos->R/(dens/n);
-            fprintf(stdout, "PRINT-HK In the R %e %e %e %d %e %e %e\n",M[0],M[1],eos->R,nc,pdens[0],pdens[1],n);
             break;
         default:
 	    r = 0;

@@ -171,9 +171,8 @@ int main(int argc, char **argv)
 	if (debugging("trace"))
 	    printf("Passed g_cartesian.initMesh()\n");
 
-	printf("debugdan before initMesh().\n");	//debugdan	FIXME
 	g_cartesian.initMesh();
-	FT_AddMovieFrame(&front,out_name,binary);	//debugdan	FIXME
+	FT_AddMovieFrame(&front,out_name,binary);
 	if (RestartRun)
 	{
 	    readFrontStates(&front,restart_state_name);
@@ -181,7 +180,6 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-	    printf("debugdan before setInitialStates().\n");	//debugdan	FIXME
 	    g_cartesian.setInitialStates();
 	}
 	if (debugging("trace"))
@@ -189,7 +187,6 @@ int main(int argc, char **argv)
 
 	/* Propagate the front */
 
-//	printf("debugdan before gas_driver().\n");	//debugdan	FIXME
 	gas_driver(&front, g_cartesian);
 
 	//PetscFinalize();
@@ -213,13 +210,9 @@ static  void gas_driver(
 
 	    if (debugging("trace"))
 		printf("Calling initial FT_Propagate()\n");
-	    printf("debugdan - before FrontPreAdvance().\n");	//debugdan	FIXME
 	    FrontPreAdvance(front);
-	    printf("debugdan - before Propagate().\n");	//debugdan	FIXME
 	    FT_Propagate(front);
-	    printf("debugdan - before solve().\n");	//debugdan	FIXME
 	    g_cartesian.solve(front->dt);
-	    printf("debugdan - after solve().\n");	//debugdan	FIXME
 
 	    FT_SetTimeStep(front);
 	    front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
@@ -245,7 +238,6 @@ static  void gas_driver(
 //	    g_cartesian.print_intfc_extrema(out_name);
 //	}
 
-	printf("debugdan - before time loop.\n");	//debugdan	FIXME
 	if (debugging("trace")) printf("Before time loop\n");
         for (;;)
         {
@@ -261,15 +253,11 @@ static  void gas_driver(
 
 	    print_storage("Storage at start of time step","step_storage");
 	    if (debugging("trace")) printf("Begin a time step\n");
-	    printf("debugdan - before FrontPreAdvance().\n");	//debugdan	FIXME
 	    FrontPreAdvance(front);
-	    printf("debugdan - before FT_Propagate().\n");	//debugdan	FIXME
 	    FT_Propagate(front);
 
 	    if (debugging("trace")) printf("Begin calling solve()\n");
-	    printf("debugdan - before solve().\n");	//debugdan	FIXME
 	    g_cartesian.solve(front->dt);
-	    printf("debugdan - after solve().\n");	//debugdan	FIXME
 	    if (debugging("trace")) 
 	    {
 		printf("Passed solve()\n");

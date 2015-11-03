@@ -284,8 +284,8 @@ EXPORT boolean make_level_surface(
 	    first_tri(surf)->prev = head_of_tri_list(surf);
 	    reset_intfc_num_points(surf->interface);
 	    interface_reconstructed(surf->interface) = YES;
-	    *s = surf; /* return surf to the parameter */
-	    interface_reconstructed(intfc) = YES;
+//	    *s = surf; /* return surf to the parameter */	//Dan
+//	    interface_reconstructed(intfc) = YES;	//Dan
 	    intfc->modified = YES;
 	}
 	else
@@ -296,8 +296,11 @@ EXPORT boolean make_level_surface(
 
 	free_grid_crx_mem(&Eg_crx,NO);
 	free_these(3,Eg_crx.comp,blk_info.surfs,blk_info.cur_tris);
+	*s = surf;	//Dan
+	interface_reconstructed(intfc) = YES;	//Dan
 	set_current_interface(save_intfc);
-	return (surf == NULL) ? NO : YES;
+//	return (surf == NULL) ? NO : YES;
+	return YES;	//Dan
 }	/* end make_level_surface */
 
 /*******************************************************************
@@ -2012,8 +2015,8 @@ EXPORT	void assign_intersection_comp(
 /**********************************************************************
 *	This function sets components for a two component domain      *
 *	described by the rectangular grid gr, the side func < 0       *
-*	will be ft_assigned neg_comp while the side func > 0 will be     *
-*	ft_assigned pos_comp.   					      *
+*	will be ft_assigned neg_comp while the side func > 0 will be  *
+*	ft_assigned pos_comp.   				      *
 **********************************************************************/
 
 LOCAL	void assign_two_comp_domain(

@@ -46,6 +46,8 @@ extern void read_cFluid_params(
 	    else if (string[5] == 'B' || string[5] == 'b')
 	    	eqn_params->prob_type = ONED_BLAST;
 	}
+	else if (string[0] == 'S' || string[0] == 's')
+	    eqn_params->prob_type = SOD_OBLIQ;
 	CursorAfterString(infile,"Enter numerical scheme for interior solver:");
 	fscanf(infile,"%s",string);
 	(void) printf("%s\n",string);
@@ -254,7 +256,7 @@ extern void read_statistics_options(
 
 	CursorAfterString(infile,"Enter a sub-grid refinement factor:");
 	fscanf(infile,"%lf",&iext->rfactor);
-	(void) printf("%lf %f\n",&iext->rfactor);
+	(void) printf("%lf\n",iext->rfactor);
 
 	CursorAfterString(infile,"Type y to get data for 1%-99% levels:");
 	fscanf(infile,"%s",string);

@@ -355,7 +355,7 @@ typedef struct {
 
 typedef struct {
 	int   max_degree;
-	double *A;
+	double *A, *L, *U;
 } LEGENDRE_POLY;
 
 typedef struct {

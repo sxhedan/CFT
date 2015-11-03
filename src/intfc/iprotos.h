@@ -769,6 +769,7 @@ IMPORT  POINTER init_propeller_params(RECT_GRID*);
 IMPORT  double   propeller_func(POINTER,double*);
 IMPORT  double   multi_circle_func(POINTER,double*);
 IMPORT  double  level_wave_func_random(POINTER,double*);
+IMPORT  double  level_linear2d_func(POINTER,double*);
 IMPORT	double 	level_wave_func(POINTER,double*);
 IMPORT  double  level_wave_func_cylindrical(POINTER,double*);
 IMPORT  double  level_wave_func_cyl_simple(POINTER,double*);

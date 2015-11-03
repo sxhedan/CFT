@@ -11,6 +11,180 @@ static void behind_state(int,double,double*,int,STATE*,STATE*);
 static void prompt_for_rigid_body_params(int,char*,RG_PARAMS*);
 static void set_rgbody_params(RG_PARAMS,HYPER_SURF*);
 
+void G_CARTESIAN::initSodObliqProb(
+        LEVEL_FUNC_PACK *level_func_pack,
+        char *inname)
+{
+        static LEGENDRE_POLY *level_func_params;
+        EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+        FILE *infile = fopen(inname,"r");
+        int i;
+        char string[100];
+        static double L[3], U[3];
+
+        FT_ScalarMemoryAlloc((POINTER*)&level_func_params,
+                                        sizeof(LEGENDRE_POLY));
+
+        ft_assign(L, front->rect_grid->L, 3*DOUBLE);
+        ft_assign(U, front->rect_grid->U, 3*DOUBLE);
+
+        level_func_params->L = L;
+        level_func_params->U = U;
+
+        level_func_pack->neg_component = GAS_COMP1;
+        level_func_pack->pos_component = GAS_COMP2;
+
+        CursorAfterString(infile,"Enter max degree of interface polynomial:");
+        fscanf(infile,"%d",&level_func_params->max_degree);
+        (void) printf("%f\n",level_func_params->max_degree);
+
+        FT_VectorMemoryAlloc((POINTER*)&level_func_params->A,
+                        level_func_params->max_degree+1,sizeof(double));
+        CursorAfterString(infile,"Enter coefficients of interface polynomial:");
+        for (i = 0; i<=level_func_params->max_degree; i++)
+        {
+            fscanf(infile, "%lf", &level_func_params->A[i]);
+            (void) printf("%f", level_func_params->A[i]);
+        }
+        (void) printf("\n");
+
+        eqn_params->level_func_params = (POINTER)level_func_params;
+        level_func_pack->func_params = (POINTER)level_func_params;
+        level_func_pack->func = level_linear2d_func;
+        level_func_pack->wave_type = FIRST_PHYSICS_WAVE_TYPE;
+        fclose(infile);
+}       /* end initSodObliqProb */
+
+void G_CARTESIAN::setSodObliqParams(char *inname)
+{
+        int i;
+        FILE *infile = fopen(inname,"r");
+        EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+        double          pinf,einf,gamma,et,mgamma[2],M[2],R;
+        char s[100], str[256];
+
+        CursorAfterString(infile,"Type yes to have MULTI_COMP_NON_REACTIVE:");
+        fscanf(infile,"%s",s);
+        (void) printf("%s\n",s);
+        if (s[0] == 'y' || s[0] == 'Y')
+            eqn_params->multi_comp_non_reactive = YES;
+        else
+            eqn_params->multi_comp_non_reactive = NO;
+
+        CursorAfterString(infile,"Enter the number of components:");
+        fscanf(infile,"%d",&eqn_params->n_comps);
+        (void) printf("%d\n",eqn_params->n_comps);
+        (eqn_params->eos[GAS_COMP1]).n_comps = eqn_params->n_comps;
+        (eqn_params->eos[GAS_COMP2]).n_comps = eqn_params->n_comps;
+
+        (eqn_params->eos[GAS_COMP1]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 2:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP1]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP1]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP1]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP1]).eos_type != ERROR_EOSTYPE);
+
+        if ((eqn_params->eos[GAS_COMP1]).eos_type == MULTI_COMP_POLYTROPIC)
+        {
+            sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:", GAS_COMP1);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+            (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+            (eqn_params->eos[GAS_COMP1]).mgamma[0] = mgamma[0];
+            (eqn_params->eos[GAS_COMP1]).M[0] = M[0];
+            (eqn_params->eos[GAS_COMP1]).mgamma[1] = mgamma[1];
+            (eqn_params->eos[GAS_COMP1]).M[1] = M[1];
+            (eqn_params->eos[GAS_COMP1]).R = R;
+        }
+        else if ((eqn_params->eos[GAS_COMP1]).eos_type == POLYTROPIC ||
+                 (eqn_params->eos[GAS_COMP1]).eos_type == STIFFENED_POLYTROPIC)
+        {
+	    sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:",
+	    		 GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+	    (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+	    (eqn_params->eos[GAS_COMP1]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP1]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP1]).einf = einf;
+	    (eqn_params->eos[GAS_COMP1]).et = et;
+	}
+        else
+        {
+            printf("Error EOS type!\n");
+            clean_up(ERROR);
+        }
+
+        (eqn_params->eos[GAS_COMP2]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 3:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP2]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP2]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP2]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP2]).eos_type != ERROR_EOSTYPE);
+
+        if ((eqn_params->eos[GAS_COMP2]).eos_type == MULTI_COMP_POLYTROPIC)
+        {
+            sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",GAS_COMP2);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+            (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+            (eqn_params->eos[GAS_COMP2]).mgamma[0] = mgamma[0];
+            (eqn_params->eos[GAS_COMP2]).M[0] = M[0];
+            (eqn_params->eos[GAS_COMP2]).mgamma[1] = mgamma[1];
+            (eqn_params->eos[GAS_COMP2]).M[1] = M[1];
+            (eqn_params->eos[GAS_COMP2]).R = R;
+        }
+        else if ((eqn_params->eos[GAS_COMP2]).eos_type == POLYTROPIC ||
+                 (eqn_params->eos[GAS_COMP2]).eos_type == STIFFENED_POLYTROPIC)
+        {
+            sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:",
+                         GAS_COMP2);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+            (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+            (eqn_params->eos[GAS_COMP2]).gamma = gamma;
+            (eqn_params->eos[GAS_COMP2]).pinf = pinf;
+            (eqn_params->eos[GAS_COMP2]).einf = einf;
+            (eqn_params->eos[GAS_COMP2]).et = et;
+	}
+        else
+        {
+            printf("Error EOS type!\n");
+            clean_up(ERROR);
+        }
+
+        CursorAfterString(infile,"Enter rho, P, vx, vy of pos dir fluid:");
+        fscanf(infile,"%lf %lf %lf %lf",&eqn_params->rho2,&eqn_params->p2,
+                                        &eqn_params->v2[0],&eqn_params->v2[1]);
+        (void) printf("%f %f %f %f\n",eqn_params->rho2,eqn_params->p2,
+                                        eqn_params->v2[0],eqn_params->v2[1]);
+        CursorAfterString(infile,"Enter rho, P, vx, vy of neg dir fluid:");
+        fscanf(infile,"%lf %lf %lf %lf",&eqn_params->rho1,&eqn_params->p1,
+                                        &eqn_params->v1[0],&eqn_params->v1[1]);
+        (void) printf("%f %f %f %f\n",eqn_params->rho1,eqn_params->p1,
+                                        eqn_params->v1[0],eqn_params->v1[1]);
+
+        CursorAfterString(infile,"Type yes to track the interface:");
+        fscanf(infile,"%s",s);
+        (void) printf("%s\n",s);
+        if (s[0] == 'y' || s[0] == 'Y')
+            eqn_params->tracked = YES;
+        else
+            eqn_params->tracked = NO;
+
+        fclose(infile);
+}       /* end setSodObliqParams */
+
 void G_CARTESIAN::initSinePertIntfc(
 	LEVEL_FUNC_PACK *level_func_pack,
 	char *inname)
@@ -626,7 +800,6 @@ void G_CARTESIAN::setRichtmyerMeshkovParams(char *inname)
 	FILE *infile = fopen(inname,"r");
 	EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
 	char s[100], str[256];
-//	double	pinf, einf, gamma;
 	double pinf,einf,gamma,et,mgamma[2],M[2],R; 
 
         CursorAfterString(infile,"Type yes to have MULTI_COMP_NON_REACTIVE:");
@@ -730,26 +903,6 @@ void G_CARTESIAN::setRichtmyerMeshkovParams(char *inname)
 	    printf("Error EOS type!\n");
 	    clean_up(ERROR);
 	}
-
-/*
-	sprintf(str,"Enter gamma, pinf, einf of the fluid with comp %d:", 
-	             GAS_COMP1);
-	CursorAfterString(infile,str);
-	fscanf(infile,"%lf %lf %lf",&gamma,&pinf,&einf);
-	(void) printf("%f %f %f\n",gamma,pinf,einf);
-	(eqn_params->eos[GAS_COMP1]).gamma = gamma;
-	(eqn_params->eos[GAS_COMP1]).pinf = pinf;
-	(eqn_params->eos[GAS_COMP1]).einf = einf;
-	
-	sprintf(str,"Enter gamma, pinf, einf of the fluid with comp %d:", 
-		     GAS_COMP2);
-	CursorAfterString(infile,str);
-	fscanf(infile,"%lf %lf %lf",&gamma,&pinf,&einf);
-	(void) printf("%f %f %f\n",gamma,pinf,einf);
-	(eqn_params->eos[GAS_COMP2]).gamma = gamma;
-	(eqn_params->eos[GAS_COMP2]).pinf = pinf;
-	(eqn_params->eos[GAS_COMP2]).einf = einf;
-*/
 
 	CursorAfterString(infile,"Enter density of top fluid:");
 	fscanf(infile,"%lf",&eqn_params->rho2);
@@ -1129,16 +1282,13 @@ void G_CARTESIAN::initVSTRMStates()
 	double *pres = field.pres;
 	double **momn = field.momn;
 
-//	printf("debugdan-1.\n");	//debugdan	FIXME
         next_point(intfc,NULL,NULL,NULL);
-//	printf("debugdan-2.\n");	//debugdan	FIXME
         while (next_point(intfc,&p,&hse,&hs))
         {
 	    FT_GetStatesAtPoint(p,hse,hs,(POINTER*)&sl,(POINTER*)&sr);
 	    getRMState(sl,eqn_params,Coords(p),negative_component(hs));
 	    getRMState(sr,eqn_params,Coords(p),positive_component(hs));
 	}
-//	printf("debugdan-3.\n");	//debugdan	FIXME
 	FT_MakeGridIntfc(front);
 	setDomain();
 
@@ -1364,7 +1514,7 @@ static void getRMState(
 	    state->pdens[0] = 0.5*rho1 + 0.5*(0.0-rho1)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 	    state->pdens[1] = 0.5*rho2 + 0.5*(rho2-0.0)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 	}
-	state->dens = 0.5*(rho1+rho2) + 0.5*(rho1-rho2)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
+	//state->dens = 0.5*(rho1+rho2) + 0.5*(rho1-rho2)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 
 	if (debugging("rm_state"))
 	{

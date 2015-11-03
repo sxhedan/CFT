@@ -1,0 +1,62 @@
+Domain limit in 0-th dimension: 0 1
+Domain limit in 1-th dimension: 0 1
+Computational grid: 100 100 
+Lower boundary in 0-th dimension: REFLECTING_BOUNDARY
+Upper boundary in 0-th dimension: REFLECTING_BOUNDARY
+Lower boundary in 1-th dimension: REFLECTING_BOUNDARY
+Upper boundary in 1-th dimension: REFLECTING_BOUNDARY
+
+Max time: 5
+Max step: 100000
+Print interval: 1.0
+Movie frame interval: 0.2
+CFL factor: 0.8
+Redistribution interval: 10
+
+Problem type can be
+	TWO_FLUID_BUBBLE
+	TWO_FLUID_RT
+	FLUID_SOLID_CIRCLE
+Enter problem type: SOD_OBLIQ
+Numerical scheme for interior solver can be
+        TVD_1st_ORDER
+        TVD_2nd_ORDER
+        TVD_4th_ORDER
+Enter numerical scheme for interior solver: WENO_4th_ORDER
+Point propagator order can be (1,2,4)
+Enter order of point propagator: 2
+
+Enter max degree of interface polynomial: 1
+Enter coefficients of interface polynomial: 0 0.5
+
+Type yes to have MULTI_COMP_NON_REACTIVE: n
+Enter the number of components: 2
+Enter EOS type of the fluid with comp 2: P
+Enter gamma, pinf, einf, et of the fluid with comp 2: 1.4 0 0 0
+Enter EOS type of the fluid with comp 3: P
+Enter gamma, pinf, einf, et of the fluid with comp 3: 1.4 0 0 0
+Enter rho, P, vx, vy of pos dir fluid: 1.0 1.0 0.0 0.0
+Enter rho, P, vx, vy of neg dir fluid: 10.0 10.0 0.0 0.0
+Type yes to track the interface: y
+
+Type y to turn the parabolic step on: n
+
+Type y to make movie of density: y
+Type y to make movie of pressure: y
+Type y to make movie of vorticity: y
+Type y to make movie of velocity: y
+
+************Debugging options*****************
+
+Enter yes for debugging: no
+Enter the debugging string: trace
+Enter the debugging string: CLOCK
+Enter the debugging string: step_size
+Enter the debugging string: sample_velocity
+
+************Statistics options****************
+
+For the averaging of the ambient state at the interface extrema:
+Enter a sub-grid refinement factor: 2
+Type y to get data for 1%-99% levels: n 
+Type y to get data for 5%-95% levels: n

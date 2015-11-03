@@ -555,7 +555,7 @@ void cF_flowThroughBoundaryState(
 //	newst->vort += - dt/dn*f_vort;
 	newst->pres += - dt/dn*f_pres;
 	newst->dens += - dt/dn*f_dens;
-	set_state_max_speed(front,newst,p0);
+//	set_state_max_speed(front,newst,p0);
 	if (debugging("flow_through"))
 	{
 	    printf("flow through boundary state:\n");
@@ -791,14 +791,6 @@ static  void contact_point_propagate(
 	EOS_PARAMS *eos = eqn_params->eos;
 	double default_var;
 
-/*
-	int debug = 0;
-	if (fabs(Coords(oldp)[0]-0.106250)<1e-6 && fabs(Coords(oldp)[1]-0.318750)<1e-6 && fabs(Coords(oldp)[2]-70.011364)<1e-6)
-	    debug = 1;
-*/
-
-//	printf("debugdan - in contact_point_propagate(), coords = (%lf, %lf, %lf).\n",
-//		Coords(oldp)[0], Coords(oldp)[1], Coords(oldp)[2]);	//debugdan	FIXME
 	FT_GetStatesAtPoint(oldp,oldhse,oldhs,&sl,&sr);
 
         newstl = (STATE*)left_state(newp);
@@ -1188,23 +1180,6 @@ LOCAL	void sample_state_3d(
 	((STATE*)ans)->vel[1] = v[1];
 	((STATE*)ans)->vel[2] = v[2];
 
-	//debugdan	FIXME
-	if (isnan(v[0]))
-	{
-	    printf("debugdan - ERROR!\n");
-	    for(i=0; i<2; i++)
-	    for(j=0; j<2; j++)
-	    for(k=0; k<2; k++)
-	    {
-		ic[0] = icrds[0] + i;
-		ic[1] = icrds[1] + j;
-		ic[2] = icrds[2] + k;
-		index1 = d_index(ic,gmax,dim);
-		printf("Gv[%d,%d,%d,%d] = (%lf, %lf, %lf).\n",
-			ic[0], ic[1], ic[2], index1, Gv[ind][0][index1], Gv[ind][0][index1], Gv[ind][0][index1]);
-	    }
-	}
-	//debugdan	FIXME
 }
 
 #define TOL 1e-10
@@ -1345,7 +1320,7 @@ void readFrontStates(
 	    if(gas_comp(comp))
 	    	rstate->pres = EosPressure(rstate);
 	    lstate->dim = rstate->dim = dim;
-            fprintf(stdout, "In the readFrontStates %e %e\n",lstate->pres,rstate->pres);
+//            fprintf(stdout, "In the readFrontStates %e %e\n",lstate->pres,rstate->pres);
         }
 	FT_MakeGridIntfc(front);
 	fclose(infile);
