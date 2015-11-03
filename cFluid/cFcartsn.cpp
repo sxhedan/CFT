@@ -3751,7 +3751,6 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
 
         double ***tau;
         double *qt1, *qt2, *qp1, *qp2, *qp3, *qp4;
-        double dtemx, dtemy, concx, concy, conc0x, conc0y;
 
         FT_VectorMemoryAlloc((POINTER*)&qt1,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&qt2,size,sizeof(double));
@@ -3776,28 +3775,17 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
             tau[1][1][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*0.5*(s22[index0]-s11[index0]) + (2.0/2.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
 
 
-            dtemx = (temp[index2] - temp[index1])/(2.0*top_h[0]);
-            dtemy = (temp[index4] - temp[index3])/(2.0*top_h[1]);
-	    concx = (conc[index2] - conc[index1])/(2.0*top_h[0]);
-            concy = (conc[index4] - conc[index3])/(2.0*top_h[1]);
-            conc0x = (conc0[index2] - conc0[index1])/(2.0*top_h[0]);
-            conc0y = (conc0[index4] - conc0[index3])/(2.0*top_h[1]);
-
-            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
-            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
+            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*tx[index0];
+            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*ty[index0];
 	 
-	    qp1[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concx;
-            qp2[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concy;
-            qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0x;
-            qp4[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0y;
-
+	    qp1[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*cx[index0];
+            qp2[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*cy[index0];
+            qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*cx0[index0];
+            qp4[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*cy0[index0];
 
         }
 
-        double *qt, *qc0, *qc;
-	FT_VectorMemoryAlloc((POINTER*)&qt,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&qc0,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&qc,size,sizeof(double));
+        double qt, qc0, qc;
 
         for (j = imin[1]; j <= imax[1]; j++)
         for (i = imin[0]; i <= imax[0]; i++)
@@ -3809,23 +3797,23 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
             index3 = d_index2d(i,j-1,top_gmax);
             index4 = d_index2d(i,j+1,top_gmax);
 
-            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
+            qt = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
                            + (qt2[index4]-qt2[index3])/(2.0*top_h[1]);
-	    qc[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
+	    qc = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
                            + (qp2[index4]-qp2[index3])/(2.0*top_h[1]);
-            qc0[index0] = (qp3[index2]-qp3[index1])/(2.0*top_h[0])  \
+            qc0 = (qp3[index2]-qp3[index1])/(2.0*top_h[0])  \
                            + (qp4[index4]-qp4[index3])/(2.0*top_h[1]);
 		
 	    if(subgrid_con == true)
             {
-               engy[index0] += -m_dt*qt[index0];
+               engy[index0] += -m_dt*qt;
 	       
             }
 
 	    if(subgrid_md == true)
             {
-               pdens[0][index0] += -m_dt*qc0[index0];
-               pdens[1][index0] += -m_dt*qc[index0];
+               pdens[0][index0] += -m_dt*qc0;
+               pdens[1][index0] += -m_dt*qc;
             }
 
 	}
@@ -3869,10 +3857,7 @@ void G_CARTESIAN::compSGS2D(SWEEP *m_vst)
         FT_FreeThese(5, cs, ci, prt, sct, sct0);
         FT_FreeThese(6, qt1, qt2, qp1, qp2, qp3, qp4);
         FT_FreeThese(1, tau);
-        FT_FreeThese(3, qt, qc0, qc);
 
-
-         
 	 
 } //end of compSGS2D() 
 
@@ -3984,7 +3969,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 		}
 	    }
             st.engy = engy[index0];
-            //st.pres = pres[index0];
             st.momn[0] = momn[0][index0];
             st.momn[1] = momn[1][index0];
             st.momn[2] = momn[2][index0];
@@ -4081,7 +4065,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    double max_Sct = 0.0;
             double max_Sct0 = 0.0;
 
-
+	    //calculation of sums of the quantities over all test filter cells
 	    for(kkkk = kk; kkkk < kk+NB; kkkk++)
             for(jjjj = jj; jjjj < jj+NB; jjjj++)
             for(iiii = ii; iiii < ii+NB; iiii++)
@@ -4115,7 +4099,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
                 sum_s += s[index0];
                 sum_ss += s[index0]*s[index0];
                 sum_rho += dens[index0];
-
+		// for energy equation
                 sum_cp += cp[index0];
                 sum_tx += tx[index0];
                 sum_ty += ty[index0];
@@ -4128,7 +4112,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
                 sum_rho_cp_tu += dens[index0]*cp[index0]*temp[index0]*u[index0];
                 sum_rho_cp_tv += dens[index0]*cp[index0]*temp[index0]*v[index0];
 		sum_rho_cp_tw += dens[index0]*cp[index0]*temp[index0]*w[index0];
-
+		// for species equation
 		sum_cx += cx[index0];
                 sum_cy += cy[index0];
 		sum_cz += cz[index0];
@@ -4215,7 +4199,7 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             CS_nume = LA11*MA11 + L12*MA12 + LA22*MA22 + L13*MA13 + L23*MA23;
             CI_deno = MI;
             CI_nume = LI;
-            Prt_nume = LH1*MH1 + LH2*MH2 + LH3*MH3; /* Cs is omitted to make the update to the energy equation simpler */
+            Prt_nume = LH1*MH1 + LH2*MH2 + LH3*MH3; /* Cs cancels out in the equation */
             Prt_deno = MH1*MH1 + MH2*MH2 + MH3*MH3;
 	    Sct0_nume  = LC01*MC01 + LC02*MC02 + LC03*MC03;
             Sct0_deno = MC01*MC01 + MC02*MC02 + MC03*MC03;
@@ -4224,9 +4208,9 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 
             CS = CS_nume/CS_deno;
             CI = CI_nume/CI_deno;
-            Prt = Prt_nume/Prt_deno;
-	    Sct0 = Sct0_nume/Sct0_deno;
-	    Sct = Sct_nume/Sct_deno;
+            Prt = Prt_nume/Prt_deno; /* This is actually 1/Prt */
+	    Sct0 = Sct0_nume/Sct0_deno; /* This is actually 1/Sct */
+	    Sct = Sct_nume/Sct_deno; /*This form is used to simplify calculations*/
 
             if(CS < 0.0 || CS_deno < 1e-16)
                 CS = 0.0;
@@ -4308,8 +4292,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         double ***tau;
         double *qt1, *qt2, *qt3;
 	double  *qp1, *qp2, *qp3, *qp4, *qp5, *qp6;
-        double dtemx, dtemy, dtemz;
-	double concx, concy, concz, conc0x, conc0y, conc0z;
 
         FT_VectorMemoryAlloc((POINTER*)&qt1,size,sizeof(double));
         FT_VectorMemoryAlloc((POINTER*)&qt2,size,sizeof(double));
@@ -4343,35 +4325,20 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
 	    tau[1][2][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(s23[index0]);
             tau[2][2][index0] = -2.0*cs[index0]*delta2*dens[index0]*s[index0]*(2.0*s33[index0]-s11[index0]- s22[index0])/3.0 + (2.0/3.0)*ci[index0]*delta2*dens[index0]*s[index0]*s[index0];
 
-            dtemx = (temp[index2]-temp[index1])/(2.0*top_h[0]);
-            dtemy = (temp[index4]-temp[index3])/(2.0*top_h[1]);
-	    dtemy = (temp[index6]-temp[index5])/(2.0*top_h[2]);
-	
-	    concx = (conc[index2] - conc[index1])/(2.0*top_h[0]);
-            concy = (conc[index4] - conc[index3])/(2.0*top_h[1]);
-	    concz = (conc[index6] - conc[index5])/(2.0*top_h[2]);
-            conc0x = (conc0[index2] - conc0[index1])/(2.0*top_h[0]);
-            conc0y = (conc0[index4] - conc0[index3])/(2.0*top_h[1]); 
-	    conc0z = (conc[index6] - conc[index5])/(2.0*top_h[2]);
+            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*tx[index0];
+            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*ty[index0];
+	    qt3[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*tz[index0];
 
-            qt1[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemx;
-            qt2[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemy;
-	    qt3[index0] = -(dens[index0]*cp[index0]*prt[index0]*delta2*s[index0])*dtemz;
-
-	    qp1[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0x;
-            qp2[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0y;
-	    qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*conc0z;
-            qp4[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concx;
-            qp5[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concy;
-	    qp6[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*concz;
+	    qp1[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*cx0[index0];
+            qp2[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*cy0[index0];
+	    qp3[index0] = -(dens[index0]*sct0[index0]*delta2*s[index0])*cz0[index0];
+            qp4[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*cx[index0];
+            qp5[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*cy[index0];
+	    qp6[index0] = -(dens[index0]*sct[index0]*delta2*s[index0])*cz[index0];
 
         }
 
-        double *qt, *qc0, *qc;
-	FT_VectorMemoryAlloc((POINTER*)&qt,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&qc0,size,sizeof(double));
-        FT_VectorMemoryAlloc((POINTER*)&qc,size,sizeof(double));
-
+        double qt, qc0, qc;
 
 	for (k = imin[2]; k <= imax[2]; k++)
         for (j = imin[1]; j <= imax[1]; j++)
@@ -4385,33 +4352,33 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
             index4 = d_index3d(i,j+1,k,top_gmax);
 	    index5 = d_index3d(i,j,k-1,top_gmax);
 	    index6 = d_index3d(i,j,k+1,top_gmax);
-
-            qt[index0] = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
+	    // for energy equation
+            qt = (qt1[index2]-qt1[index1])/(2.0*top_h[0])  \
                            + (qt2[index4]-qt2[index3])/(2.0*top_h[1])  \
                            + (qt3[index6]-qt3[index5])/(2.0*top_h[2]);
-	
-	    qc0[index0] = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
+	    // for species equation
+	    qc0 = (qp1[index2]-qp1[index1])/(2.0*top_h[0])  \
                             + (qp2[index4]-qp2[index3])/(2.0*top_h[1])  \
                             + (qp3[index6]-qp3[index5])/(2.0*top_h[2]);
-            qc[index0] = (qp4[index2]-qp4[index1])/(2.0*top_h[0])  \
+            qc = (qp4[index2]-qp4[index1])/(2.0*top_h[0])  \
                             + (qp5[index4]-qp5[index3])/(2.0*top_h[1])  \
                             + (qp6[index6]-qp6[index5])/(2.0*top_h[2]);
 
 		
 	    if(subgrid_con == true)
             {
-               engy[index0] += -m_dt*qt[index0];
+               engy[index0] += -m_dt*qt;
             }
 
 	   if(subgrid_md == true)
             {
-               pdens[0][index0] += -m_dt*qc0[index0];
-               pdens[1][index0] += -m_dt*qc[index0];
+               pdens[0][index0] += -m_dt*qc0;
+               pdens[1][index0] += -m_dt*qc;
             }
 
 
 	}
-
+	// for momentum equation
 	double t1, t2, t3;
 	double t1r, t1l, t2r, t2l, t3r, t3l;
 		
@@ -4469,7 +4436,6 @@ void G_CARTESIAN::compSGS3D(SWEEP *m_vst)
         FT_FreeThese(4, cp, temp, conc0, conc);
         FT_FreeThese(5, cs, ci, prt, sct0, sct);
         FT_FreeThese(9, qt1, qt2, qt3, qp1, qp2, qp3, qp4, qp5, qp6);
-        FT_FreeThese(3, qt, qc0, qc);
         FT_FreeThese(1, tau); 
 
          
@@ -4705,7 +4671,6 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
 		}
 	    }
             st.engy = engy[index0];
-            //st.pres = pres[index0];
             st.momn[0] = momn[0][index0];
             st.momn[1] = momn[1][index0];
             st.momn[2] = momn[2][index0];
