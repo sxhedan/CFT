@@ -224,6 +224,7 @@ void G_CARTESIAN::setComponent(void)
             if (eqn_params->tracked && cell_center[i].comp != -1 &&
                 cell_center[i].comp != top_comp[i] && gas_comp(new_comp))
             {
+/*
                 if (!FrontNearestIntfcState(front,coords,new_comp,
                                 (POINTER)state))
                 {
@@ -233,7 +234,7 @@ void G_CARTESIAN::setComponent(void)
                                         old_comp,new_comp);
                     clean_up(ERROR);
                 }
-
+*/
                 state->dim = dim;
                 state->eos = &eqn_params->eos[new_comp];
 
