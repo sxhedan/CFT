@@ -1772,15 +1772,6 @@ void G_CARTESIAN::solve(double dt)
 	    printf("max_speed after computeAdvection(): %20.14f\n",max_speed);
 	stop_clock("computeAdvection");
 
-	//turbulence boundary layer	FIXME
-	//for now, it's only set for Kathy's simulation
-	if (eqn_params->TBL)
-	{
-	    computeTBL();	//Dan
-	}
-	else
-	    printf("TBL is not called.\n");
-
         /* parabolic step added by PRAO */
         if (eqn_params->parabolic_step == true)
         {
@@ -2949,7 +2940,9 @@ void G_CARTESIAN::copyMeshStates()
 	    FT_ParallelExchGridArrayBuffer(pres,front);
 	    FT_ParallelExchGridArrayBuffer(engy,front);
 	    FT_ParallelExchGridArrayBuffer(mom[0],front);
+	    state_reflect(0,mom[0]);	//Dan
 	    FT_ParallelExchGridArrayBuffer(vel[0],front);
+	    state_reflect(0,vel[0]);	//Dan
 	    break;
 	case 2:
 	    for (i = imin[0]; i <= imax[0]; ++i)
@@ -2974,7 +2967,9 @@ void G_CARTESIAN::copyMeshStates()
 	    for (l = 0; l < dim; ++l)
 	    {
 	    	FT_ParallelExchGridArrayBuffer(mom[l],front);
+		state_reflect(l,mom[l]);	//Dan
 	    	FT_ParallelExchGridArrayBuffer(vel[l],front);
+		state_reflect(l,vel[l]);	//Dan
 	    }
 	    break;
 	case 3:
@@ -3003,9 +2998,9 @@ void G_CARTESIAN::copyMeshStates()
 	    for (l = 0; l < dim; ++l)
 	    {
 	    	FT_ParallelExchGridArrayBuffer(mom[l],front);
-		state_reflect(l,mom[l]);	//Dan	FIXME
+		state_reflect(l,mom[l]);	//Dan
 	    	FT_ParallelExchGridArrayBuffer(vel[l],front);
-		state_reflect(l,vel[l]);	//Dan	FIXME
+		state_reflect(l,vel[l]);	//Dan
 	    }
 	    break;
 	}
@@ -5951,6 +5946,7 @@ void G_CARTESIAN::scatMeshVst(SWEEP *m_vst)
 		    array[index] = m_vst->momn[l][index];
 	    	}
 	    	scatMeshArray();
+		state_reflect(l,array);	//Dan
             	for (i = 0; i <= top_gmax[0]; i++)
             	{
                     index = d_index1d(i,top_gmax);
@@ -6026,6 +6022,7 @@ void G_CARTESIAN::scatMeshVst(SWEEP *m_vst)
 		    array[index] = m_vst->momn[l][index];
 	    	}
 	    	scatMeshArray();
+		state_reflect(l,array);	//Dan
             	for (j = 0; j <= top_gmax[1]; j++)
             	for (i = 0; i <= top_gmax[0]; i++)
             	{
@@ -6111,7 +6108,7 @@ void G_CARTESIAN::scatMeshVst(SWEEP *m_vst)
                     array[index] = m_vst->momn[l][index];
 	    	}
 	    	scatMeshArray();
-		state_reflect(l,array);	//Dan	FIXME
+		state_reflect(l,array);	//Dan
             	for (k = 0; k <= top_gmax[2]; k++)
             	for (j = 0; j <= top_gmax[1]; j++)
             	for (i = 0; i <= top_gmax[0]; i++)
@@ -7503,7 +7500,7 @@ void G_CARTESIAN::scatMeshGhost()
 	    array[index] = Gvel[k][0][index];
 	}
 	scatMeshArray();
-	state_reflect(0,array);	//Dan	FIXME
+	state_reflect(0,array);	//Dan
         for (j = 0; j <= top_gmax[1]; j++)
         for (i = 0; i <= top_gmax[0]; i++)
         {
@@ -7518,7 +7515,7 @@ void G_CARTESIAN::scatMeshGhost()
 	    array[index] = Gvel[k][1][index];
 	}
 	scatMeshArray();
-	state_reflect(1,array);	//Dan	FIXME
+	state_reflect(1,array);	//Dan
         for (j = 0; j <= top_gmax[1]; j++)
         for (i = 0; i <= top_gmax[0]; i++)
         {
@@ -7593,7 +7590,7 @@ void G_CARTESIAN::scatMeshGhost()
 	    array[index] = Gvel[k][0][index];
 	}
 	scatMeshArray();
-	state_reflect(0,array);	//Dan	FIXME
+	state_reflect(0,array);	//Dan
         for (n = 0; n <= top_gmax[2]; n++)
         for (j = 0; j <= top_gmax[1]; j++)
         for (i = 0; i <= top_gmax[0]; i++)
@@ -7610,7 +7607,7 @@ void G_CARTESIAN::scatMeshGhost()
 	    array[index] = Gvel[k][1][index];
 	}
 	scatMeshArray();
-	state_reflect(1,array);	//Dan	FIXME
+	state_reflect(1,array);	//Dan
         for (n = 0; n <= top_gmax[2]; n++)
         for (j = 0; j <= top_gmax[1]; j++)
         for (i = 0; i <= top_gmax[0]; i++)
@@ -7627,7 +7624,7 @@ void G_CARTESIAN::scatMeshGhost()
 	    array[index] = Gvel[k][2][index];
 	}
 	scatMeshArray();
-	state_reflect(2,array);	//Dan	FIXME
+	state_reflect(2,array);	//Dan
         for (n = 0; n <= top_gmax[2]; n++)
         for (j = 0; j <= top_gmax[1]; j++)
         for (i = 0; i <= top_gmax[0]; i++)
