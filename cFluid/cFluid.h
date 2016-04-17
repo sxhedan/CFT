@@ -96,14 +96,16 @@ enum _NUM_SCHEME {
         TVD_FOURTH_ORDER,
         WENO_FIRST_ORDER,
         WENO_SECOND_ORDER,
-        WENO_FOURTH_ORDER
+        WENO_FOURTH_ORDER,
+        WENO_STRANG_SPLIT //PRAO
 };
 typedef enum _NUM_SCHEME NUM_SCHEME;
 
 enum _POINT_PROP_SCHEME {
 	FIRST_ORDER		=	1,
         SECOND_ORDER,
-        FOURTH_ORDER
+        FOURTH_ORDER,
+        STRANG_SPLIT = 'S' //PRAO
 };
 typedef enum _POINT_PROP_SCHEME POINT_PROP_SCHEME;
 
@@ -471,8 +473,10 @@ private:
 
 	/* Mesh operations */
 	void solveRungeKutta(int);
+    void solveStrangSplitting(void); //PRAO: for Strang splitting
 	void addMeshFluxToVst(SWEEP*,FSWEEP,double);
 	void computeMeshFlux(SWEEP,FSWEEP*,double);
+    void computeMeshFluxStrang(SWEEP,FSWEEP*,double); //PRAO: for Strang splitting
 	void copyMeshVst(SWEEP,SWEEP*);
 	void copyFromMeshVst(SWEEP);
 	void copyToMeshVst(SWEEP*);

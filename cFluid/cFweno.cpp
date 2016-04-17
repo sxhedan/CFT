@@ -161,11 +161,11 @@ static void weno5_get_flux(
 //	maxeig[2] = maxeig[1];
 //	maxeig[3] = maxeig[1];
 
-	for(i = ghost_size; i < extend_size - ghost_size; i++)	//Dan
+	for(i = ghost_size; i < extend_size - ghost_size +1; i++)	//Dan
 	{
 	    for (j = 0; j < 5; j++)
 		maxeig[j][i] = 0;
-	    for (j = i-ghost_size; j <= i+ghost_size; j++)
+	    for (j = i-ghost_size; j < i+ghost_size; j++)
 	    {
 		a = sqrt(gamma[i] * u_old[5][j]/u_old[0][j]);
 		v = u_old[1][j]/u_old[0][j];
@@ -293,7 +293,7 @@ static void weno5_get_flux(
 	    for(j = 0; j < 5; ++j)
 	    {
                 flux[j][i] = ff[j];
-		if (isnan(f[j][i]))
+		if (isnan(flux[j][i]))
 		{
 		    (void) printf("In weno5_flux(): f[%d][%d] = %f\n",j,i,
 					f[j][i]);

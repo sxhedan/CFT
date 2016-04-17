@@ -494,28 +494,39 @@ void G_CARTESIAN::setInitialStates()
 
 void G_CARTESIAN::computeAdvection(void)
 {
-	int order;
+   int order;
+   //PRAO: if statement added for Strang-splitting
+   if (eqn_params->num_scheme==WENO_STRANG_SPLIT)
+    {
+       nrad = 3;
+       solveStrangSplitting();
+       
+    }
+
+   else
+   {
 	switch (eqn_params->num_scheme)
 	{
-	case TVD_FIRST_ORDER:
-	case WENO_FIRST_ORDER:
-	    nrad = 3;
-	    order = 1;
-	    break;
-	case TVD_SECOND_ORDER:
-	case WENO_SECOND_ORDER:
-	    nrad = 3;
-	    order = 2;
-	    break;
-	case TVD_FOURTH_ORDER:
-	case WENO_FOURTH_ORDER:
-	    nrad = 3;
-	    order = 4;
-	    break;
-	default:
-	    order = -1;
-	}
+	 case TVD_FIRST_ORDER:
+	 case WENO_FIRST_ORDER:
+	      nrad = 3;
+	      order = 1;
+	      break;
+	 case TVD_SECOND_ORDER:
+	 case WENO_SECOND_ORDER:
+	      nrad = 3;
+	      order = 2;
+	      break;
+	 case TVD_FOURTH_ORDER:
+	 case WENO_FOURTH_ORDER:
+	      nrad = 3;
+	      order = 4;
+	      break;
+	 default:
+	      order = -1;
+	 }
 	solveRungeKutta(order);
+   }
 }	/* end computeAdvection */
 
 
@@ -595,7 +606,58 @@ void G_CARTESIAN::solveRungeKutta(int order)
 	stop_clock("solveRungeKutta");
 }	/* end solveRungeKutta */
 
+void G_CARTESIAN::solveStrangSplitting(void)
+{
+    static SWEEP *st_field;
+    static FSWEEP *st_flux;
+    double delta_t;
+    int order = 1;
+
+    /* Allocate memory for Strang-splitting */
+    start_clock("soveStrangSplitting");
+    if (st_flux == NULL)
+    {
+
+        FT_VectorMemoryAlloc((POINTER*)&st_field,order,sizeof(SWEEP));
+        FT_VectorMemoryAlloc((POINTER*)&st_flux,order,sizeof(FSWEEP));
+        allocMeshVst(&st_field[0]);
+        allocMeshFlux(&st_flux[0]);
+        
+    }
+    delta_t = m_dt;
+
+    /* Compute flux and advance field */
+
+    copyToMeshVst(&st_field[0]);
+    computeMeshFluxStrang(st_field[0],&st_flux[0],delta_t);
+    copyFromMeshVst(st_field[0]);
+    stop_clock("solveStrangSplitting");
+}   /* end solveStrangSplitting */
+
 void G_CARTESIAN::computeMeshFlux(
+    SWEEP m_vst,
+    FSWEEP *m_flux,
+    double delta_t)
+{
+    int dir;
+
+    if(eqn_params->tracked)
+    {
+        get_ghost_state(m_vst, 2, 0);
+        get_ghost_state(m_vst, 3, 1);
+        scatMeshGhost();
+        solve_exp_value();
+    }
+    resetFlux(m_flux);
+    for (dir = 0; dir < dim; ++dir)
+      {
+        addFluxInDirection(dir,&m_vst,m_flux,delta_t);
+      }
+    addSourceTerm(&m_vst,m_flux,delta_t);
+}   /* end computeMeshFlux */
+
+
+void G_CARTESIAN::computeMeshFluxStrang(
 	SWEEP m_vst,
 	FSWEEP *m_flux,
 	double delta_t)
@@ -610,13 +672,51 @@ void G_CARTESIAN::computeMeshFlux(
 	    solve_exp_value();
 	}
 
-	resetFlux(m_flux);
-	for (dir = 0; dir < dim; ++dir)
-	{
-	    addFluxInDirection(dir,&m_vst,m_flux,delta_t);
-	}
+    if (dim==2) //for 2d strang splitting 
+    {
+        resetFlux(m_flux);
+        addFluxInDirection(0,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+        resetFlux(m_flux);
+        addFluxInDirection(1,&m_vst,m_flux,delta_t);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+        resetFlux(m_flux);
+        addFluxInDirection(0,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+    }
+    else
+    {
+       /* PRAO: This is the implementation of 3d strang splitting
+        for time integration in 3d. 
+                    x(del_t/2)y(del_t/2)z(del_t)y(del_t/2)x(del_t/2)
+        CFL was about 0.11 for a 3d multimode RM problem */   
+
+        resetFlux(m_flux); 
+        addFluxInDirection(0,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+        resetFlux(m_flux); 
+        addFluxInDirection(1,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+        
+        resetFlux(m_flux); 
+        addFluxInDirection(2,&m_vst,m_flux,delta_t);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+        resetFlux(m_flux);
+        addFluxInDirection(1,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+        resetFlux(m_flux); 
+        addFluxInDirection(0,&m_vst,m_flux,delta_t/2.0);
+        addMeshFluxToVst(&m_vst,*m_flux,1.0);
+
+    }
 	addSourceTerm(&m_vst,m_flux,delta_t);
-}	/* end computeMeshFlux */
+}	/* end computeMeshFluxStrang */
 
 void G_CARTESIAN::resetFlux(FSWEEP *m_flux)
 {
@@ -5889,6 +5989,7 @@ void G_CARTESIAN::numericalFlux(
 	case WENO_FIRST_ORDER:
 	case WENO_SECOND_ORDER:
 	case WENO_FOURTH_ORDER:
+    case WENO_STRANG_SPLIT:   //PRAO
 	    WENO_flux(scheme_params,sweep,fsweep,n);
 	    break;
 	default:

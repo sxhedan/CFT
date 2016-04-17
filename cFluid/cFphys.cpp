@@ -75,6 +75,9 @@ extern void read_cFluid_params(
 	case 'w':
 	    switch (string[5])
 	    {
+        case 'S':
+        eqn_params->num_scheme = WENO_STRANG_SPLIT;
+        break;
 	    case '1':
 		eqn_params->num_scheme = WENO_FIRST_ORDER;
 		break;
@@ -98,6 +101,9 @@ extern void read_cFluid_params(
 	(void) printf("%s\n",string);
 	switch (string[0])
 	{
+    case 'S':
+        eqn_params->point_prop_scheme = STRANG_SPLIT;
+        break;
 	case '1':
 	    eqn_params->point_prop_scheme = FIRST_ORDER;
 	    break;
