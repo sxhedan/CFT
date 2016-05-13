@@ -1,3 +1,9 @@
 /autom4te.cache
 /configure
+/include
+/lib
+/config.log
+/config.status
+/iMesh-defs.inc
 *.o
+Makefile
