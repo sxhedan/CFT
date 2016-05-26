@@ -42,7 +42,7 @@ G_CARTESIAN::~G_CARTESIAN()
 // include the following parts
 // 1) setup cell_center
 //---------------------------------------------------------------
-void G_CARTESIAN::initMesh(void)
+void G_CARTESIAN::initMesh(double *in_L, double *in_U, int *in_gmax, int *in_lbuf, int *in_ubuf)
 {
 	int i,j,k, index;
 	double coords[2];
@@ -54,8 +54,82 @@ void G_CARTESIAN::initMesh(void)
 	/*TMP*/
 	min_dens = 0.0001;
 	min_pres = 0.0001;
-	FT_MakeGridIntfc(front);
 	setDomain();
+
+	assert(dim == front->grid_intfc->dim);
+
+	hmin = HUGE;
+	int size = 1;
+
+	    for (i = 0; i < 3; ++i)
+	    top_gmax[i] = 0;
+
+	    for (i = 0; i < dim; ++i)
+	{
+	    lbuf[i] = in_lbuf[i];
+	    assert(lbuf[i] == front->rect_grid->lbuf[i]);
+	    ubuf[i] = in_ubuf[i];
+	    assert(ubuf[i] == front->rect_grid->ubuf[i]);
+	    top_gmax[i] = in_gmax[i];
+	    assert(top_gmax[i] == top_grid->gmax[i]);
+	    top_L[i] = in_L[i];
+	    assert(top_L[i] == top_grid->L[i]);
+	    top_U[i] = in_U[i];
+	    assert(top_U[i] == top_grid->U[i]);
+	    top_h[i] = (top_U[i] - top_L[i]) / top_gmax[i];
+	    assert(top_h[i] == top_grid->h[i]);
+
+	    if (hmin > top_h[i]) hmin = top_h[i];
+	    size *= (top_gmax[i]+1);
+	    imin[i] = (lbuf[i] == 0) ? 1 : lbuf[i];
+	    imax[i] = (ubuf[i] == 0) ? top_gmax[i] - 1 :
+			    top_gmax[i] - ubuf[i];
+	}
+
+	FT_VectorMemoryAlloc((POINTER*)&eqn_params->dens,size,
+				    sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->pdens,2,size,
+                                        sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&eqn_params->pres,size,
+				    sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&eqn_params->engy,size,
+				    sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->vel,dim,size,
+				    sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->mom,dim,size,
+				    sizeof(double));
+	//GFM
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->gnor,dim,size,
+				    sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->Gdens,2,size,
+				    sizeof(double));
+	FT_TriArrayMemoryAlloc((POINTER*)&eqn_params->Gpdens,2,2,size,
+								sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->Gpres,2,size,
+				    sizeof(double));
+	FT_TriArrayMemoryAlloc((POINTER*)&eqn_params->Gvel,2,dim,size,
+				    sizeof(double));
+
+	/* fields added by PRAO for SGS */
+	FT_TriArrayMemoryAlloc((POINTER*)&field.tau,dim,dim,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&field.qt,size,sizeof(double));
+
+	/* end  of fields added by PRAO */
+
+	FT_VectorMemoryAlloc((POINTER*)&array,size,sizeof(double));
+	if (dim == 2)
+	    FT_VectorMemoryAlloc((POINTER*)&eqn_params->vort,size,
+				    sizeof(double));
+	else if (dim == 3)
+	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->vort3d,dim,size,
+				    sizeof(double));
+	field.dens = eqn_params->dens;
+	field.pdens = eqn_params->pdens;
+	field.engy = eqn_params->engy;
+	field.pres = eqn_params->pres;
+	field.momn = eqn_params->mom;
+	field.vel = eqn_params->vel;
+
 	num_cells = 1;
 	for (i = 0; i < dim; ++i)
 	{
@@ -105,7 +179,6 @@ void G_CARTESIAN::initMesh(void)
 	}
 	
 	setComponent();
-	FT_FreeGridIntfc(front);
 }
 
 void G_CARTESIAN::setComponent_old(void)
@@ -367,8 +440,10 @@ void G_CARTESIAN::setInitialIntfc(
 	LEVEL_FUNC_PACK *level_func_pack,
 	char *inname)
 {
-	dim = front->rect_grid->dim;
-	eqn_params = (EQN_PARAMS*)front->extra1;
+	// eqn_params and dim are set in setProbParams. If this assert is
+	// false, it's because that function must be called first.
+	assert(eqn_params == (EQN_PARAMS*)front->extra1);
+	assert(dim == front->rect_grid->dim);
 	switch (eqn_params->prob_type)
 	{
 	case TWO_FLUID_RT:
@@ -405,10 +480,12 @@ void G_CARTESIAN::setInitialIntfc(
 	}
 }	/* end setInitialIntfc */
 
-void G_CARTESIAN::setProbParams(char *inname)
+void G_CARTESIAN::setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic)
 {
-	dim = front->rect_grid->dim;
-	eqn_params = (EQN_PARAMS*)front->extra1;
+	char *inname = f_basic.in_name;
+	dim = f_basic.dim;
+	eqn_params = in_eqn_params;
+	assert(eqn_params == (EQN_PARAMS*)front->extra1);
 	switch (eqn_params->prob_type)
 	{
 	case TWO_FLUID_RT:
@@ -1889,7 +1966,8 @@ void G_CARTESIAN::solve(double dt)
 
 	setAdvectionDt();
 	stop_clock("solve");
-
+	assert(step==front->step);
+	assert(time==front->time);
 }	/* end solve */
 
 
@@ -2048,92 +2126,17 @@ void G_CARTESIAN::save(char *filename)
 
 G_CARTESIAN::G_CARTESIAN(Front &front):front(&front)
 {
+    step = 0;
+    time = 0.0;
 }
 
 void G_CARTESIAN::setDomain()
 {
-	static boolean first = YES;
-	INTERFACE *grid_intfc;
-	Table *T;
-	int i,size;
+	int i;
 
-	grid_intfc = front->grid_intfc;
-	top_grid = &topological_grid(grid_intfc);
-	T = table_of_interface(grid_intfc);
-	top_comp = T->components;
-	eqn_params = (EQN_PARAMS*)front->extra1;
-	
-	if (first)
-	{
-	    first = NO;
-	    dim = grid_intfc->dim;
-
-	    hmin = HUGE;
-	    size = 1;
-	    
-            for (i = 0; i < 3; ++i)
-	    	top_gmax[i] = 0;
-
-            for (i = 0; i < dim; ++i)
-	    {
-	    	lbuf[i] = front->rect_grid->lbuf[i];
-	    	ubuf[i] = front->rect_grid->ubuf[i];
-	    	top_gmax[i] = top_grid->gmax[i];
-	    	top_L[i] = top_grid->L[i];
-	    	top_U[i] = top_grid->U[i];
-	    	top_h[i] = top_grid->h[i];
-
-                if (hmin > top_h[i]) hmin = top_h[i];
-	        size *= (top_gmax[i]+1);
-	    	imin[i] = (lbuf[i] == 0) ? 1 : lbuf[i];
-	    	imax[i] = (ubuf[i] == 0) ? top_gmax[i] - 1 : 
-				top_gmax[i] - ubuf[i];
-	    }
-
-	    FT_VectorMemoryAlloc((POINTER*)&eqn_params->dens,size,
-					sizeof(double));
-            FT_MatrixMemoryAlloc((POINTER*)&eqn_params->pdens,2,size,
-                                        sizeof(double));
-	    FT_VectorMemoryAlloc((POINTER*)&eqn_params->pres,size,
-					sizeof(double));
-	    FT_VectorMemoryAlloc((POINTER*)&eqn_params->engy,size,
-					sizeof(double));
-	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->vel,dim,size,
-					sizeof(double));
-	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->mom,dim,size,
-					sizeof(double));
-	    //GFM
-	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->gnor,dim,size,
-					sizeof(double));
-	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->Gdens,2,size,
-					sizeof(double));
-            FT_TriArrayMemoryAlloc((POINTER*)&eqn_params->Gpdens,2,2,size,
-                                        sizeof(double));
-	    FT_MatrixMemoryAlloc((POINTER*)&eqn_params->Gpres,2,size,
-					sizeof(double));
-	    FT_TriArrayMemoryAlloc((POINTER*)&eqn_params->Gvel,2,dim,size,
-					sizeof(double));
-
-            /* fields added by PRAO for SGS */
-            FT_TriArrayMemoryAlloc((POINTER*)&field.tau,dim,dim,size,sizeof(double));
-            FT_VectorMemoryAlloc((POINTER*)&field.qt,size,sizeof(double));
-            
-            /* end  of fields added by PRAO */ 
-
-	    FT_VectorMemoryAlloc((POINTER*)&array,size,sizeof(double));
-	    if (dim == 2)
-	    	FT_VectorMemoryAlloc((POINTER*)&eqn_params->vort,size,
-					sizeof(double));
-	    else if (dim == 3)
-	    	FT_MatrixMemoryAlloc((POINTER*)&eqn_params->vort3d,dim,size,
-					sizeof(double));
-	    field.dens = eqn_params->dens;
-            field.pdens = eqn_params->pdens;
-	    field.engy = eqn_params->engy;
-	    field.pres = eqn_params->pres;
-	    field.momn = eqn_params->mom;
-	    field.vel = eqn_params->vel;
-	}
+	top_grid = &topological_grid(front->grid_intfc);
+	top_comp = table_of_interface(front->grid_intfc)->components;
+	assert(eqn_params == (EQN_PARAMS*)front->extra1);
 }
 
 void G_CARTESIAN::allocMeshVst(
@@ -2239,8 +2242,9 @@ void G_CARTESIAN::printFrontInteriorStates(char *out_name)
 	double **momn = field.momn;
         double **pdens = field.pdens;
 
+	assert(step==front->step);
 	sprintf(filename,"%s/state.ts%s",out_name,
-			right_flush(front->step,7));
+			right_flush(step,7));
 	if (pp_numnodes() > 1)
             sprintf(filename,"%s-nd%s",filename,right_flush(pp_mynode(),4));
 	sprintf(filename,"%s-gas",filename);
@@ -2344,11 +2348,12 @@ void G_CARTESIAN::printOneDimStates(char *out_name)
 	double *pres = field.pres;
 	double **vel = field.vel;
 
-	sprintf(filename1,"%s/dens%s",out_name,right_flush(front->step,7));
+	assert(step==front->step);
+	sprintf(filename1,"%s/dens%s",out_name,right_flush(step,7));
 	sprintf(filename1,"%s-dat",filename1);
-	sprintf(filename2,"%s/pres%s",out_name,right_flush(front->step,7));
+	sprintf(filename2,"%s/pres%s",out_name,right_flush(step,7));
 	sprintf(filename2,"%s-dat",filename2);
-	sprintf(filename3,"%s/vel%s",out_name,right_flush(front->step,7));
+	sprintf(filename3,"%s/vel%s",out_name,right_flush(step,7));
 	sprintf(filename3,"%s-dat",filename3);
 
 	outfile = fopen(filename1,"w");
@@ -2381,7 +2386,6 @@ void G_CARTESIAN::printOneDimStates(char *out_name)
 
 void G_CARTESIAN::printInteriorVtk(char *out_name)
 {
-    	int i,j,k,index,l;
 	char filename[100];
 	FILE *outfile;
 	double *dens = field.dens;
@@ -2389,7 +2393,8 @@ void G_CARTESIAN::printInteriorVtk(char *out_name)
 	double *pres = field.pres;
 	double **momn = field.momn;
 
-	sprintf(filename,"%s/state.ts%07d", out_name, front->step);
+	assert(step == front->step);
+	sprintf(filename,"%s/state.ts%07d", out_name, step);
 	if (pp_numnodes() > 1)
 		sprintf(filename,"%s-nd%07d", filename, pp_mynode());
 	sprintf(filename,"%s.vtk",filename);
@@ -2481,7 +2486,8 @@ void G_CARTESIAN::readInteriorStates(char *restart_name)
 	m_smoothing_radius = top_h[0] < top_h[1] ? top_h[1] : top_h[0];
 	m_smoothing_radius *= 2.0;
 	
-	st_tmp.dim = eqn_params->dim;
+	assert(dim == eqn_params->dim);
+	st_tmp.dim = dim;
 
 	sprintf(fname,"%s-gas",restart_name);
 	infile = fopen(fname,"r");
@@ -2548,10 +2554,8 @@ void G_CARTESIAN::readInteriorStates(char *restart_name)
 
 void G_CARTESIAN::setAdvectionDt()
 {
-	double d = (double)dim;
 	pp_global_max(&max_speed,1);
 	if (max_speed != 0.0)
-//	    max_dt = hmin/max_speed/d;
 	    max_dt = hmin/max_speed;
 	else
 	    max_dt = 0.0;
@@ -2909,7 +2913,7 @@ void G_CARTESIAN::initMovieVariables()
 
 double G_CARTESIAN::getVorticityX(int i, int j, int k)
 {
-	int index0,index00,index01,index10,index11;
+	int index00,index01,index10,index11;
 	double v00,v01,v10,v11;
 	double dy,dz;
 	double vorticity;
@@ -2918,7 +2922,6 @@ double G_CARTESIAN::getVorticityX(int i, int j, int k)
 
 	dy = top_h[1];
 	dz = top_h[2];
-	index0 = d_index3d(i,j,k,top_gmax);
 	index00 = d_index3d(i,j-1,k,top_gmax);
 	index01 = d_index3d(i,j+1,k,top_gmax);
 	index10 = d_index3d(i,j,k-1,top_gmax);
@@ -2934,7 +2937,7 @@ double G_CARTESIAN::getVorticityX(int i, int j, int k)
 
 double G_CARTESIAN::getVorticityY(int i, int j, int k)
 {
-	int index0,index00,index01,index10,index11;
+	int index00,index01,index10,index11;
 	double v00,v01,v10,v11;
 	double dx,dz;
 	double vorticity;
@@ -2943,7 +2946,6 @@ double G_CARTESIAN::getVorticityY(int i, int j, int k)
 
 	dx = top_h[0];
 	dz = top_h[2];
-	index0 = d_index3d(i,j,k,top_gmax);
 	index00 = d_index3d(i,j,k-1,top_gmax);
 	index01 = d_index3d(i,j,k+1,top_gmax);
 	index10 = d_index3d(i-1,j,k,top_gmax);
@@ -2959,7 +2961,7 @@ double G_CARTESIAN::getVorticityY(int i, int j, int k)
 
 double G_CARTESIAN::getVorticityZ(int i, int j, int k)
 {
-	int index0,index00,index01,index10,index11;
+	int index00,index01,index10,index11;
 	double v00,v01,v10,v11;
 	double dx,dy;
 	double vorticity;
@@ -2968,7 +2970,6 @@ double G_CARTESIAN::getVorticityZ(int i, int j, int k)
 
 	dx = top_h[0];
 	dy = top_h[1];
-	index0 = d_index3d(i,j,k,top_gmax);
 	index00 = d_index3d(i-1,j,k,top_gmax);
 	index01 = d_index3d(i+1,j,k,top_gmax);
 	index10 = d_index3d(i,j-1,k,top_gmax);
@@ -2984,7 +2985,7 @@ double G_CARTESIAN::getVorticityZ(int i, int j, int k)
 
 double G_CARTESIAN::getVorticity(int i, int j)
 {
-	int index0,index00,index01,index10,index11;
+	int index00,index01,index10,index11;
 	double v00,v01,v10,v11;
 	double dx,dy;
 	double vorticity;
@@ -2993,7 +2994,6 @@ double G_CARTESIAN::getVorticity(int i, int j)
 
 	dx = top_h[0];
 	dy = top_h[1];
-	index0 = d_index2d(i,j,top_gmax);
 	index00 = d_index2d(i-1,j,top_gmax);
 	index01 = d_index2d(i+1,j,top_gmax);
 	index10 = d_index2d(i,j-1,top_gmax);
@@ -4582,7 +4582,8 @@ void G_CARTESIAN::parab2D(SWEEP *m_vst)
 	FT_VectorMemoryAlloc((POINTER*)&conc,size,sizeof(double));
 
         STATE st;
-        st.dim = eqn_params->dim;
+	assert(dim == eqn_params->dim);
+	st.dim = dim;
         EOS_PARAMS *eos = eqn_params->eos;
 	double *dens = m_vst->dens;
         double *pres = m_vst->pres;
@@ -4724,7 +4725,8 @@ void G_CARTESIAN::parab3D(SWEEP *m_vst)
 
 
         STATE st;
-        st.dim = eqn_params->dim;
+        assert(dim == eqn_params->dim);
+		st.dim = dim;
         EOS_PARAMS *eos = eqn_params->eos;
 
 	double *dens = m_vst->dens;
@@ -5458,15 +5460,11 @@ void G_CARTESIAN::sampleVelocity3d()
 	char *out_name = front-> out_name;
 	double dens;
 
-	if (front->step < sample->start_step || front->step > sample->end_step)
+	assert(step == front->step);
+	if (step < sample->start_step || step > sample->end_step)
 	    return;
-	if ((front->step - sample->start_step)%sample->step_interval)
+	if ((step - sample->start_step)%sample->step_interval)
 	    return;
-        if (step != front->step)
-        {
-            step = front->step;
-            count = 0;
-        }
         switch (sample_type[0])
         {
         case 'x':
@@ -5854,17 +5852,15 @@ void G_CARTESIAN::sampleVelocity2d()
         FILE *sfile;
         char sname[100];
         static int count = 0;
-        static int step = 0;
         static int l = -1;
         static double lambda;
 	double dens;
 
-	if (front->step < sample->start_step || front->step > sample->end_step)
+	assert(step == front->step);
+	if (step < sample->start_step || step > sample->end_step)
             return;
-        if ((front->step - sample->start_step)%sample->step_interval)
+        if ((step - sample->start_step)%sample->step_interval)
             return;
-        if (step != front->step)
-            step = front->step;
 	
         switch (sample_type[0])
         {
@@ -9509,7 +9505,7 @@ void G_CARTESIAN::initSampleVelocity(char *in_name)
 	FT_ScalarMemoryAlloc((POINTER*)&sample,sizeof(SAMPLE));
 	sample_type = sample->sample_type;
 	sample_line = sample->sample_coords;
-	dim = front->rect_grid->dim;
+	assert(dim == front->rect_grid->dim);
 
 	if (dim == 2)
 	{
@@ -9624,7 +9620,8 @@ void G_CARTESIAN::checkIntfc(char *out_name)
     if(pp_mynode() == 0)
     {
         sprintf(filename, "%s/growth_rate.dat",out_name);
-        if(front->step == 1)
+	assert(step == front->step);
+        if(step == 1)
             outfile = fopen(filename,"w");
         else
             outfile = fopen(filename,"a");
@@ -9650,11 +9647,13 @@ void G_CARTESIAN::checkIntfc(char *out_name)
 
     if(pp_mynode() == 0)
     {
-        if(front->step == 1)
+	assert(step==front->step);
+	assert(time==front->time);
+        if(step == 1)
         {
             (void) fprintf(outfile,"#time    h_max    h_min\n");
         }
-        (void) fprintf(outfile,"%.5E     ",front->time);
+        (void) fprintf(outfile,"%.5E     ",time);
         (void) fprintf(outfile,"%.5E     ",h_max);
         (void) fprintf(outfile,"%.5E     ",h_min);
         (void) fprintf(outfile,"\n");
@@ -10035,7 +10034,8 @@ double G_CARTESIAN::find_particular_fluid_cell_volume(
 	/* If the dimension of the interface is not 2 or 3, return 
 	   the initial value of ans  (0.0).
 	*/
-	if (front->rect_grid->dim == 2)
+	assert(front->rect_grid->dim == dim);
+	if (dim == 2)
 	{
 	    coords[0] += dh[0]; 
 	    comp[0] = component(previous_coords, intfc);
@@ -10057,10 +10057,7 @@ double G_CARTESIAN::find_particular_fluid_cell_volume(
 	        ans = dh[0] - intersection_length[0];
 	    /* else, return 0.0 */
 	}
-
-
-
-	else if (front->rect_grid->dim == 3)
+	else if (dim == 3)
 	{
 	    comp[0] = component(coords,intfc);
 
@@ -10378,7 +10375,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 	    /*for max_00*/
 	    sprintf(filename, "%s/intfc_extrema.max00",out_name);
 
-	    if(front->step == 0)
+	    assert(step == front->step);
+	    if(step == 0)
 	    {
 	        outfile = fopen(filename,"w");
 	        (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10387,7 +10385,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 	    else
 	        outfile = fopen(filename,"a");
 
-	    (void) fprintf(outfile,"%15.5e", front->time);
+	    assert(time==front->time);
+	    (void) fprintf(outfile,"%15.5e", time);
 	    (void) fprintf(outfile,"%15.5e", iext->h_max);
 	    (void) fprintf(outfile,"%15.5e", bst_00[1].v[dim-1]);
 	    (void) fprintf(outfile,"%15.5e", amb_bst_00[1].v[dim-1]);
@@ -10404,7 +10403,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 	    /*for min_00*/
 	    sprintf(filename, "%s/intfc_extrema.min00",out_name);
 
-	    if(front->step == 0)
+	    assert(step == front->step);
+	    if(step == 0)
 	    {
 	        outfile = fopen(filename,"w");
 	        (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10413,7 +10413,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 	    else
 	        outfile = fopen(filename,"a");
 
-	    (void) fprintf(outfile,"%15.5e", front->time);
+	    assert(time==front->time);
+	    (void) fprintf(outfile,"%15.5e", time);
 	    (void) fprintf(outfile,"%15.5e", iext->h_min);
 	    (void) fprintf(outfile,"%15.5e", bst_00[0].v[dim-1]);
 	    (void) fprintf(outfile,"%15.5e", amb_bst_00[0].v[dim-1]);
@@ -10432,7 +10433,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		/*for max_01*/
 		sprintf(filename, "%s/intfc_extrema.max01",out_name);
 
-		if(front->step == 0)
+		assert(step == front->step);
+		if(step == 0)
 		{
 		    outfile = fopen(filename,"w");
 		    (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10441,7 +10443,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		else
 		    outfile = fopen(filename,"a");
 
-		(void) fprintf(outfile,"%15.5e", front->time);
+		assert(time==front->time);
+		(void) fprintf(outfile,"%15.5e", time);
 		(void) fprintf(outfile,"%15.5e", iext->h_max_01);
 		(void) fprintf(outfile,"%15.5e", bst_01[1].v[dim-1]);
 		(void) fprintf(outfile,"%15.5e", amb_bst_01[1].v[dim-1]);
@@ -10458,7 +10461,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		/*for min_01*/
 		sprintf(filename, "%s/intfc_extrema.min01",out_name);
 
-		if(front->step == 0)
+		assert(step == front->step);
+		if(step == 0)
 		{
 		    outfile = fopen(filename,"w");
 		    (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10467,7 +10471,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		else
 		    outfile = fopen(filename,"a");
 
-		(void) fprintf(outfile,"%15.5e", front->time);
+		assert(time==front->time);
+		(void) fprintf(outfile,"%15.5e", time);
 		(void) fprintf(outfile,"%15.5e", iext->h_min_01);
 		(void) fprintf(outfile,"%15.5e", bst_01[0].v[dim-1]);
 		(void) fprintf(outfile,"%15.5e", amb_bst_01[0].v[dim-1]);
@@ -10486,7 +10491,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		/*for max_05*/
 		sprintf(filename, "%s/intfc_extrema.max05",out_name);
 
-		if(front->step == 0)
+		assert(step == front->step);
+		if(step == 0)
 		{
 		    outfile = fopen(filename,"w");
 		    (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10495,7 +10501,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		else
 		    outfile = fopen(filename,"a");
 
-		(void) fprintf(outfile,"%15.5e", front->time);
+		assert(time==front->time);
+		(void) fprintf(outfile,"%15.5e", time);
 		(void) fprintf(outfile,"%15.5e", iext->h_max_05);
 		(void) fprintf(outfile,"%15.5e", bst_05[1].v[dim-1]);
 		(void) fprintf(outfile,"%15.5e", amb_bst_05[1].v[dim-1]);
@@ -10512,7 +10519,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		/*for min_05*/
 		sprintf(filename, "%s/intfc_extrema.min05",out_name);
 
-		if(front->step == 0)
+		assert(step == front->step);
+		if(step == 0)
 		{
 		    outfile = fopen(filename,"w");
 		    (void) fprintf(outfile," %14s %14s %14s %14s %14s %14s %14s %14s %14s %14s\n",
@@ -10521,7 +10529,8 @@ void G_CARTESIAN::print_intfc_extrema(char *out_name)
 		else
 		    outfile = fopen(filename,"a");
 
-		(void) fprintf(outfile,"%15.5e", front->time);
+		assert(time==front->time);
+		(void) fprintf(outfile,"%15.5e", time);
 		(void) fprintf(outfile,"%15.5e", iext->h_min_05);
 		(void) fprintf(outfile,"%15.5e", bst_05[0].v[dim-1]);
 		(void) fprintf(outfile,"%15.5e", amb_bst_05[0].v[dim-1]);
@@ -10545,7 +10554,6 @@ void G_CARTESIAN::accumulate_state_in_layer(
 {
 	INTERFACE		*intfc = front->interf;
 	const RECT_GRID		*rgrid = front->rect_grid;
-	const int		dim = rgrid->dim;
 	const int		zdir = dim - 1;
 	const int		n_params = 2;
 

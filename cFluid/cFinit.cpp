@@ -36,7 +36,7 @@ void G_CARTESIAN::initSodObliqProb(
 
         CursorAfterString(infile,"Enter max degree of interface polynomial:");
         fscanf(infile,"%d",&level_func_params->max_degree);
-        (void) printf("%f\n",level_func_params->max_degree);
+        (void) printf("%d\n",level_func_params->max_degree);
 
         FT_VectorMemoryAlloc((POINTER*)&level_func_params->A,
                         level_func_params->max_degree+1,sizeof(double));

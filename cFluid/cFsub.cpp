@@ -1033,15 +1033,11 @@ LOCAL	void sample_state_1d(
 	int		*icrds,
 	Front		*front)
 {
-	RECT_GRID	*gr = &topological_grid(front->grid_intfc);
-	int		dim = gr->dim;
-	int		*gmax = gr->gmax;
 	EQN_PARAMS	*eqn_params = (EQN_PARAMS*)front->extra1;
 	double		***Gv = eqn_params->Gvel;
 	double		**Gd = eqn_params->Gdens;
 	double		**Gp = eqn_params->Gpres;
 	int		index1, index2;
-	int		k;
 
 	index1 = icrds[0];
 	index2 = icrds[0]+1;

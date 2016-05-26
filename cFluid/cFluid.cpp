@@ -42,7 +42,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 static void gas_driver(Front*,G_CARTESIAN&);
 static int g_cartesian_vel(POINTER,Front*,POINT*,HYPER_SURF_ELEMENT*,
                         HYPER_SURF*,double*);
-static boolean compare_with_base_data(Front *front);
 
 char *in_name,*restart_state_name,*restart_name,*out_name;
 boolean RestartRun;
@@ -66,7 +65,6 @@ int main(int argc, char **argv)
 	static LEVEL_FUNC_PACK level_func_pack;
 	static VELO_FUNC_PACK velo_func_pack;
 	static EQN_PARAMS eqn_params;
-	int i;
 
 	G_CARTESIAN	g_cartesian(front);
 
@@ -76,10 +74,6 @@ int main(int argc, char **argv)
 	FT_Init(argc,argv,&f_basic);
 	f_basic.size_of_intfc_state = sizeof(STATE);
 	
-	//Initialize the Petsc
-	//PetscInitialize(&argc,&argv,PETSC_NULL,PETSC_NULL);
-	//if (debugging("trace")) printf("Passed PetscInitialize()\n");
-
         in_name                 = f_basic.in_name;
         restart_state_name      = f_basic.restart_state_name;
         out_name                = f_basic.out_name;
@@ -99,7 +93,16 @@ int main(int argc, char **argv)
                         right_flush(pp_mynode(),4));
 	}
 
+	eqn_params.dim = f_basic.dim;
+	front.extra1 = (POINTER)&eqn_params;
 	FT_ReadSpaceDomain(in_name,&f_basic);
+	read_cFluid_params(in_name,&eqn_params);
+	if (debugging("trace")) printf("Passed read_cFluid_params()\n");
+
+	g_cartesian.setProbParams(&eqn_params, f_basic);
+	if (debugging("trace"))
+	    printf("Passed g_cartesian.setProbParams()\n");
+
 	FT_StartUp(&front,&f_basic);
 	FT_InitDebug(in_name);
 	if (debugging("sample_velocity"))
@@ -107,24 +110,11 @@ int main(int argc, char **argv)
 
 	if (debugging("trace")) printf("Passed FT_StartUp()\n");
 
-	eqn_params.dim = f_basic.dim;
-	read_cFluid_params(in_name,&eqn_params);
-
-	if (eqn_params.use_base_soln == YES)
-	{
-            for (i = 0; i < f_basic.dim; ++i)
-                eqn_params.f_basic->subdomains[i] = f_basic.subdomains[i];
-	}
-
 	read_movie_options(in_name,&eqn_params);
 	if (eqn_params.dim != 1)
 	    read_statistics_options(in_name,&eqn_params);
-	front.extra1 = (POINTER)&eqn_params;
-	if (debugging("trace")) printf("Passed read_cFluid_params()\n");
 
 	/* Initialize interface through level function */
-
-	g_cartesian.setProbParams(in_name);
 
 	if (!RestartRun)
 	{
@@ -133,8 +123,6 @@ int main(int argc, char **argv)
 	    FT_InitIntfc(&front,&level_func_pack);
 
 	    FT_PromptSetMixedTypeBoundary2d(in_name,&front);
-	    if (debugging("trace"))
-	    	printf("Passed g_cartesian.setProbParams()\n");
 	    read_dirichlet_bdry_data(in_name,&front);
 	    if (f_basic.dim < 3)
 	    	FT_ClipIntfcToSubdomain(&front);
@@ -168,11 +156,21 @@ int main(int argc, char **argv)
 	if (debugging("trace"))
 	    printf("Passed FT_InitVeloFunc()\n");
 
+	FT_MakeGridIntfc(&front);
+	g_cartesian.initMesh(
+		topological_grid(front.grid_intfc).L,
+		topological_grid(front.grid_intfc).U,
+		topological_grid(front.grid_intfc).gmax,
+		front.rect_grid->lbuf,
+		front.rect_grid->ubuf
+		);
+	FT_FreeGridIntfc(&front);
+
 	if (debugging("trace"))
 	    printf("Passed g_cartesian.initMesh()\n");
 
-	g_cartesian.initMesh();
 	FT_AddMovieFrame(&front,out_name,binary);
+
 	if (RestartRun)
 	{
 	    readFrontStates(&front,restart_state_name);
@@ -198,6 +196,7 @@ static  void gas_driver(
 	G_CARTESIAN &g_cartesian)
 {
         double CFL;
+	double dt;
 
 	Curve_redistribution_function(front) = full_redistribute;
 
@@ -215,15 +214,17 @@ static  void gas_driver(
 	    g_cartesian.solve(front->dt);
 
 	    FT_SetTimeStep(front);
-	    front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
+	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
 	    FT_SetOutputCounter(front);
         }
         else
 	    FT_SetOutputCounter(front);
 
 	FT_TimeControlFilter(front);
+	assert(g_cartesian.time == front->time);
+	assert(g_cartesian.step == front->step);
 	(void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
-                        front->time,front->step,front->dt);
+                        g_cartesian.time, g_cartesian.step, dt);
 
 	if (debugging("trace"))
 	{
@@ -257,7 +258,7 @@ static  void gas_driver(
 	    FT_Propagate(front);
 
 	    if (debugging("trace")) printf("Begin calling solve()\n");
-	    g_cartesian.solve(front->dt);
+	    g_cartesian.solve(dt);
 	    if (debugging("trace")) 
 	    {
 		printf("Passed solve()\n");
@@ -265,6 +266,10 @@ static  void gas_driver(
 	    }
 
 	    FT_AddTimeStepToCounter(front);
+	    ++g_cartesian.step;
+	    g_cartesian.time += dt;
+	    assert(g_cartesian.time==front->time);
+	    assert(g_cartesian.step==front->step);
 				
             //Next time step determined by maximum speed of previous
             //step, assuming the propagation is hyperbolic and
@@ -278,7 +283,7 @@ static  void gas_driver(
 		(void) printf("Step size from interior: %20.14f\n",
 					CFL*g_cartesian.max_dt);
 	    }
-            front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
+            dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
 	
             /* Output section */
 
@@ -286,11 +291,6 @@ static  void gas_driver(
 	    {
             	FT_Save(front,out_name);
 		g_cartesian.printFrontInteriorStates(out_name);
-		if (compare_with_base_data(front))
-		{
-		    g_cartesian.compareWithBaseData(out_name);
-		    g_cartesian.freeBaseFront();
-		}
 	    }
             if (FT_IsMovieFrameTime(front))
 	    {
@@ -330,6 +330,7 @@ static  void gas_driver(
                 break;
 	    }
 	    FT_TimeControlFilter(front);
+	    dt = front->dt;
 	    (void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
                         front->time,front->step,front->dt);
             fflush(stdout);
@@ -346,12 +347,7 @@ static int g_cartesian_vel(
 	double *vel)
 {
 	double *coords = Coords(p);
-	((G_CARTESIAN_EB*)params)->getVelocity(coords, vel);
+	((G_CARTESIAN*)params)->getVelocity(coords, vel);
 	return YES;
 }	/* end g_cartesian_vel */
 
-static boolean compare_with_base_data(Front *front)
-{
-	EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
-	return eqn_params->use_base_soln;
-}	/* end compare_with_base_data */

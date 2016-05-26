@@ -2,6 +2,9 @@
  * 		cFluid.h
  **********************************************************************/
 
+#ifndef _CFLUID_H
+#define _CFLUID_H
+
 #include <FronTier.h>
 #include <vector>
 #include <list>
@@ -16,7 +19,7 @@
 #define		gas_comp(comp)   (((comp) == GAS_COMP1 || 	\
 		comp == GAS_COMP2) ? YES : NO)
 
-enum _PROB_TYPE {
+enum PROB_TYPE {
         ERROR_TYPE = -1,
         TWO_FLUID_BUBBLE = 1,
         TWO_FLUID_RT,
@@ -36,7 +39,6 @@ enum _PROB_TYPE {
 	TWO_FLUID_VST_RM,
 	SOD_OBLIQ
 };
-typedef enum _PROB_TYPE PROB_TYPE;
 
 enum _EOS_TYPE {
         ERROR_EOSTYPE = -1,
@@ -46,7 +48,7 @@ enum _EOS_TYPE {
 };
 typedef enum _EOS_TYPE EOS_TYPE;
 
-struct _EOS_PARAMS {
+struct EOS_PARAMS {
         EOS_TYPE eos_type;
         int n_comps;
         double  mgamma[2];
@@ -59,11 +61,10 @@ struct _EOS_PARAMS {
 	double	tbl_visc;
 	double	tbl_therm;
 };
-typedef struct _EOS_PARAMS EOS_PARAMS;
 
-struct _STATE {
+struct STATE {
 	double dens;			/* density */
-        double pdens[2];         /* partial density */
+	double pdens[2];         /* partial density */
 	double engy;			/* energy density */
 	double momn[MAXD];		/* momentum deisnty */
 	double pres;			/* Pressure */
@@ -74,9 +75,8 @@ struct _STATE {
 	int dim;
 	double gamma;	//Dan
 };
-typedef struct _STATE STATE;
 
-struct _MOVIE_OPTION {
+struct MOVIE_OPTION {
         boolean plot_dens;
         boolean plot_pres;
         boolean plot_vort;
@@ -88,9 +88,8 @@ struct _MOVIE_OPTION {
 	double min_velo,max_velo;
 	double min_vort,max_vort;
 };
-typedef struct _MOVIE_OPTION MOVIE_OPTION;
 
-enum _NUM_SCHEME {
+enum NUM_SCHEME {
 	TVD_FIRST_ORDER		=	1,
         TVD_SECOND_ORDER,
         TVD_FOURTH_ORDER,
@@ -99,25 +98,22 @@ enum _NUM_SCHEME {
         WENO_FOURTH_ORDER,
         WENO_STRANG_SPLIT //PRAO
 };
-typedef enum _NUM_SCHEME NUM_SCHEME;
 
-enum _POINT_PROP_SCHEME {
+enum POINT_PROP_SCHEME {
 	FIRST_ORDER		=	1,
         SECOND_ORDER,
         FOURTH_ORDER,
         STRANG_SPLIT = 'S' //PRAO
 };
-typedef enum _POINT_PROP_SCHEME POINT_PROP_SCHEME;
 
-enum _SHOCK_PARAMETER {
+enum SHOCK_PARAMETER {
 	BEHIND_PRESSURE 	=	1,
 	BEHIND_VELOCITY,
 	SHOCK_SPEED,
 	SHOCK_MACH_NUMBER
 };
-typedef enum _SHOCK_PARAMETER SHOCK_PARAMETER;
 
-enum _RIEMANN_SOLVER_WAVE_TYPE {
+enum RIEMANN_SOLVER_WAVE_TYPE {
 	UNSET_RIEMANN_SOLVER_WAVE_TYPE = -1,
 	RAREFACTION = 1,
 	SHOCK,
@@ -126,26 +122,23 @@ enum _RIEMANN_SOLVER_WAVE_TYPE {
 	CJ_DET,
 	LAST_GAS_RIEMANN_SOLVER_WAVE_TYPE
 };
-typedef enum _RIEMANN_SOLVER_WAVE_TYPE RIEMANN_SOLVER_WAVE_TYPE;
 
-struct _Intfc_extrema{
+struct Intfc_extrema{
 	bool	do_01, do_05;
 	double	rfactor;
 	double	h_min, h_min_01, h_min_05;
 	double	h_max, h_max_01, h_max_05;
 };
-typedef struct _Intfc_extrema Intfc_extrema;
 
-struct _Big_State{
+struct Big_State{
     	int	count;		/*num of pts summed within layer*/
     	double	d;		/*density*/
 	double	v[MAXD];	/*velocity*/
 	double	p;		/*pressure*/
 	double	e;		/*energy*/
 };
-typedef struct _Big_State Big_State;
 
-typedef struct {
+struct EQN_PARAMS {
         int dim;
         PROB_TYPE prob_type;
         POINTER level_func_params;
@@ -214,24 +207,22 @@ typedef struct {
         int num_step;
         int *steps;
         F_BASIC_DATA *f_basic;
-} EQN_PARAMS;
+};
 
-struct _SCHEME_PARAMS
+struct SCHEME_PARAMS
 {
         double lambda;
         double beta;
 	double gamma, einf;
 };
-typedef struct _SCHEME_PARAMS SCHEME_PARAMS;
 
-struct _FLOW_THROUGH_PARAMS {
+struct FLOW_THROUGH_PARAMS {
         POINT *oldp;
         COMPONENT comp;
         EQN_PARAMS *eqn_params;
 };
-typedef struct _FLOW_THROUGH_PARAMS FLOW_THROUGH_PARAMS;
 
-struct _RG_PARAMS {
+struct RG_PARAMS {
         int dim;
         double  total_mass;             /* Total mass */
         double  moment_of_inertial;     /* Moment of inertial about the axis */
@@ -242,12 +233,8 @@ struct _RG_PARAMS {
         double  angular_velo;           /* Angular velocity of rotation */
         MOTION_TYPE motion_type;
 };
-typedef struct _RG_PARAMS RG_PARAMS;
 
-typedef class G_CARTESIAN G_CARTESIAN_EB;
-
-
-struct _VAR_BDRY_PARAMS {
+struct VAR_BDRY_PARAMS {
 	int dim;
         double center[MAXD];        /* Center of disk/sphere */
         double *angles_pistons;     /* Angles to the pistons' centers */
@@ -258,7 +245,6 @@ struct _VAR_BDRY_PARAMS {
         int number_pistons;         /* Number of pistons */
 	double jet_duration_time;   /* Time duration for the jet */
 };
-typedef struct _VAR_BDRY_PARAMS VAR_BDRY_PARAMS;
 
 
 /******************************************************************************
@@ -273,10 +259,6 @@ typedef struct _VAR_BDRY_PARAMS VAR_BDRY_PARAMS;
  ******************************************************************************/
 
 class SOLVER;
-class G_CARTESIAN;
-
-//typedef class G_CARTESIAN G_CARTESIAN_EB;
-//enum VISITED_TYPE {UNVISITED, VISITED, PARTIAL_VISITED, FULL_VISITED};
 
 //------------------------------------------------------
 //		MESH
@@ -296,7 +278,7 @@ public:
 	void setCoords(double*,int);
 };
 
-struct _FIELD
+struct FIELD
 {
 	double **vel;
 	double **momn;
@@ -311,7 +293,7 @@ struct _FIELD
 	double *gamma;	//Dan
 };
 
-struct _SWEEP
+struct SWEEP
 {
         double *dens;            /* density vector */
         double **pdens;            /* partial density vector */
@@ -324,7 +306,7 @@ struct _SWEEP
 	double *gamma;	//Dan
 };
 
-struct _FSWEEP
+struct FSWEEP
 {
         double *dens_flux;       /* density flux */
         double **pdens_flux; /* partial density flux */
@@ -333,13 +315,8 @@ struct _FSWEEP
 	double *gamma;	//Dan
 };
 
-typedef struct _FIELD FIELD;
-
-typedef struct _FSWEEP FSWEEP;
-
-typedef struct _SWEEP SWEEP;
-
-class G_CARTESIAN{
+class G_CARTESIAN
+{
 	Front *front;
 public:
 	//G_CARTESIAN();
@@ -348,6 +325,9 @@ public:
 	double m_dt;			// time increment
 	double max_dt;			// max_dt from cartesian
 	double hmin;			// smallest spacing
+	int step;
+	double time;
+
 	Intfc_extrema	*iext;	
 	Big_State	bst_00[2], amb_bst_00[2];
 	Big_State	bst_01[2], amb_bst_01[2];
@@ -355,15 +335,19 @@ public:
 
 	void setInitialIntfc(LEVEL_FUNC_PACK*,char*);// setup initial geometry
 	void setInitialStates(); 	// setup initial state
-	void setProbParams(char*); 	// setup initial state
-	void initMesh(void);		// setup the cartesian grid
+	void setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic);
+	// setup the cartesian grid
+	void initMesh(
+		double *in_L,
+		double *in_U,
+		int *in_gmax,
+		int *in_lbuf,
+		int *in_ubuf);
 	void readInteriorStates(char*);
 	void printFrontInteriorStates(char*);
 	void initMovieVariables();
 	void getVelocity(double*,double*);
 	void initSampleVelocity(char *in_name);
-	void compareWithBaseData(char *out_name);
-	void freeBaseFront();
 	void printOneDimStates(char*);
 	void printInteriorVtk(char*);
 	void checkIntfc(char*);
@@ -381,7 +365,7 @@ public:
 	void normalize_state_totals(Big_State*);
 
 	// main step function
-	void solve(double dt);		
+	void solve(double dt);
 
 	// constructor
 	~G_CARTESIAN();
@@ -393,8 +377,6 @@ private:
 	COMPONENT *top_comp;
 	EQN_PARAMS *eqn_params;
 	FIELD field;
-	FIELD *base_field;
-	Front *base_front;
 
 	int top_gmax[MAXD];
 	int lbuf[MAXD],ubuf[MAXD];
@@ -410,7 +392,7 @@ private:
 	// member data: mesh storage
 	std::vector<L_RECTANGLE> 	cell_center;
 
-	// member data: 
+	// member data:
 	int m_comp[2];
 	double m_mu[2];
 	double m_dens[2];		// two component at most
@@ -695,3 +677,4 @@ private:
         int imin,jmin,kmin;
         int imax,jmax,kmax;
 };
+#endif // _CFLUID_H
