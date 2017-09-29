@@ -1,11 +1,11 @@
 /************************************************************************************
 FronTier is a set of libraries that implements differnt types of Front Traking algorithms.
-Front Tracking is a numerical method for the solution of partial differential equations 
-whose solutions have discontinuities.  
+Front Tracking is a numerical method for the solution of partial differential equations
+whose solutions have discontinuities.
 
 
-Copyright (C) 1999 by The University at Stony Brook. 
- 
+Copyright (C) 1999 by The University at Stony Brook.
+
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *
 */
 
-
+// Meniscus was configured in two ways, as VERSIONONE, a simple one, and VERSIONTWO, an improved one on top of VERSIONONE.
+// Only turn on one version at a time.
+// VERSIONTWO will be used eventually. VERSIONONE will be dropped.
+// Another way to clean up this section is to simply delete the rest versions and keep VERSIONTWO.
+// VERSIONTWO has more complicated geometry
+#define VERSIONONE NO
+#define VERSIONTWO NO
+#define VERSIONTHREE YES
 #define DEBUG_STRING "i_make_curve"
 
 #include <intfc/int.h>
@@ -91,6 +98,117 @@ LOCAL	POINTER init_test_disk_params(RECT_GRID*);
 
 LOCAL   double line_func(POINTER,double*);
 
+//for RSRV case
+LOCAL   double adjust_for_z_grid_spacing(double,double,double);
+
+//for Meniscus Linear Profile
+LOCAL   double dist_line_meniscus(double,double,double,double);
+LOCAL   double dist_line_meniscus2Dlike(double,double,double);
+//VERSION ONE
+LOCAL   boolean areaOne(double,double,double);
+LOCAL   boolean areaTwo(double,double,double);
+//VERSION TWO
+LOCAL   boolean areaSquare(double,double,double);
+LOCAL   boolean areaLeft(double,double,double);
+LOCAL   boolean areaRight(double,double,double);
+
+//meniscus linear profile function
+// Three points
+// where alpha is contact angle
+// where m is meniscus
+// where b is -meniscus/tan(alpha)
+
+
+// VERSIONONE
+LOCAL  double dist_line_meniscus(
+            double angle,
+            double meniscus,
+            double x,
+            double y)
+{
+     angle = angle * 1.0 / 180.0 * PI;
+     double tmp = meniscus - y;
+     double anotherangle = PI * 1.0 / 2.0 - angle;
+     if (anotherangle < 0.0)
+     {
+         printf("contact angle larger than PI/2 not support yet!\n");
+         fflush(stdout);
+         clean_up(ERROR);
+     }
+     double height = tan(anotherangle) * tmp;
+     return height;
+}
+
+LOCAL boolean areaOne(double x, double y, double meniscus)
+{
+
+    if (y >= 0.0 && y <= meniscus)
+    {
+        if ((x >= 0.0 && x <= meniscus) && y >= x)
+            return NO;
+        return YES;
+    }
+    else
+        return NO;
+}
+
+LOCAL boolean areaTwo(double x, double y, double meniscus)
+{
+    if (x >= 0.0 && x <= meniscus)
+    {
+        if ((y >= 0.0 && y <= meniscus) && y < x)
+            return NO;
+        return YES;
+    }
+    else
+        return NO;
+}
+//VERSION TWO
+LOCAL boolean areaSquare(double x, double y, double meniscus)
+{
+    //if ((x >= 0.0) && (y >= 0.0) && (x <= meniscus) && (y <= meniscus))
+    if (x >= 0.0 && y >= 0.0)
+    {
+        if (x <= meniscus && y <= meniscus)
+            return YES;
+        else
+            return NO;
+    }
+    return NO;
+}
+LOCAL boolean areaLeft(double x, double y, double meniscus)
+{
+    //if ((x > meniscus) && (y >= 0.0 && y <= meniscus))
+    if (x > meniscus && y >= 0.0 && y <= meniscus)
+        return YES;
+    return NO;
+}
+
+LOCAL boolean areaRight(double x, double y, double meniscus)
+{
+    //if ((y > meniscus) && (x >= 0.0 && x <= meniscus))
+    if (y > meniscus && x >= 0.0 && x <= meniscus)
+        return YES;
+    return NO;
+}
+//VERSION THREE
+LOCAL  double dist_line_meniscus2Dlike(
+            double angle,
+            double meniscus,
+            double x)
+{
+     angle = angle * 1.0 / 180.0 * PI;
+     double tmp = meniscus - x;
+     double anotherangle = PI * 1.0 / 2.0 - angle;
+     if (anotherangle < 0.0)
+     {
+         printf("contact angle larger than PI/2 not support yet!\n");
+         fflush(stdout);
+         clean_up(ERROR);
+     }
+     double height = tan(anotherangle) * tmp;
+     return height;
+}
 #define		MAX_NUM_SEGMENTS		100
 
 
@@ -260,18 +378,18 @@ LOCAL	boolean increment_theta(
 }		/*end increment_theta*/
 
 EXPORT double multi_sine_mode_func(
-	POINTER func_params, 
+	POINTER func_params,
         double *coords)
 {
 	FOURIER_POLY *sine_params = (FOURIER_POLY*)func_params;
 	double z0,dist;
-	double *nu,A,phase;	
+	double *nu,A,phase;
 	double *L = sine_params->L;
 	double *U = sine_params->U;
 	int i,j;
 	int dim = sine_params->dim;
 
-	
+
 	z0 = sine_params->z0;
 	for (i = 0; i < sine_params->num_modes; ++i)
 	{
@@ -492,7 +610,7 @@ LOCAL	void assign_two_comp_domain2d(
 		if (comp[i][j] != NO_COMP) continue;
 		if ((*func)(func_params,coords) > 0)
 		    comp[i][j] = left_comp;
-		else 
+		else
 		    comp[i][j] = right_comp;
 	    }
 	}
@@ -978,9 +1096,9 @@ EXPORT 	CURVE *prompt_make_elliptic_curve(
 	screen("Enter the radii of the ellipse: ");
 	Scanf("%f %f\n",&rad[0],&rad[1]);
 
-	ellip.closed = YES;	
+	ellip.closed = YES;
 	ellip.nor_orient = POSITIVE_ORIENTATION;
-	ellip.dim = 2;		
+	ellip.dim = 2;
 	ellip.gr = &topological_grid(intfc);
 	ellip.fpoly = NULL;
 	ellip.lpoly = NULL;
@@ -1187,7 +1305,7 @@ EXPORT  POINTER init_propeller_params(RECT_GRID *gr)
         Scanf("%f \n",&pparams.r[1]);
         return (POINTER)&pparams;
 }
-	
+
 LOCAL	POINTER init_multi_circle_params(RECT_GRID *gr)
 {
 	static MC_PARAMS mc_params;
@@ -1247,11 +1365,11 @@ LOCAL	POINTER init_test_disk_params(RECT_GRID *gr)
 	return (POINTER)&td_params;
 }	/* end init_test_disk_params */
 
-/*	Level functions for curves 
+/*	Level functions for curves
 */
 
 LOCAL double line_func(
-	POINTER func_params, 
+	POINTER func_params,
         double *coords)
 {
 	LINE_PARAMS *lparams = (LINE_PARAMS*)func_params;
@@ -1265,7 +1383,7 @@ LOCAL double line_func(
 }	/* end line_func */
 
 EXPORT double multi_circle_func(
-	POINTER func_params, 
+	POINTER func_params,
         double *coords)
 {
 	MC_PARAMS *mc_params = (MC_PARAMS*)func_params;
@@ -1283,7 +1401,7 @@ EXPORT double multi_circle_func(
 	    for (j = 0; j < dim; ++j)
 		dist += sqr(coords[j] - cen[i][j]);
 	    dist = sqrt(dist);
-	    if (dist - rad[i] < dmin) 
+	    if (dist - rad[i] < dmin)
 	    {
 	    	dmin = dist - rad[i];
 		imin = i;
@@ -1297,7 +1415,7 @@ EXPORT double multi_circle_func(
 }	/* end multi_circle_func */
 
 EXPORT double ellipse_func(
-	POINTER func_params, 
+	POINTER func_params,
         double *coords)
 {
 	ELLIP2D_PARAMS *eparams = (ELLIP2D_PARAMS*)func_params;
@@ -1319,12 +1437,12 @@ EXPORT double ellipse_tilt_func(
         double phi;
 
         phi = etparams->theta*PI/180.0;
-        tcoords[0] = cos(-phi)*(coords[0]-etparams->x0) - 
+        tcoords[0] = cos(-phi)*(coords[0]-etparams->x0) -
 			sin(-phi)*(coords[1]-etparams->y0) + etparams->x0;
-        tcoords[1] = sin(-phi)*(coords[0]-etparams->x0) + 
+        tcoords[1] = sin(-phi)*(coords[0]-etparams->x0) +
 			cos(-phi)*(coords[1]-etparams->y0) + etparams->y0;
 
-        dist = sqr(tcoords[0] - etparams->x0)/sqr(etparams->a) + sqr(tcoords[1] - 
+        dist = sqr(tcoords[0] - etparams->x0)/sqr(etparams->a) + sqr(tcoords[1] -
 			etparams->y0)/sqr(etparams->b) - 1.0;
         return dist;
 }       /* end ellipse_tilt_func JD */
@@ -1377,13 +1495,13 @@ EXPORT double rectangle_func(
         x[2] = x[0] + rparams->a;       y[2] = y[0] + rparams->b;
         x[3] = x[0];            y[3] = y[0] + rparams->b;
 
-        det0 = x[1]*coords[1] - y[1]*coords[0] - x[0]*coords[1] + 
+        det0 = x[1]*coords[1] - y[1]*coords[0] - x[0]*coords[1] +
 				y[0]*coords[0] + x[0]*y[1] - x[1]*y[0];
-        det1 = x[2]*coords[1] - y[2]*coords[0] - x[1]*coords[1] + 
+        det1 = x[2]*coords[1] - y[2]*coords[0] - x[1]*coords[1] +
 				y[1]*coords[0] + x[1]*y[2] - x[2]*y[1];
-        det2 = x[3]*coords[1] - y[3]*coords[0] - x[2]*coords[1] + 
+        det2 = x[3]*coords[1] - y[3]*coords[0] - x[2]*coords[1] +
 				y[2]*coords[0] + x[2]*y[3] - x[3]*y[2];
-        det3 = x[0]*coords[1] - y[0]*coords[0] - x[3]*coords[1] + 
+        det3 = x[0]*coords[1] - y[0]*coords[0] - x[3]*coords[1] +
 				y[3]*coords[0] + x[3]*y[0] - x[0]*y[3];
 
 	if (det0 ==0.0)
@@ -1513,7 +1631,7 @@ EXPORT double taegeuk_func(
         x1 = tgparams->x1;
         x2 = tgparams->x2;
 	x3 = tgparams->x3;
-	x4 = tgparams->x4;	
+	x4 = tgparams->x4;
         y  = tgparams->y;
         r0 = tgparams->r0;
         r1 = tgparams->r1;
@@ -1540,7 +1658,7 @@ EXPORT double taegeuk_func(
 	     return dist2;
 	     if(dist3<=0)
 	     return -dist3;
-	     else return dist3;             
+	     else return dist3;
         }
 }       /*taegeuk_func by JD Kim*/
 
@@ -1588,15 +1706,15 @@ EXPORT double propeller_func(
 	double tcoords[2];
 	int n;
 	x[0] = pparams->x[0]; y[0] = pparams->y[0];
-	NofW = pparams->NofW;  
+	NofW = pparams->NofW;
 	r[0] = pparams->r[0]; r[1] = pparams->r[1];
 
 	x[1] = x[0]+r[0]*cos(2.0*PI/NofW);
 	x[2] = x[0]+0.5*(r[0]+r[1]);
 	y[1] = y[2] = y[0];
 
-	a[0] = r[1]-r[0]*cos(2.0*PI/NofW); 
-	a[1] = 0.5*(r[1]-r[0]);  
+	a[0] = r[1]-r[0]*cos(2.0*PI/NofW);
+	a[1] = 0.5*(r[1]-r[0]);
 	b[0] = r[0]*sin(2.0*PI/NofW);
 	b[1] = 1.5/NofW*b[0]; 	/*This comes from experiment but  */
 				/*still have restriction */
@@ -1612,7 +1730,7 @@ EXPORT double propeller_func(
             else
                 phi = PI + phi;
         }
-        else if (rcrds[1] < 0.0) 
+        else if (rcrds[1] < 0.0)
             phi = 2.0*PI - phi;
         if (R == 0.0) phi = 0.0;
 
@@ -1630,7 +1748,7 @@ EXPORT double propeller_func(
 }       /*propeller_func by JD Kim*/
 
 EXPORT double slotted_disk_func(
-	POINTER func_params, 
+	POINTER func_params,
         double *coords)
 {
 	TDISK_PARAMS *td_params = (TDISK_PARAMS*)func_params;
@@ -1640,7 +1758,7 @@ EXPORT double slotted_disk_func(
 	xl = td_params->x0 - td_params->w/2.0;
 	xr = td_params->x0 + td_params->w/2.0;
 	yh = td_params->y0 + td_params->r - td_params->h;
-	dist1 = sqrt(sqr(coords[0] - td_params->x0) + 
+	dist1 = sqrt(sqr(coords[0] - td_params->x0) +
                 sqr(coords[1] - td_params->y0)) - td_params->r;
 	dist2 = (coords[0] < td_params->x0) ? coords[0] - xl :
 		xr - coords[0];
@@ -1692,13 +1810,369 @@ EXPORT double level_wave_func_cyl_sphere(
         int iii, jjj, n, m[2], k[3];
         unsigned short int xsubi_a[3], xsubi_p[3];
 
-        dist = 0.15*0.15 - 
-	    (coords[2]*sin(coords[0]) - 0.8957)*(coords[2]*sin(coords[0]) - 0.8957) 
+        dist = 0.15*0.15 -
+	    (coords[2]*sin(coords[0]) - 0.8957)*(coords[2]*sin(coords[0]) - 0.8957)
 	  - (coords[2]*cos(coords[0]) - 2.7582)*(coords[2]*cos(coords[0]) - 2.7582)
 	  - (coords[1] - 0.314)*(coords[1] - 0.314);
         return dist;
 }
 
+// TODO && FIXME: No Fourier Node, No Bubble.
+EXPORT double level_wave_func_Meniscus(
+        POINTER func_params,
+        double *coords)
+
+{
+        //RANDOM_PARAMS_VD *rand_params = (RANDOM_PARAMS_VD*)func_params;
+        //RECT_GRID *gr = rand_params->gr;
+        //FOURIER_POLY *wave_params = rand_params->pert;
+
+        FOURIER_POLY *wave_params = (FOURIER_POLY*)func_params;
+        double arg,z,t,sigma,dist;
+        int i,j,num_modes,dim;
+        double *L = wave_params->L;
+        double *U = wave_params->U;
+        int min_n = wave_params->min_n;
+        int max_n = wave_params->max_n;
+        double A_sd = wave_params->A_sd;
+        double av_phase = wave_params->av_phase;
+        double P_sd = wave_params->P_sd;
+        double wv_num[1000][1000], A[1000];
+        double phase[1000];
+        double nu;
+        double angle = wave_params->contact_angle; // Contact Angle
+        double meniscus = wave_params->Meniscus; // position of Meniscus
+        int iii, jjj, n, m;
+        unsigned short int xsubi_a[3], xsubi_p[3];
+        double height1 = meniscus * 1.0 / tan(angle*1.0/180.0*PI);
+        double wv_len = wave_params->wv_len; // This is the most unstable wavelength.
+        double wave_len[2];// single mode wave_len for X and Y direction
+        double k_m, k_min, k_max, k_x, k_y;
+        int    min_m, max_m;
+        double x = coords[0];
+        double y = coords[1];
+        //printf("wv_len = %f in function %s\n", wv_len, __func__);
+
+        dim = wave_params->dim;
+        z = wave_params->z0;
+
+        // if introduced here, perturbed boundary condition which makes adjustment of coordinates will produce errors on interface.
+/*
+        for (i=0; i<dim-1; ++i)
+        {
+            if (wave_params->pert_bdry_type[i] == PERIODIC)
+            {
+
+                while (coords[i] < L[i])
+                    coords[i] += (U[i] - L[i]);
+                while (coords[i] > U[i])
+                    coords[i] -= (U[i] - L[i]);
+            }
+            else if (wave_params->pert_bdry_type[i] == SYMMETRIC)
+            {
+                if (coords[i] < L[i])
+                    coords[i] = 2.0*L[i] - coords[i];
+                if (coords[i] > U[i])
+                    coords[i] = 2.0*U[i] - coords[i];
+            }
+            else
+            {
+                (void) printf("pert->pert_bdry_type[%d] == UNMODIFIED\n",i);
+                fflush(stdout);
+                clean_up(ERROR);
+            }
+        }
+*/
+
+        // FOCUS ON EDGE AND CORNER EFFECTS. NO FOURIER MODES. Smeeton Youngs' 105 Experiment.
+//Comment Start NO FOURIER MODE
+if (min_n != 0 && max_n != 0)
+{
+        // This is a new perturbation theory for SY105, 99, 103, 104 and114:
+        // Since we're using reflective boundary condition on X and Y direction, which makes level set function inherits its symmetry property, aka symmetry boundary condition
+        // Fourier Series is cosine based only. = \sum_{m,n>0} A_{mn} cos(m k_x x) cos(n k_y y)
+        // wavelength goes from 0.5*lambda_m to 1.5*lambda_m, where lambda_m is the most unstable wavelength from previous context.
+        // lambda_{min} = 0.5*lambda_m; lambda_{max} = 1.5*lambda_{m}.
+        // Using relationship k = 2*PI/lambda, where k is wavenumber and lambda is wavelength, we could define corresponding term k_m = 2*PI/lambda_m.
+        // So, are k_{min} = k_m*lambda_m/lambda_{max} = 2/3*k_m; k_{max} = k_m*lambda_m/lambda_{min} = 2*k_m.
+        // k_{x,y} = 2*PI/L_{x,y}, where L_{x,y} are the width of the tank. this is the smallest wavenumber
+        // no phase information here. phase = 0
+        if (max_n == 1 && min_n == 1)
+        {
+            wave_len[0] = 2.0 * (U[0]-L[0]);
+            wave_len[1] = 2.0 * (U[1]-L[1]);
+            wv_num[0][0] = 2.0*PI/wave_len[0];
+            wv_num[0][1] = 2.0*PI/wave_len[1];
+            A[0] = wave_params->A[0];// single mode: amplitude of the wave is a multiple of mesh block, like 1, 2 or 3. Currently, it took a dummy value.
+            z += A[0]*cos(wv_num[0][0]*(x-L[0]));
+        }
+        else
+        {
+        k_m = 2.0*PI/wv_len;
+        k_min = 2.0/3*k_m;
+        k_max = 2.0*k_m;
+        k_x = 2.0*PI/(U[0]-L[0]); // along X direction
+        k_y = 2.0*PI/(U[1]-L[1]); // along Y direction
+        //min_m = (int) k_min/k_x;
+        //max_m = (int) k_max/k_x;
+        P_sd = radians(P_sd);
+        //xsubi_a[0] = 5123;      xsubi_a[1] = 234; xsubi_a[2] = 1979;
+        xsubi_a[0] = 82;      xsubi_a[1] = 1772; xsubi_a[2] = 813;
+        //xsubi_p[0] = 4857;      xsubi_p[1] = 123; xsubi_p[2] = 11001;
+        xsubi_p[0] = 6362;      xsubi_p[1] = 88; xsubi_p[2] = 183;
+
+        iii = 0;
+
+        for (m = min_m; m <= max_m; ++m)
+        {
+            //fprintf(stdout, "random_gaussian %e\n", random_gaussian(0.0,A_sd,xsubi_a));
+            //fprintf(stdout, "A%d %e\n", iii,A[iii]);
+            A[iii] = random_gaussian(0.0,A_sd,xsubi_a);
+            //(void) printf("\tAmplitude for mode %d::%g\n",iii,A[iii]);
+            //(void) printf("\tPhase for mode %d::%g\n",
+                //          iii,degrees(phase[iii]));
+
+            wv_num[iii][0] = m*k_x;
+            z += A[iii]*cos(wv_num[iii][0]*x);
+        }
+
+        }
+
+}
+//Comment End NO FOURIER MODE
+        dist = coords[dim-1] - z;
+        // TODO && FIXME: copy 3D meniscus back here.
+        if (dim == 2)
+        {
+            return dist;
+        }
+        else if (dim == 3)
+        {
+            // This is the switch for Contact Angle and Meniscus
+            if (angle == 90 || meniscus == 0.0)
+            {
+                return dist;
+            }
+            else if (VERSIONONE)
+            {
+                if (areaOne(x, y, meniscus))
+                {
+                    dist = dist - dist_line_meniscus(angle, meniscus, x, y);
+                    return dist;
+                }
+                else if (areaTwo(x, y, meniscus))
+                {
+                    dist = dist - dist_line_meniscus(angle, meniscus, y, x);
+                    return dist;
+                }
+                else
+                    return dist;
+            }
+            else if (VERSIONTWO)
+            {
+                if (areaSquare(x, y, meniscus))
+                {
+                    // replace this area with a plane function, a much more stable and efficient version
+                    // a * x + b * y + c * z + d = 0
+                    // Proof for the existing plane is trivial
+                    // Here annotation: m is the measure of meniscus and h1 is height1
+                    // coordinates: A(m, 0, h1), B(0, m, h1), C(m, m, 0), D(0, 0, 2*h1)
+                    // Picked 3 points out of 4: A, B and D
+                    // choose coefficients: a = 1, b = 1, c = m/h1, d = -2m
+                    // With all information the coordinate of z direction gives 2*h1 - h1/m * x - h1/m * y
+                    double deltah = 2 * height1 - height1/meniscus * (x + y);
+                    return dist = dist - deltah;
+                }
+                else if (areaLeft(x, y, meniscus))
+                {
+                     double deltah = height1 * (1.0 * meniscus - y) / (1.0 * meniscus);
+                     return dist = dist - deltah;
+                }
+                else if (areaRight(x, y, meniscus))
+                {
+                     double deltah = height1 * (1.0 * meniscus - x) / (1.0 * meniscus);
+                     return dist = dist - deltah;
+                }
+                else
+                    return dist;
+            }
+            else if (VERSIONTHREE)
+            {
+                // This version of meniscus is for test ONLY. Specially for input file in-SY3dx, in which we consider a 2D like simulation.
+                if (x <= meniscus)
+                {
+                    dist = dist - dist_line_meniscus2Dlike(angle, meniscus, x);
+                    return dist;
+                }
+                else
+                {
+                    return dist;
+                }
+            }
+        }
+        else
+        {
+             printf("NO VERSION OF MENISCUS WERE CHOSEN.\n");
+             fflush(stdout);
+             clean_up(ERROR);
+        }
+}
+
+EXPORT double level_wave_func_cylindrical_init(
+	POINTER func_params,
+	double *coords)
+{
+        //RANDOM_PARAMS_VD *rand_params = (RANDOM_PARAMS_VD*)func_params;
+        //RECT_GRID *gr = rand_params->gr;
+        //FOURIER_POLY *wave_params = rand_params->pert;
+
+        FOURIER_POLY *wave_params = (FOURIER_POLY*)func_params;
+        double arg,z,t,sigma,dist;
+        int i,j,num_modes,dim;
+        double *L = wave_params->L;
+        double *U = wave_params->U;
+        int min_n = wave_params->min_n;
+        int max_n = wave_params->max_n;
+        double A_sd = wave_params->A_sd;
+        double av_phase = wave_params->av_phase;
+        double P_sd = wave_params->P_sd;
+        double wv_num[1000][1000], A[1000];
+        double phase[1000];
+        double nu;
+        int iii, jjj, n, m[2], k[3];
+        unsigned short int xsubi_a[3], xsubi_p[3];
+
+        dim = wave_params->dim;
+        z = wave_params->z0;
+        av_phase = radians(av_phase);
+        P_sd = radians(P_sd);
+        num_modes = (max_n+2)*(max_n+1)/2 - min_n*(min_n+1)/2;
+        //xsubi_a[0] = 5123;      xsubi_a[1] = 234; xsubi_a[2] = 1979;
+        xsubi_a[0] = 82;      xsubi_a[1] = 1772; xsubi_a[2] = 813;
+        //xsubi_p[0] = 4857;      xsubi_p[1] = 123; xsubi_p[2] = 11001;
+        xsubi_p[0] = 6362;      xsubi_p[1] = 88; xsubi_p[2] = 183;
+
+        iii = 0;
+        for (n = min_n; n <= max_n; ++n)
+        {
+            for (m[0] = 0; m[0] <= n; ++m[0])
+            {
+                m[1] = (n - m[0]);
+                /*fprintf(stdout, "random_gaussian %e\n", random_gaussian(0.0,A_sd,xsubi_a));*/
+                /*fprintf(stdout, "A%d %e\n", iii,A[iii]);*/
+                A[iii] = random_gaussian(0.0,A_sd,xsubi_a);
+                /*(void) printf("\tAmplitude for mode %d::%g\n",iii,A[iii]);*/
+                phase[iii] = random_gaussian(av_phase,P_sd,xsubi_p);
+                /*(void) printf("\tPhase for mode %d::%g\n",
+                              iii,degrees(phase[iii]));*/
+                for (jjj = 0; jjj < 2; ++jjj)
+                {
+                    nu = (double) m[jjj];
+                    /*(void) printf("\tfrequency for mode %d ",iii);
+                      (void) printf("direction %d::%g\n",jjj,nu);
+                      wv_num[i][j] = 2.0*PI*nu/((U[j]-L[j]));
+                      phase[i] += L[j]*wv_num[i][j];*/
+                    wv_num[iii][jjj] = 2.0*PI*nu/((U[0]-L[0]));
+                    phase[iii] += L[0]*wv_num[iii][jjj];
+                }
+                ++iii;
+            }
+        }
+
+        t = 0.0;
+        sigma = 0.0;
+        for (iii = 0; iii < num_modes; iii++)
+        {
+            arg = 0.0;
+            for (jjj = 0; jjj < dim-1; jjj++)
+                arg += wv_num[iii][jjj]*coords[jjj];
+            arg -= phase[iii];
+            z += A[iii] * exp(sigma*t)*sin(arg);
+        }
+
+        dist = coords[dim-1] - z;
+        return dist;
+}
+
+//merged from iFluid front lib
+EXPORT double level_wave_func_cylindrical(
+	POINTER func_params,
+	double *coords)
+{
+        RANDOM_PARAMS_VD *rand_params = (RANDOM_PARAMS_VD*)func_params;
+        RECT_GRID *gr = rand_params->gr;
+        FOURIER_POLY *wave_params = rand_params->pert;
+
+        //FOURIER_POLY *wave_params = (FOURIER_POLY*)func_params;
+        double arg,z,t,sigma,dist;
+        int i,j,num_modes,dim;
+        double *L = wave_params->L;
+        double *U = wave_params->U;
+        int min_n = wave_params->min_n;
+        int max_n = wave_params->max_n;
+        double A_sd = wave_params->A_sd;
+        double av_phase = wave_params->av_phase;
+        double P_sd = wave_params->P_sd;
+        double wv_num[1000][1000], A[1000];
+        double phase[1000];
+        double nu;
+        int iii, jjj, n, m[2], k[3];
+        unsigned short int xsubi_a[3], xsubi_p[3];
+
+        dim = wave_params->dim;
+        z = wave_params->z0;
+        av_phase = radians(av_phase);
+        P_sd = radians(P_sd);
+        num_modes = (max_n+2)*(max_n+1)/2 - min_n*(min_n+1)/2;
+        //xsubi_a[0] = 5123;      xsubi_a[1] = 234; xsubi_a[2] = 1979;
+        xsubi_a[0] = 82;      xsubi_a[1] = 1772; xsubi_a[2] = 813;
+        //xsubi_p[0] = 4857;      xsubi_p[1] = 123; xsubi_p[2] = 11001;
+        xsubi_p[0] = 6362;      xsubi_p[1] = 88; xsubi_p[2] = 183;
+
+        iii = 0;
+        for (n = min_n; n <= max_n; ++n)
+        {
+            for (m[0] = 0; m[0] <= n; ++m[0])
+            {
+                m[1] = (n - m[0]);
+                /*fprintf(stdout, "random_gaussian %e\n", random_gaussian(0.0,A_sd,xsubi_a));*/
+                /*fprintf(stdout, "A%d %e\n", iii,A[iii]);*/
+                A[iii] = random_gaussian(0.0,A_sd,xsubi_a);
+                /*(void) printf("\tAmplitude for mode %d::%g\n",iii,A[iii]);*/
+                phase[iii] = random_gaussian(av_phase,P_sd,xsubi_p);
+                /*(void) printf("\tPhase for mode %d::%g\n",
+                              iii,degrees(phase[iii]));*/
+                for (jjj = 0; jjj < 2; ++jjj)
+                {
+                    nu = (double) m[jjj];
+                    /*(void) printf("\tfrequency for mode %d ",iii);
+                      (void) printf("direction %d::%g\n",jjj,nu);
+                      wv_num[i][j] = 2.0*PI*nu/((U[j]-L[j]));
+                      phase[i] += L[j]*wv_num[i][j];*/
+                    wv_num[iii][jjj] = 2.0*PI*nu/((U[jjj]-L[jjj]));
+                    phase[iii] += L[0]*wv_num[iii][jjj];
+                }
+                ++iii;
+            }
+        }
+
+        t = 0.0;
+        sigma = 0.0;
+        for (iii = 0; iii < num_modes; iii++)
+        {
+            arg = 0.0;
+            for (jjj = 0; jjj < dim-1; jjj++)
+                arg += wv_num[iii][jjj]*coords[jjj];
+            arg -= phase[iii];
+            z += A[iii] * exp(sigma*t)*sin(arg);
+        }
+
+        dist = coords[dim-1] - z;
+        return dist;
+}
+
+//old version	Dan
+/*
 EXPORT double level_wave_func_cylindrical(
 	POINTER func_params,
 	double *coords)
@@ -1735,20 +2209,13 @@ EXPORT double level_wave_func_cylindrical(
             for (m[0] = 0; m[0] <= n; ++m[0])
             {
                 m[1] = (n - m[0]);
-                /*fprintf(stdout, "random_gaussian %e\n", random_gaussian(0.0,A_sd,xsubi_a));*/
-                /*fprintf(stdout, "A%d %e\n", iii,A[iii]);*/
                 A[iii] = random_gaussian(0.0,A_sd,xsubi_a);
-                /*(void) printf("\tAmplitude for mode %d::%g\n",iii,A[iii]);*/
                 phase[iii] = random_gaussian(av_phase,P_sd,xsubi_p);
-                /*(void) printf("\tPhase for mode %d::%g\n",
-                              iii,degrees(phase[iii]));*/
                 for (jjj = 0; jjj < 2; ++jjj)
                 {
                     nu = (double) m[jjj];
-                    /*(void) printf("\tfrequency for mode %d ",iii);
-                      (void) printf("direction %d::%g\n",jjj,nu);
-                      wv_num[i][j] = 2.0*PI*nu/((U[j]-L[j]));
-                      phase[i] += L[j]*wv_num[i][j];*/
+//                      wv_num[i][j] = 2.0*PI*nu/((U[j]-L[j]));
+//                      phase[i] += L[j]*wv_num[i][j];
                     wv_num[iii][jjj] = 2.0*PI*nu/((U[jjj]-L[jjj]));
                     phase[iii] += L[jjj]*wv_num[iii][jjj];
                 }
@@ -1770,7 +2237,7 @@ EXPORT double level_wave_func_cylindrical(
         dist = coords[dim-1] - z;
         return dist;
 }
-
+*/
 EXPORT double level_wave_func_random(
         POINTER func_params,
         double *coords)
@@ -1980,15 +2447,13 @@ EXPORT double level_wave_func(
 
         for (i = 0; i < num_modes; ++i)
         {
-            arg = 0.0;  
-            phase = radians(wave_params->phase[i]);
+            arg = 0.0;
             for (j = 0; j < dim-1; ++j)
             {
                 k = wave_params->nu[i][j]*2.0*PI/(U[j]-L[j]);
                 arg += k*coords[j];
-                //phase += L[j]*k;
             }
-            phase = wave_params->phase[i]*PI/180.0;  //old
+            phase = wave_params->phase[i]*PI/180.0;
             arg -= phase;
             z += wave_params->A[i]*sin(arg);
         }
@@ -2049,6 +2514,120 @@ EXPORT double level_circle_func(
         }
         return dist;
 }       /* end level_circle_func */
+
+
+//for RSRV case, added by Wenlin Hu
+EXPORT  double random_pert_vd_func(
+        POINTER func_params,
+        double *coords)
+{
+        RANDOM_PARAMS_VD *rand_params = (RANDOM_PARAMS_VD*)func_params;
+        RECT_GRID *gr = rand_params->gr;
+        FOURIER_POLY *pert = rand_params->pert;
+        int dim = gr->dim;
+        double dist;
+
+        /*
+        if (debugging("trace"))
+        {
+            printf("In random_pert_vd_func():\n");
+            (void) printf("GL[0]=%f, GL[1]=%f,GL[2]=%f\n",gr->GL[0],gr->GL[1],gr->GL[2]);
+            (void) printf("GU[0]=%f, GU[1]=%f,GU[2]=%f\n",gr->GU[0],gr->GU[1],gr->GU[2]);
+            (void) printf("VL[0]=%f, VL[1]=%f,VL[2]=%f\n",gr->VL[0],gr->VL[1],gr->VL[2]);
+            (void) printf("VU[0]=%f, VU[1]=%f,VU[2]=%f\n",gr->VU[0],gr->VU[1],gr->VU[2]);
+            (void) printf("z0=%f, number_modes=%d\n",pert->z0,pert->num_modes);
+            (void) printf("pert_bdry_type[0]=%d, pert_bdry_type[1]=%d\n",pert->pert_bdry_type[0],pert->pert_bdry_type[1]);
+        } */
+        dist = coords[dim-1] - pert_height_vd(coords,gr,pert,dim);
+        return dist;
+} /* end random_pert_vd_func */
+
+
+EXPORT double pert_height_vd(
+        double    *coords,
+        RECT_GRID *gr,
+        FOURIER_POLY *pert,
+        int       dim)
+{
+        double *GL = gr->GL;
+        double *GU = gr->GU;
+        double h = gr->h[dim-1];
+//        double L = gr->VL[dim-1] + 0.5*h; //local VL
+        double L = gr->GL[dim-1] + 0.5*h; //Global GL
+        int    i;
+        double height;
+        double crds[dim];
+
+        for (i=0; i<dim-1; ++i)
+        {
+            crds[i] = coords[i];
+            if (pert->pert_bdry_type[i] == PERIODIC)
+            {
+
+                /*
+                if (debugging("trace"))
+                    (void) printf("pert->pert_bdry_type[%d] == PERIODIC\n",i); */
+
+                while (crds[i] < GL[i])
+                    crds[i] += (GU[i] - GL[i]);
+                while (crds[i] > GU[i])
+                    crds[i] -= (GU[i] - GL[i]);
+            }
+            else if (pert->pert_bdry_type[i] == SYMMETRIC)
+            {
+                if (crds[i] < GL[i])
+                    crds[i] = 2.0*GL[i] - coords[i];
+                if (crds[i] > GU[i])
+                    crds[i] = 2.0*GU[i] - coords[i];
+            }
+            else
+                (void) printf("pert->pert_bdry_type[%d] == UNMODIFIED\n",i);
+        }
+        height = pert_interface_vd(pert,crds,0,dim);
+        return adjust_for_z_grid_spacing(height,L,h);
+} /*end pert_height_vd */
+
+
+EXPORT double pert_interface_vd(
+        FOURIER_POLY    *pert,
+        double          *coords,
+        double          t,
+        int             dim)
+{
+        int             i, j;
+        int             number_modes = pert->num_modes;
+        double          arg, z;
+
+        z = pert->z0;
+        for (i = 0; i < number_modes; ++i)
+        {
+            arg = 0;
+            for (j = 0; j < dim-1; j++)
+                arg += pert->nu[i][j]*coords[j];
+            arg -= pert->phase[i];
+            z += pert->A[i] * sin(arg);
+        }
+        return z;
+} /* end pert_interface_vd */
+
+
+LOCAL   double adjust_for_z_grid_spacing(
+        double height,
+        double L,
+        double h)
+{
+        double              k, delta;
+        static const double htol = 0.004;/*TOLERANCE*/
+
+        k = floor((height - L)/h);
+        delta = (height - (L + k*h))/h;
+        if (delta < htol)
+            height = L + (k + htol)*h;
+        else if (1.0 - delta < htol)
+            height = L + (k + 1 - htol)*h;
+        return height;
+} /* end adjust_for_z_grid_spacing */
+
 
 EXPORT CURVE *make_array_curve(
 	INTERFACE   *intfc,

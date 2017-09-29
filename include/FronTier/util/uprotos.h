@@ -310,6 +310,7 @@ IMPORT	void	alloc_view(FILE*);
 IMPORT	void	f_ree(POINTER,const char*);
 IMPORT	void	free_these(int,...);
 IMPORT	void	long_alloc_view(FILE*);
+IMPORT  int     get_number_of_blockName(FILE*, const char*);
 
 /* vtk.c */
 IMPORT  float 	endian_float_swap(float);

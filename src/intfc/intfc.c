@@ -1650,6 +1650,119 @@ EXPORT int i_delete_interface(
 }		/*end i_delete_interface*/
 
 
+/*
+*                       i_deep_delete_interface():
+*
+*       Deletes a previosly created interface and the associated table/chunks.
+*	Disable the use of freeTableList. Table/chunks are allocated whenever needed.
+*	Returns 1 if successful or 0 if the given interface did not exist.
+*
+*/
+
+EXPORT int i_deep_delete_interface(
+        INTERFACE       *intfc)
+{
+        struct Table    *T = NULL;
+        struct Chunk	*chunk = NULL;
+
+        if (DEBUG) (void) printf("Entered i_deep_delete_interface(%llu)\n",
+                                 interface_number(intfc));
+        if (intfc==NULL)
+        {
+            return 0;
+        }
+
+                /* Find Table and Previous Table: */
+        if ((T = table_of_interface(intfc)) == NULL) /* No match */
+        {
+            return 0;
+        }
+
+                /* Reset Current Interface: */
+        if (intfc==cur_intfc)
+        {
+            cur_IT = NULL;
+            cur_intfc = NULL;
+        }
+
+                /* Free the Chunks: */
+        while (T->first_chunk) {
+	    chunk = T->first_chunk;
+	    T->first_chunk = chunk->next;
+	    free(chunk);
+	}
+
+                /* Free the big chunks */
+        while (T->big_chunks)
+        {
+            chunk = T->big_chunks;
+            T->big_chunks = chunk->prev;
+            free(chunk);
+        }
+
+                /* Free the bond, curve, component lists: */
+        if (T->compon1d)
+            free(T->compon1d);
+        if (T->num_of_points)
+            free(T->num_of_points);
+        if (T->pts_in_zone)
+            free(T->pts_in_zone);
+        if (T->compon2d)
+            free(T->compon2d);
+        if (T->num_of_bonds)
+            free(T->num_of_bonds);
+        if (T->bonds)
+            free(T->bonds);
+        if (T->bondstore)
+            free(T->bondstore);
+        if (T->curves)
+            free(T->curves);
+        if (T->curvestore)
+            free(T->curvestore);
+        if (T->compon3d)
+            free(T->compon3d);
+        if (T->num_of_tris)
+            free(T->num_of_tris);
+        if (T->tris)
+            free(T->tris);
+        if (T->tristore)
+            free(T->tristore);
+        if (T->surfaces)
+            free(T->surfaces);
+        if (T->surfacestore)
+            free(T->surfacestore);
+
+                /* Unlink and Free the Table: */
+        if (T->prev != NULL)
+            T->prev->next = T->next;
+        else
+        {
+            FirstIT = T->next;
+            if (FirstIT != NULL)
+                FirstIT->prev = NULL;
+        }
+        if (T->next != NULL)
+            T->next->prev = T->prev;
+        else
+        {
+            LastIT = T->prev;
+            if (LastIT != NULL)
+                LastIT->next = NULL;
+        }
+	//free table
+        free(T);
+
+        if (cur_intfc == NULL)
+        {
+            cur_IT = LastIT;
+            if (cur_IT != NULL)
+                cur_intfc = cur_IT->interface;
+        }
+        if (DEBUG)
+            (void) printf("Left i_deep_delete_interface()\n\n");
+        return 1;
+}               /*end i_deep_delete_interface*/
+
 
 /*
 *			i_make_node():

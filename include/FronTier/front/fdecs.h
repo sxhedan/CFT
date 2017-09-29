@@ -1,11 +1,11 @@
 /************************************************************************************
 FronTier is a set of libraries that implements differnt types of Front Traking algorithms.
-Front Tracking is a numerical method for the solution of partial differential equations 
-whose solutions have discontinuities.  
+Front Tracking is a numerical method for the solution of partial differential equations
+whose solutions have discontinuities.
 
 
-Copyright (C) 1999 by The University at Stony Brook. 
- 
+Copyright (C) 1999 by The University at Stony Brook.
+
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -258,8 +258,8 @@ struct _Tan_stencil {
 typedef struct _Tan_stencil Tan_stencil;
 
 typedef struct {
-	TRI     *tri; 
-	BOND    *b; 
+	TRI     *tri;
+	BOND    *b;
 	boolean    is_vertex;
 	int     side;
 	int     iv;
@@ -270,8 +270,8 @@ typedef struct {
 	HYPER_SURF *hs;
 	POINT      *p;
 	double      *nor;
-	double      tan[3]; 
-	double      plane[4]; 
+	double      tan[3];
+	double      plane[4];
 	double      ds;
 	double      dt;
 	TN         tnl, tnr;
@@ -660,7 +660,9 @@ struct _Front {
 	INTERFACE *interf;		/* Interface */
 	INTERFACE *grid_intfc;		/* Grid Interface */
 	INTERFACE *emb_grid_intfc;	/* Grid Interface for embedded bdry */
-        boolean extrapolation_permitted;
+	boolean extrapolation_permitted;
+	// Introduce Contact Angle for Smeeton Youngs' Experiment 105
+	double contactangle;
 
 #if defined(USE_OVERTURE)
 
@@ -1353,8 +1355,13 @@ struct _LEVEL_FUNC_PACK {
 	char *vtk_name;
 	boolean is_mono_hs;
 	int wave_type;
-	
+
 	boolean set_3d_bdry;
+
+        /* For RS_RV initialization */
+        boolean is_RS_RV;
+        /* For RSSY, i.e. RT initialization Smerton-Young experiment */
+        boolean is_RS_SY;
 };
 typedef struct _LEVEL_FUNC_PACK LEVEL_FUNC_PACK;
 
@@ -1396,9 +1403,9 @@ struct _VELO_FUNC_PACK {
 typedef struct _VELO_FUNC_PACK VELO_FUNC_PACK;
 
 enum {
-        TSTEP_FIELD_WIDTH   = 7,         
+        TSTEP_FIELD_WIDTH   = 7,
 	PP_NODE_FIELD_WIDTH = 4
-}; 
+};
 
 struct _INTRP_CELL {
         int dim;

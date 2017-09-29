@@ -37,6 +37,9 @@ LOCAL 	boolean build_linear_element(INTRP_CELL*,double*);
 //                        double (*func)(Locstate));
 LOCAL   void collect_cell_ptst(INTRP_CELL*,int*,double*,COMPONENT,Front*,
                         double*,double (*func)(Locstate));
+//for MAC grid
+LOCAL   void collect_cell_ptst_MAC_vd(INTRP_CELL*,int*,COMPONENT,Front*,double*,
+                        double (*func)(Locstate),int,double*);
 LOCAL	boolean test_point_in_seg(double*,double**);
 LOCAL	boolean test_point_in_tri(double*,double**);
 LOCAL 	boolean test_point_in_tetra(double*,double**);
@@ -598,12 +601,10 @@ EXPORT	void FT_ParallelExchGridArrayBuffer(
 	scatter_top_grid_float_array(grid_array,front);
 }	/* end FT_ParallelExchGridArrayBuffer */
 
-/*
 EXPORT	HYPER_SURF *FT_HyperSurfAtGridCrossing(
 	Front *front,
 	int *icoords,
-	GRID_DIRECTION dir,
-	int w_type)
+	GRID_DIRECTION dir)
 {
 	static CRXING *crxs[MAX_NUM_CRX];
 	INTERFACE *grid_intfc = front->grid_intfc;
@@ -617,18 +618,8 @@ EXPORT	HYPER_SURF *FT_HyperSurfAtGridCrossing(
 	else
 	    crx_index = nc - 1;
 
-	if (crxs[crx_index]->hs != NULL)
-	{
-	    if (w_type == ANY_WAVE_TYPE)
-		return crxs[crx_index]->hs;
-	    else if (w_type == wave_type(crxs[crx_index]->hs))
-		return crxs[crx_index]->hs;
-	    else 
-		return NULL;
-	}
-	return NULL;
-}	// end FT_HyperSurfAtGridCrossing 
-*/
+	return crxs[crx_index]->hs;
+}	/* end FT_HyperSurfAtGridCrossing */
 
 EXPORT	boolean FT_StateVarAtGridCrossing(
 	Front *front,
@@ -893,6 +884,100 @@ EXPORT  boolean FT_IntrpStateVarAtCoords(
             return YES;
         }
 }       /* end FT_IntrpStateVarAtCoords */
+
+//for MAC grid and only comp == NO COMP case(i.e. ignore the intfc)
+EXPORT  boolean FT_IntrpVelocityVarAtCoords_MAC_vd(
+        Front *front,
+        COMPONENT comp,
+        double *coords,
+        double *grid_array,
+        double (*get_state)(Locstate),
+        int dirc,
+        double *ans)
+{
+        int icoords[MAXD];
+        INTERFACE *grid_intfc = front->grid_intfc;
+        static INTRP_CELL *blk_cell;
+        RECT_GRID *gr = &topological_grid(grid_intfc);
+        int i,dim = gr->dim;
+
+        if (blk_cell == NULL)
+        {
+            scalar(&blk_cell,sizeof(INTRP_CELL));
+            uni_array(&blk_cell->var,MAX_NUM_VERTEX_IN_CELL,sizeof(double));
+            bi_array(&blk_cell->coords,MAX_NUM_VERTEX_IN_CELL,MAXD,
+                                                sizeof(double));
+            bi_array(&blk_cell->p_lin,MAXD+1,MAXD,sizeof(double));
+            uni_array(&blk_cell->var_lin,MAXD+1,sizeof(double));
+            lin_cell_tol = 1.0;
+            for (i = 0; i < dim; ++i)
+                lin_cell_tol *= 0.00001*gr->h[i];
+        }
+
+        if (!rect_in_which(coords,icoords,gr))
+        {
+            *ans = 0.0;
+
+/*
+            if (debugging("interpolate"))
+            {
+                (void) printf("In FT_IntrpVelocityVarAtCoords_MAC_vd(), rect_in_which() failed for Intfc_pt = (%lf, %lf, %lf)\n", coords[0],coords[1],coords[2]);
+            }
+*/
+
+            return NO;
+        }
+
+/*
+        if (debugging("interpolate"))
+        {
+            INTERFACE *grid_intfc_debug = front->grid_intfc;
+            RECT_GRID *gr_debug = &topological_grid(grid_intfc_debug);
+            double *L_debug = gr_debug->L;
+            double *h_debug = gr_debug->h;
+
+            (void) printf("\nIn FT_IntrpVelocityVarAtCoords_MAC_vd() for U[%d] component:\n", dirc);
+            (void) printf("Intfc_pt = (%20.16g, %20.16g, %20.16g)\n", coords[0],coords[1],coords[2]);
+            (void) printf("icoords = (%d, %d, %d), whose coords = (%lf, %lf, %lf)\n", icoords[0],icoords[1],icoords[2],L_debug[0]+icoords[0]*h_debug[0],L_debug[1]+icoords[1]*h_debug[1],L_debug[2]+icoords[2]*h_debug[2]);
+            (void) printf("Intfc_pt - coords = (%f*hx, %f*hy, %f*hz)\n", (coords[0]-L_debug[0]-icoords[0]*h_debug[0])/h_debug[0], (coords[1]-L_debug[1]-icoords[1]*h_debug[1])/h_debug[1], (coords[2]-L_debug[2]-icoords[2]*h_debug[2])/h_debug[2]);
+        }
+*/
+
+
+        //(void) printf("icoords = [%d, %d, %d]\n", icoords[0],icoords[1],icoords[2]);
+
+
+        //set blk_cell: cell vertices coordinates and values of states on vertices
+        collect_cell_ptst_MAC_vd(blk_cell,icoords,comp,front,grid_array,get_state,dirc,coords);
+
+        if (blk_cell->is_bilinear)
+        {
+            *ans = FrontBilinIntrp(coords,blk_cell,NO);
+            return YES;
+        }
+        //TODO: codes needed
+        else if (build_linear_element(blk_cell,coords))
+        {
+//            *ans = FrontLinIntrp(coords,blk_cell,NO);
+//            return YES;
+            (void) printf("codes needed for build_linear_element in FT_IntrpVelocityVarAtCoords_MAC_vd\n");
+            clean_up(ERROR);
+            return NO;
+        }
+        //TODO: codes needed
+        else
+        {
+//            static Locstate state;
+//            if (state == NULL)
+//                scalar(&state,front->sizest);
+//            nearest_intfc_state(coords,comp,front->interf,state,NULL,NULL);
+//            *ans = get_state(state);
+//            return YES;
+            (void) printf("codes needed for other cases in FT_IntrpVelocityVarAtCoords_MAC_vd\n");
+            clean_up(ERROR);
+            return NO;
+        }
+}       /* end FT_IntrpVelocityVarAtCoords_MAC_vd */
 
 EXPORT boolean FrontNearestIntfcState(
 	Front *front,
@@ -1372,6 +1457,432 @@ LOCAL void collect_cell_ptst(
 	blk_cell->nv = nv;
 	sort_blk_cell(blk_cell);
 }	/* end collect_cell_ptst */
+
+
+//for MAC grid and only comp == NO COMP case(i.e. ignore the intfc)
+LOCAL void collect_cell_ptst_MAC_vd(
+        INTRP_CELL *blk_cell,
+        int *icoords,
+        COMPONENT comp,
+        Front *front,
+        double *grid_array,
+        double (*get_state)(Locstate),
+        int dirc,
+        double *coords)
+{
+        INTERFACE *grid_intfc = front->grid_intfc;
+        Table *T = table_of_interface(grid_intfc);
+        RECT_GRID *gr = &topological_grid(grid_intfc);
+        int dim = gr->dim;
+        int *gmax = gr->gmax;
+        double *L = gr->L;
+        double *h = gr->h;
+        COMPONENT *gr_comp = T->components;
+        static COMPONENT cell_comp1d[2];
+        static COMPONENT cell_comp2d[2][2];
+        static COMPONENT cell_comp3d[2][2][2];
+        int i,j,k,index,nv,nc;
+        CRXING *crx,*crxs[MAX_NUM_CRX];
+        GRID_DIRECTION dir;
+        int ic[MAXD];
+        boolean fr_crx_grid_seg;
+        double state_at_crx;
+        double crx_coords[MAXD];
+
+        blk_cell->is_bilinear = YES;
+        blk_cell->dim = dim;
+        nv = 0;
+        switch (dim)
+        {
+        //TODO: mofify from case 3
+        case 1:
+            for (i = 0; i < 2; ++i)
+            {
+            /*
+                //for interpolation of u
+                if ((coords[0] < L[0] + icoords[0]*h[0] + 0.5*h[0]) && (dirc == 0))
+                    ic[0] = icoords[0] - 1 + i;
+                if ((coords[0] >= L[0] + icoords[0]*h[0] + 0.5*h[0]) && (dirc == 0))
+                    ic[0] = icoords[0] + i;
+
+                index = d_index1d(ic[0],gmax);
+                cell_comp1d[i] = gr_comp[index];
+                if (debugging("interpolate"))
+                {
+                    printf("ic = %d  comp = %d  gr_comp = %d\n",ic[0],
+                                comp,gr_comp[index]);
+                }
+                if (gr_comp[index] == comp || comp == NO_COMP)
+                {
+                    if (dirc == 0) //for u
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0] + 0.5*h[0];
+                    blk_cell->var[nv] = grid_array[index];
+                    nv++;
+                }
+                else
+                    blk_cell->is_bilinear = NO;
+            */
+
+                clean_up(ERROR);
+            }
+            break;
+        //TODO: mofify from case 3
+        case 2:
+            for (i = 0; i < 2; ++i)
+            for (j = 0; j < 2; ++j)
+            {
+            /*
+                //for interpolation of u
+                if ((coords[0] < L[0] + icoords[0]*h[0] + 0.5*h[0]) && (dirc == 0))
+                {
+                    ic[0] = icoords[0] - 1 + i;
+                    ic[1] = icoords[1] + j;
+                }
+                if ((coords[0] >= L[0] + icoords[0]*h[0] + 0.5*h[0]) && (dirc == 0))
+                {
+                    ic[0] = icoords[0] + i;
+                    ic[1] = icoords[1] + j;
+                }
+                //for interpolation of v
+                if ((coords[1] < L[1] + icoords[1]*h[1] + 0.5*h[1]) && (dirc == 1))
+                {
+                    ic[0] = icoords[0] + i;
+                    ic[1] = icoords[1] - 1 + j;
+                }
+                if ((coords[1] >= L[1] + icoords[1]*h[1] + 0.5*h[1]) && (dirc == 1))
+                {
+                    ic[0] = icoords[0] + i;
+                    ic[1] = icoords[1] + j;
+                }
+               
+                index = d_index2d(ic[0],ic[1],gmax);
+                cell_comp2d[i][j] = gr_comp[index];
+                if (gr_comp[index] == comp || comp == NO_COMP)
+                {
+                    if (dirc == 0) //for u
+                    {
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0] + 0.5*h[0];
+                        blk_cell->coords[nv][1] = L[1] + ic[1]*h[1];
+                    }
+                    if (dirc == 1) //for v
+                    {
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0];
+                        blk_cell->coords[nv][1] = L[1] + ic[1]*h[1] + 0.5*h[1];
+                    }
+                    blk_cell->var[nv] = grid_array[index];
+                    nv++;
+                }
+                else
+                    blk_cell->is_bilinear = NO;
+            */
+
+                clean_up(ERROR);
+            }
+            break;
+        case 3:
+            for (i = 0; i < 2; ++i)
+            for (j = 0; j < 2; ++j)
+            for (k = 0; k < 2; ++k)
+            {
+                switch(dirc)
+                {
+                case 0: //for interpolation of u
+                    if (coords[0] < L[0]+icoords[0]*h[0]+0.5*h[0])
+                    {
+                        if (icoords[0] <= 0) //outside of local top_grid, do extrapolation
+                            ic[0] = 0 + i;
+                        else
+                            ic[0] = icoords[0] - 1 + i;
+                        ic[1] = icoords[1] + j;
+                        ic[2] = icoords[2] + k;
+
+
+                        if (debugging("interpolate") && ic[dirc]==-1)
+                        {
+                            printf("In collect_cell_ptst_MAC_vd(), ic = -1 in dirc %d for Intfc_pt = [%lf, %lf, %lf]\n", dirc, coords[0],coords[1],coords[2]);
+                            (void) printf("ic[nv=%d] = [%d, %d, %d]\n", nv,ic[0],ic[1],ic[2]);
+                            (void) printf("icoords = [%d, %d, %d]\n", icoords[0],icoords[1],icoords[2]);
+                            index = d_index3d(ic[0],ic[1],ic[2],gmax);
+                            (void) printf("index of ic = %d, blk_cell->var[nv=%d] = %lf\n", index,nv,grid_array[index]);
+                        }
+
+                    }
+                    else
+                    {
+                        ic[0] = icoords[0] + i;
+                        ic[1] = icoords[1] + j;
+                        ic[2] = icoords[2] + k;
+                    }
+                    break;
+                case 1: //for interpolation of v
+                    if (coords[1] < L[1]+icoords[1]*h[1]+0.5*h[1])
+                    {
+                        ic[0] = icoords[0] + i;
+                        if (icoords[1] <= 0) //outside of local top_grid, do extrapolation
+                            ic[1] = 0 + j;
+                        else
+                            ic[1] = icoords[1] - 1 + j;
+                        ic[2] = icoords[2] + k;
+
+
+                        if (debugging("interpolate") && ic[dirc]==-1)
+                        {
+                            printf("In collect_cell_ptst_MAC_vd(), ic = -1 in dirc %d for Intfc_pt = [%lf, %lf, %lf]\n", dirc, coords[0],coords[1],coords[2]);
+                            (void) printf("ic[nv=%d] = [%d, %d, %d]\n", nv,ic[0],ic[1],ic[2]);
+                            (void) printf("icoords = [%d, %d, %d]\n", icoords[0],icoords[1],icoords[2]);
+                            index = d_index3d(ic[0],ic[1],ic[2],gmax);
+                            (void) printf("index of ic = %d, blk_cell->var[nv=%d] = %lf\n", index,nv,grid_array[index]);
+                        }
+
+                    }
+                    else
+                    {
+                        ic[0] = icoords[0] + i;
+                        ic[1] = icoords[1] + j;
+                        ic[2] = icoords[2] + k;
+                    }
+                    break;
+                case 2: //for interpolation of w
+                    if (coords[2] < L[2]+icoords[2]*h[2]+0.5*h[2])
+                    {
+                        ic[0] = icoords[0] + i;
+                        ic[1] = icoords[1] + j;
+                        if (icoords[2] <= 0) //outside of local top_grid, do extrapolation
+                            ic[2] = 0 + k;
+                        else
+                            ic[2] = icoords[2] - 1 + k;
+
+
+                        if (debugging("interpolate") && ic[dirc]==-1)
+                        {
+                            printf("In collect_cell_ptst_MAC_vd(), ic = -1 in dirc %d for Intfc_pt = [%lf, %lf, %lf]\n", dirc, coords[0],coords[1],coords[2]);
+                            (void) printf("ic[nv=%d] = [%d, %d, %d]\n", nv,ic[0],ic[1],ic[2]);
+                            (void) printf("icoords = [%d, %d, %d]\n", icoords[0],icoords[1],icoords[2]);
+                            index = d_index3d(ic[0],ic[1],ic[2],gmax);
+                            (void) printf("index of ic = %d, blk_cell->var[nv=%d] = %lf\n", index,nv,grid_array[index]);
+                        }
+
+                    }
+                    else
+                    {
+                        ic[0] = icoords[0] + i;
+                        ic[1] = icoords[1] + j;
+                        ic[2] = icoords[2] + k;
+                    }
+                    break;
+                default:
+                    clean_up(ERROR);
+                }
+
+                //(void) printf("enter cell_comp3d = %d, index = %d\n", cell_comp3d[i][j][k], d_index3d(ic[0],ic[1],ic[2],gmax));
+
+                index = d_index3d(ic[0],ic[1],ic[2],gmax);
+                cell_comp3d[i][j][k] = gr_comp[index];
+
+                //(void) printf("leave gr_comp[%d] = %d\n", index,gr_comp[index]);
+
+
+                if (gr_comp[index] == comp || comp == NO_COMP)
+                {
+                    if (dirc == 0) //for u
+                    {
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0] + 0.5*h[0];
+                        blk_cell->coords[nv][1] = L[1] + ic[1]*h[1];
+                        blk_cell->coords[nv][2] = L[2] + ic[2]*h[2];
+                    }
+                    else if (dirc == 1) //for v
+                    {
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0];
+                        blk_cell->coords[nv][1] = L[1] + ic[1]*h[1] + 0.5*h[1];
+                        blk_cell->coords[nv][2] = L[2] + ic[2]*h[2];
+                    }
+                    else if (dirc == 2) //for w
+                    {
+                        blk_cell->coords[nv][0] = L[0] + ic[0]*h[0];
+                        blk_cell->coords[nv][1] = L[1] + ic[1]*h[1];
+                        blk_cell->coords[nv][2] = L[2] + ic[2]*h[2] + 0.5*h[2];
+                    }
+                    else
+                        clean_up(ERROR);
+                    blk_cell->var[nv] = grid_array[index];
+                    nv++;
+
+
+                    if (debugging("interpolate"))
+                    {
+                        (void) printf("In collect_cell_ptst_MAC_vd() for U[%d] component, ic[%d] = %d:\n", dirc,dirc,ic[nv-1]);
+                        (void) printf("(i,j,k) = [%d, %d, %d], nv = %d\n", i,j,k,nv-1);
+                        (void) printf("coords[nv=%d] = [%lf, %lf, %lf]\n", nv-1,blk_cell->coords[nv-1][0],blk_cell->coords[nv-1][1],blk_cell->coords[nv-1][2]);
+                        (void) printf("ic[nv=%d] = [%d, %d, %d]\n", nv-1,ic[0],ic[1],ic[2]);
+                        (void) printf("index of ic = %d, blk_cell->var[nv=%d] = %f\n", index,nv-1,grid_array[index]);
+                    }
+
+
+                }
+                else
+                {
+                    blk_cell->is_bilinear = NO;
+
+                    if (debugging("interpolate"))
+                    {
+                        (void) printf("In collect_cell_ptst_MAC_vd() for U[%d] component:\n", dirc);
+                        (void) printf("blk_cell->is_bilinear = NO, for (i,j,k) = (%d, %d, %d) and nv = %d\n", i,j,k,nv);
+                        (void) printf("gr_comp[%d] = %d and comp = %d\n", index,gr_comp[index],comp);
+                    }
+                    clean_up(ERROR);
+                }
+            }
+            break;
+        }
+        if (blk_cell->is_bilinear == YES)
+        {
+            blk_cell->nv = nv;
+            return;
+        }
+
+        //TODO: for the following part, need to be modified for MAC grid 
+        switch (dim)
+        {
+        case 1:
+            for (i = 0; i < 2; ++i)
+            {
+                ic[0] = icoords[0] + i;
+                if (cell_comp1d[i] == comp)
+                {
+                    if (cell_comp1d[(i+1)%2] != comp)
+                    {
+                        dir = (i < (i+1)%2) ? EAST : WEST;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d) and (%d)\n",
+                                        icoords[0]+i,icoords[0]+(i+1)%2);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        if (debugging("interpolate"))
+                            printf("crx_coords = %f\n",crx_coords[0]);
+                        nv++;
+                    }
+                }
+            }
+            if (debugging("interpolate"))
+                printf("nv = %d\n",nv);
+            break;
+        case 2:
+            for (i = 0; i < 2; ++i)
+            for (j = 0; j < 2; ++j)
+            {
+                ic[0] = icoords[0] + i;
+                ic[1] = icoords[1] + j;
+                if (cell_comp2d[i][j] == comp)
+                {
+                    if (cell_comp2d[(i+1)%2][j] != comp)
+                    {
+                        dir = (i < (i+1)%2) ? EAST : WEST;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d %d) "
+                                   "and (%d %d)\n",icoords[0]+i,icoords[1]+j,
+                                        icoords[0]+(i+1)%2,icoords[1]+j);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        blk_cell->coords[nv][1] = crx_coords[1];
+                        nv++;
+                    }
+                    if (cell_comp2d[i][(j+1)%2] != comp)
+                    {
+                        dir = (j < (j+1)%2) ? NORTH : SOUTH;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d %d) "
+                                   "and (%d %d)\n",icoords[0]+i,icoords[1]+j,
+                                        icoords[0]+i,icoords[1]+(j+1)%2);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        blk_cell->coords[nv][1] = crx_coords[1];
+                        nv++;
+                    }
+                }
+            }
+            break;
+        case 3:
+            for (i = 0; i < 2; ++i)
+            for (j = 0; j < 2; ++j)
+            for (k = 0; k < 2; ++k)
+            {
+                ic[0] = icoords[0] + i;
+                ic[1] = icoords[1] + j;
+                ic[2] = icoords[2] + k;
+                if (cell_comp3d[i][j][k] == comp)
+                {
+                    if (cell_comp3d[(i+1)%2][j][k] != comp)
+                    {
+                        dir = (i < (i+1)%2) ? EAST : WEST;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d %d %d) "
+                                   "and (%d %d %d)\n",icoords[0]+i,icoords[1]+j,
+                                   icoords[2]+k,icoords[0]+(i+1)%2,icoords[1]+j,
+                                   icoords[2]+k);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        blk_cell->coords[nv][1] = crx_coords[1];
+                        blk_cell->coords[nv][2] = crx_coords[2];
+                        nv++;
+                    }
+                    if (cell_comp3d[i][(j+1)%2][k] != comp)
+                    {
+                        dir = (j < (j+1)%2) ? NORTH : SOUTH;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d %d %d) "
+                                   "and (%d %d %d)\n",icoords[0]+i,icoords[1]+j,
+                                   icoords[2]+k,icoords[0]+i,icoords[1]+(j+1)%2,
+                                   icoords[2]+k);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        blk_cell->coords[nv][1] = crx_coords[1];
+                        blk_cell->coords[nv][2] = crx_coords[2];
+                        nv++;
+                    }
+                    if (cell_comp3d[i][j][(k+1)%2] != comp)
+                    {
+                        dir = (k < (k+1)%2) ? UPPER : LOWER;
+                        fr_crx_grid_seg = FT_StateVarAtGridCrossing(front,ic,dir,
+                                comp,get_state,&state_at_crx,crx_coords);
+                        if (!fr_crx_grid_seg)
+                        {
+                            screen("ERROR: no crxing between (%d %d %d) "
+                                   "and (%d %d %d)\n",icoords[0]+i,icoords[1]+j,
+                                   icoords[2]+k,icoords[0]+i,icoords[1]+j,
+                                   icoords[2]+(k+1)%2);
+                        }
+                        blk_cell->var[nv] = state_at_crx;
+                        blk_cell->coords[nv][0] = crx_coords[0];
+                        blk_cell->coords[nv][1] = crx_coords[1];
+                        blk_cell->coords[nv][2] = crx_coords[2];
+                        nv++;
+                    }
+                }
+            }
+            break;
+        }
+        blk_cell->nv = nv;
+}       /* end collect_cell_ptst_MAC_vd */
 
 
 LOCAL 	boolean test_point_in_tetra(

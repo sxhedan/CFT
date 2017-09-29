@@ -1,11 +1,11 @@
 /************************************************************************************
 FronTier is a set of libraries that implements differnt types of Front Traking algorithms.
-Front Tracking is a numerical method for the solution of partial differential equations 
-whose solutions have discontinuities.  
+Front Tracking is a numerical method for the solution of partial differential equations
+whose solutions have discontinuities.
 
 
-Copyright (C) 1999 by The University at Stony Brook. 
- 
+Copyright (C) 1999 by The University at Stony Brook.
+
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -227,11 +227,11 @@ EXPORT	void	set_front_hooks(
 	F_INIT_DATA	*f_init = f_init_data(init);
 
 	f_init->_set_redistribution_defaults = f_set_redistribution_defaults;
-	f_init->_set_front_time_step_control_default = 
+	f_init->_set_front_time_step_control_default =
 	    f_set_front_time_step_control_default;
 	f_init->_copy_redistribution_values = f_copy_redistribution_values;
 	f_init->_prompt_for_redistribute = f_prompt_for_redistribute;
-	f_init->_read_print_FlowSpecifiedRegion_data = 
+	f_init->_read_print_FlowSpecifiedRegion_data =
 	    f_read_print_FlowSpecifiedRegion_data;
 	f_init->_prompt_for_front_options = f_prompt_for_front_options;
 	f_init->_read_print_front_options = f_read_print_front_options;
@@ -255,7 +255,7 @@ EXPORT void set_default_front_options(
 
 	InitialMaxFrontSpeed(init) =
 	    alloc_MaxFrontSpeed(InitialMaxFrontSpeed(init),
-	                        i_intfc(init),StateSize(init)); 
+	                        i_intfc(init),StateSize(init));
 	/* call f_alloc_MaxFrontSpeed */
 
 	if (restart_io_type(init) != NULL)
@@ -309,7 +309,7 @@ EXPORT	void	f_read_print_front_options(
 	{
 	    (void) fgetstring(file,"redistribution count = ");
 	    (void) fscanf(file,"%d",&redistribution_count(init));
-	    
+
 	    (void) fgetstring(file,"redis_flag = ");
 	    (void) fscanf(file,"%d",&redis_flag);
 	    redis_flag(init) = redis_flag == 0 ? NO : YES;
@@ -352,8 +352,8 @@ EXPORT	void	f_read_print_front_options(
 /*
 *			     init_front():
 *
-*	Initialization of a front involves setting various parameters 
-*	such as the type of redistribute algorithm to be used, 
+*	Initialization of a front involves setting various parameters
+*	such as the type of redistribute algorithm to be used,
 *	the front spacing, the time step factor.
 */
 
@@ -389,7 +389,7 @@ EXPORT void init_front(
 *	Also, the redistribution
 *	of the initial interface front->interf is performed.
 *
-*	IMPORTANT NOTE:  For restarts,  the interface is never 
+*	IMPORTANT NOTE:  For restarts,  the interface is never
 *	redistributed here.
 */
 
@@ -425,7 +425,7 @@ EXPORT void initial_front_redistribute(
 
 	measure_front(front);
 
-	if (debugging("Front")) 
+	if (debugging("Front"))
 	    print_Front_structure(front);
 	debug_print("init","Left initial_front_redistribute()\n");
 }		/*end initial_front_redistribute*/
@@ -551,7 +551,7 @@ EXPORT	void	f_set_redistribution_defaults(
 	use_rect_bdry_redistribution(init) =  NO;
 	cosine_big_angle(init,GENERAL_WAVE) = 1.0;
 	cosine_big_angle(init,VECTOR_WAVE) =  1.0;
-	
+
 	redistribution_grid_size(init) = 3.0/4;           /*DEFAULT*/
 	redistribution_frequency(init,GENERAL_WAVE) = 5; /*DEFAULT*/
 	redistribution_frequency(init,VECTOR_WAVE) = 5;   /*DEFAULT*/
@@ -625,7 +625,7 @@ EXPORT void f_prompt_for_redistribute(
 	if (dim == 1)
 	    return;
 
-	f_prompt_for_curve_redist_options(init);   
+	f_prompt_for_curve_redist_options(init);
 
 	/* Choose Approximate Spacing of Points on Front */
 	prompt_for_front_spacing(init);
@@ -666,7 +666,7 @@ EXPORT void f_init_redistribute(
 
 	if (front->rect_grid->dim == 3)
 	    f_init_surface_redistribution_parameters(init,front);
-	
+
 	debug_print("init","Left f_init_redistribute()\n");
 }		/*end f_init_redistribute*/
 
@@ -702,7 +702,7 @@ LOCAL void f_prompt_for_curve_redist_options(
 	char		s[Gets_BUF_SIZE];
 	double		big_angle;
 	boolean		use_big_angle = NO;
-	int		dim = Comp_grid(init).dim;	
+	int		dim = Comp_grid(init).dim;
 
 	debug_print("init","Entered f_prompt_for_curve_redist_oprtions()\n");
 
@@ -809,7 +809,7 @@ LOCAL void f_prompt_for_curve_redist_options(
 	    	use_rect_bdry_redistribution(init) = YES;
 	}
 	debug_print("init","Left f_prompt_for_curve_redist_oprtions()\n");
-}		/* end to f_prompt_for_curve_redist_options() */									
+}		/* end to f_prompt_for_curve_redist_options() */
 
 /*
 *		f_init_curve_redistribution_parameters():
@@ -878,7 +878,7 @@ LOCAL void f_init_curve_redistribution_parameters(
 	    Cosine_big_angle(front,VECTOR_WAVE) =
 	        cosine_big_angle(init,VECTOR_WAVE);
 	    break;
-	    
+
 	default:
 	    screen("ERROR in f_init_curve_redistribution_parameters(), "
 	           "invalid redistribution mode %d\n",front_redist_mode(init));
@@ -891,7 +891,7 @@ LOCAL void f_init_curve_redistribution_parameters(
 	    Use_rect_boundary_redistribution(front) =
 	        use_rect_bdry_redistribution(init);
 	}
-	
+
 	debug_print("init","Left f_init_curve_redistribution_parameters()\n");
 }		/*end f_init_curve_redistribution_parameters*/
 
@@ -949,9 +949,9 @@ LOCAL	void	init_redistribution_frequency(
 
 	if(restart_io_type(init) == NULL)
 	    redis_flag(init) = NO;
-	
-	if (tracking_algorithm(init) == GRID_BASED_TRACKING  ||  
-	    tracking_algorithm(init) == THREE_COMP_GRID_BASED_TRACKING)  
+
+	if (tracking_algorithm(init) == GRID_BASED_TRACKING  ||
+	    tracking_algorithm(init) == THREE_COMP_GRID_BASED_TRACKING)
 	{
 	  redistribution_frequency(init,GENERAL_WAVE) = INT_MAX;
 	  redistribution_frequency(init,VECTOR_WAVE) = INT_MAX;
@@ -1593,7 +1593,7 @@ LOCAL void init_3d_front_states(
 	(void) next_point(intfc,NULL,NULL,NULL);
 	while (next_point(intfc,&p,&hse,&hs))
 	{
-	    slsr(p,hse,hs,&sl,&sr); 
+	    slsr(p,hse,hs,&sl,&sr);
 	    (*front_initializer)(p,hse,hs,sl,sr,init);
 	}
 
@@ -1618,7 +1618,7 @@ EXPORT  void    FT_StartUp(
         setbuf(stdin,NULL);
         init_clean_up(NULL,NULL);
 
-	if(ft_basic == NULL) /* call build-in functions to prompt data */
+	if (ft_basic == NULL) /* call build-in functions to prompt data */
 	{
 	        front->coordinate = 'r';
         	suppress_prompts = YES;
@@ -1633,7 +1633,7 @@ EXPORT  void    FT_StartUp(
         	for (i = 0; i < dim; ++i)
         	{
             		subdomains(init_data(&Init))[i] = 1;
-            		buffer_zones(init_data(&Init))[i] = DEFAULT_BUF_WIDTH 
+            		buffer_zones(init_data(&Init))[i] = DEFAULT_BUF_WIDTH
 					+ MAXD/3;
         	}
 
@@ -1662,7 +1662,7 @@ EXPORT  void    FT_StartUp(
 		{
 		    for (j = 0; j < 2; ++j)
 		    {
-			rect_boundary_type(front->interf,i,j) = 
+			rect_boundary_type(front->interf,i,j) =
 				rect_bdry_type[i][j];
 		    }
 		}
@@ -1687,14 +1687,14 @@ EXPORT  void    FT_StartUp(
         	for (i = 0; i < dim; ++i)/* For setting pp_grid in front */
         	{
             		subdomains(init_data(&Init))[i] = 1;
-            		buffer_zones(init_data(&Init))[i] = DEFAULT_BUF_WIDTH 
+            		buffer_zones(init_data(&Init))[i] = DEFAULT_BUF_WIDTH
 					+ MAXD/3;
 #if defined(__MPI__)
                         subdomains(init_data(&Init))[i] =
                                         ft_basic->subdomains[i];
 #endif /* defined(__MPI__) */
         	}
-		Init._StateSize = front->sizest = 
+		Init._StateSize = front->sizest =
 				ft_basic->size_of_intfc_state;
 		set_size_of_intfc_state(front->sizest);/* set global variable size_of_intfc_state */
 
@@ -1745,7 +1745,7 @@ EXPORT  void    FT_StartUp(
 
 		    set_remap_and_rect_grid(ft_basic->L,ft_basic->U,
 			    ft_basic->gmax,IDENTITY_REMAP,&comp_grid);
-        	    
+
 		    front->rect_grid = &comp_grid;
 		    /*Use ft_basic to construct the rect_grid in front
 		     *Now the front->rect_grid is the global grid */
@@ -1774,7 +1774,7 @@ EXPORT  void    FT_StartUp(
 		    {
 		        for (j = 0; j < 2; ++j)
 		        {
-			    rect_boundary_type(front->interf,i,j) = 
+			    rect_boundary_type(front->interf,i,j) =
 				    ft_basic->boundary[i][j];
 		        }
 		    }
@@ -1827,7 +1827,7 @@ EXPORT	void FT_InitIntfc(
 	case 3:
 	    FT_InitIntfc3d(front,level_func_pack);
 	    break;
-	default: 
+	default:
 	    screen("Unknown dimension!\n");
 	    clean_up(ERROR);
 	}
@@ -1928,12 +1928,12 @@ LOCAL   void FT_InitIntfc2d(
 			    intfc->default_comp,eps);
 	for (c = intfc->curves; c && *c; ++c)
 	{
-	    if (wave_type(*c) != UNKNOWN_WAVE_TYPE) 
+	    if (wave_type(*c) != UNKNOWN_WAVE_TYPE)
 		continue;	/* Already assigned */
 	    if (negative_component(*c) == left_c &&
 		positive_component(*c) == right_c)
 	    {
-		if (level_func_pack == NULL) 
+		if (level_func_pack == NULL)
 	    	    wave_type(*c) = FIRST_PHYSICS_WAVE_TYPE;
 		else if (level_func_pack->wave_type != UNKNOWN_WAVE_TYPE)
 		{
@@ -2084,6 +2084,29 @@ LOCAL   void FT_InitIntfc3d(
 	    install_hsbdry_on_surface(surf,MONO_COMP_HSBDRY);
 	    negative_component(surf) = positive_component(surf);
 	}
+        else if (level_func_pack->is_RS_RV && level_func_pack->func != NULL) //for RSRV case
+        {
+            double (*func)(POINTER,double*);
+            RECT_GRID *rgr = computational_grid(intfc);
+            RANDOM_PARAMS_VD rand_params;
+
+            if (debugging("trace"))
+                printf("Enter RS_RV case in FT_InitIntfc3d()\n");
+
+            rand_params.gr = rgr;
+            rand_params.pert = (FOURIER_POLY*)level_func_pack->func_params;
+            func = level_func_pack->func;
+            neg_comp = level_func_pack->neg_component;
+            pos_comp = level_func_pack->pos_component;
+            if (!make_level_surface(rgr,intfc,neg_comp,pos_comp,func,
+                        (POINTER)&rand_params,&surf))
+            {
+                screen("make_level_surface() failed!\n");
+                clean_up(ERROR);
+            }
+            if (debugging("trace"))
+                printf("Leave RS_RV case in FT_InitIntfc3d()\n");
+        }
 	else if (level_func_pack->func != NULL)
 	{
 	    double (*func)(POINTER,double*);

@@ -745,7 +745,6 @@ double	intfc_bdry_coord(
 	return pm;
 }
 
-//IMPORT void sep_common_pt_for_open_bdry(INTERFACE*);
 void    sep_common_pt_for_open_bdry(INTERFACE*);
 void sep_common_pt_for_open_bdry(
         INTERFACE       *intfc)

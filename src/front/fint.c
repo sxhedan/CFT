@@ -205,7 +205,12 @@ EXPORT	int f_delete_interface(
 
 	remove_corresponds_to_deleted_interface(intfc);
 	rst_cor_after_delete_interface(intfc);
+
+        //use freeTableList instead of deleting tables
 	status = i_delete_interface(intfc);
+
+	//disable the use of freeTableList, delete associated table/chunks instead.
+//	status = i_deep_delete_interface(intfc);
 	return status;
 }		/*end f_delete_interface*/
 

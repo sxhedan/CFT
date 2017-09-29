@@ -445,6 +445,15 @@ extern "C" {
 				double *ans,
                                 double *default_ans);
 
+   //for MAC grid
+   IMPORT  boolean FT_IntrpVelocityVarAtCoords_MAC_vd(Front *front ,
+                                int comp ,
+                                double *coords ,
+                                double *var_array ,
+                                double (*state_func)(POINTER) ,
+                                int dirc,
+                                double *ans );
+
 /*! \fn boolean FT_NearestRectGridVarInRange(Front *front, int comp, double *coords, double *var_array, int range, double *ans)
  *  \ingroup GRIDINTFC
     \brief Find the state variable on rectangular grid point which

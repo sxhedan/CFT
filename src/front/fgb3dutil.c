@@ -105,6 +105,16 @@ LOCAL   boolean     install_btri_states_from_crx(INTERFACE*,BOND_TRI*,CRXING*,si
 LOCAL   void   check_curve_connect(CURVE*, SURFACE*);
 void   print_edge_crossings(int *, int*, INTERFACE *);
 
+//from hiprop	Dan
+LOCAL boolean triInterDetect(double*,double*,double*,double*,double*,double*);
+LOCAL double detPoints3D(const double*,const double*,const double*,const double*);
+LOCAL boolean triangle_intersert_inSamePlane(const double*,const double*,const double*,const double*,const double*,const double*);
+LOCAL boolean line_triangle_intersert_inSamePlane(const double*,const double*,const double*,const double*,const double*);
+LOCAL boolean segments_intersert(const double*,const double*,const double*,const double*);
+LOCAL double direction(const double*,const double*,const double*);
+LOCAL boolean on_segment(const double*,const double*,const double*);
+LOCAL boolean is_point_within_triangle(const double*,const double*,const double*,const double*);
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* defined(__cplusplus) */
@@ -1035,6 +1045,7 @@ EXPORT	void set_crx_storage_for_reconstruction(
 	T->n_crx = n_crx;
 	init_seg_crx_lists(intfc,n_crx,n_segs);
 	uni_array(&T->components,n_reg_nodes,sizeof(COMPONENT));
+
 	if (dim == 3 && volume_frac != NULL)
 	{
 	    tri_array(&T->area,gmax[0],gmax[1],gmax[2],FLOAT);
@@ -1850,7 +1861,7 @@ EXPORT	void  fill_comp_with_component3d(
 	DEBUG_ENTER(fill_comp_with_component3d)
 
 	intfc->modified = NO;
-        
+
 	for (ip[2] = smin[2]; ip[2] <= smax[2]; ++ip[2])
 	{
 	    for (ip[1] = smin[1]; ip[1] <= smax[1]; ++ip[1])
@@ -1885,17 +1896,18 @@ EXPORT  void    set_fm(boolean flag)
         use_fast_merge_algo = flag;
 }
 
-/*
+
+// Yijie's version: gb+gf exact tangle detection
 EXPORT	int record_unphysical_ips(
 	int      *smin,
 	int      *smax,
 	INTERFACE *intfc,
 	int	 **ips)
 {
-    	int ii,jj,kk;
-	GRID_DIRECTION 	dir[6] = {WEST,EAST,SOUTH,NORTH,LOWER,UPPER};
-	int 		ip[3], num_ip;
-	RECT_GRID 	*gr = &topological_grid(intfc);
+	int ii,jj,kk;
+	GRID_DIRECTION	dir[6] = {WEST,EAST,SOUTH,NORTH,LOWER,UPPER};
+	int		ip[3], num_ip;
+	RECT_GRID	*gr = &topological_grid(intfc);
         CRXING          *crx1, *crx2;
         Table           *T = table_of_interface(intfc);
         float           dist, merge_tol;
@@ -1919,20 +1931,20 @@ EXPORT	int record_unphysical_ips(
 		    boolean gb_tangle_result = 0;
 		    boolean gf_tangle_result = 0;
 
-	            for (i = 0; i < 6; ++i)
-	            {
-	                if (ip[0] == smin[0] && dir[i] == WEST)
-	                    continue;
-	                if (ip[0] == smax[0] && dir[i] == EAST)
-	                    continue;
-	                if (ip[1] == smin[1] && dir[i] == SOUTH)
-	                    continue;
-	                if (ip[1] == smax[1] && dir[i] == NORTH)
-	                    continue;
-	                if (ip[2] == smin[2] && dir[i] == LOWER)
-	                    continue;
-	                if (ip[2] == smax[2] && dir[i] == UPPER)
-	                    continue;
+                    for (i = 0; i < 6; ++i)
+                    {
+                        if (ip[0] == smin[0] && dir[i] == WEST)
+                            continue;
+                        if (ip[0] == smax[0] && dir[i] == EAST)
+                            continue;
+                        if (ip[1] == smin[1] && dir[i] == SOUTH)
+                            continue;
+                        if (ip[1] == smax[1] && dir[i] == NORTH)
+                            continue;
+                        if (ip[2] == smin[2] && dir[i] == LOWER)
+                            continue;
+                        if (ip[2] == smax[2] && dir[i] == UPPER)
+                            continue;
 
                         if(use_fast_merge_algo == YES)
                         {
@@ -1940,16 +1952,17 @@ EXPORT	int record_unphysical_ips(
                             nc = T->seg_crx_count[k];
 
                             for(j=0; j<nc-1; j++)
+
                             {
                                 list1 = T->seg_crx_lists[k][j];
                                 crx1 = T->crx_store+list1;
 
                                 list1 = T->seg_crx_lists[k][j+1];
                                 crx2 = T->crx_store+list1;
- 
+
                                 if(!check_two_tris_cond(crx1->tri, crx2->tri, intfc))
                                     continue;
-    
+
                                  dist = distance_between_positions(Coords(crx1->pt),
                                     Coords(crx2->pt), 3);
 
@@ -1960,7 +1973,7 @@ EXPORT	int record_unphysical_ips(
                                     ips[num_ip][2] = ip[2];
                                     ++num_ip;
                                     num_merge++;
-  
+
                                     break;
                                 }
                             }
@@ -1968,17 +1981,22 @@ EXPORT	int record_unphysical_ips(
                                 break;
                         }
 
-	                if (physical_edge(ip,dir[i],intfc,smin,smax,MULTIPLE) 
-				!= YES)
-	                {
-			    gb_tangle_result = 1;
-			    break;
-	                }
-		    }
+                        if (physical_edge(ip,dir[i],intfc,smin,smax,MULTIPLE)
+                                != YES)
+                        {
+                            gb_tangle_result = 1;
+                            break;
+                            //ips[num_ip][0] = ip[0];
+                            //ips[num_ip][1] = ip[1];
+                            //ips[num_ip][2] = ip[2];
+                            //++num_ip;
+                        }
+                    }
 
-		    // If at the boundary, tris information is not stored
-		    if (ip[0] != smax[0] && ip[1] != smax[1] && ip[2] != smax[2])
-		    {
+                    // If at the boundary, tris information is not stored
+		    
+                    if (ip[0] != smax[0] && ip[1] != smax[1] && ip[2] != smax[2])
+                    {
                         double tri1p1[3],tri1p2[3],tri1p3[3];
                         double tri2p1[3],tri2p2[3],tri2p3[3];
 
@@ -2015,7 +2033,7 @@ EXPORT	int record_unphysical_ips(
 					tri2p3[kk] = (Coords(pstri2[2]))[kk];
 				    }
 
-				    boolean_T res = 0;
+				    boolean res = 0;
 				    res = triInterDetect(tri1p1, tri1p2, tri1p3, tri2p1, tri2p2, tri2p3);
 				    if (res)
 				    {
@@ -2029,6 +2047,7 @@ EXPORT	int record_unphysical_ips(
 			}
 		    }
 
+		    //gb_tangle_result = 0;
 		    //gf_tangle_result = 0;
 		    if (gb_tangle_result == 1 || gf_tangle_result == 1)
 		    {
@@ -2037,14 +2056,16 @@ EXPORT	int record_unphysical_ips(
 			ips[num_ip][2] = ip[2];
 			++num_ip;
 		    }
-		}
-	    }
-	}
-	DEBUG_LEAVE(record_unphysical_ips)
-	    return num_ip;
-}	// end record_unphysical_ips 
-*/
+                }
+            }
+        }
+        DEBUG_LEAVE(record_unphysical_ips)
+        return num_ip;
+}	//end record_unphysical_ips
 
+
+/*
+// original version: gb tangle detection
 EXPORT  int record_unphysical_ips(
         int      *smin,
         int      *smax,
@@ -2138,7 +2159,8 @@ EXPORT  int record_unphysical_ips(
         }
         DEBUG_LEAVE(record_unphysical_ips)
         return num_ip;
-}       /* end record_unphysical_ips */
+}       //end record_unphysical_ips 
+*/
 
 void show_line_components3d(int*, int*, int, INTERFACE*);
 
@@ -5396,4 +5418,306 @@ EXPORT  void check_intfc_curve_connect(INTERFACE *intfc)
 
 #endif /* defined(THREED) */
 
+//from hiprop	Dan
+LOCAL boolean triInterDetect(double *tri1p1, double *tri1p2, double *tri1p3, double *tri2p1, double *tri2p2, double *tri2p3)
+{
+    double p1_tri2_vertex1 = detPoints3D(tri1p1, tri1p2, tri1p3, tri2p1);
+    double p1_tri2_vertex2 = detPoints3D(tri1p1, tri1p2, tri1p3, tri2p2);
+    double p1_tri2_vertex3 = detPoints3D(tri1p1, tri1p2, tri1p3, tri2p3);
 
+    if (p1_tri2_vertex1 > 0 && p1_tri2_vertex2 > 0 && p1_tri2_vertex3 > 0)
+        return 0;
+
+    if (p1_tri2_vertex1 < 0 && p1_tri2_vertex2 < 0 && p1_tri2_vertex3 < 0)
+        return 0;
+
+    if (p1_tri2_vertex1 == 0 && p1_tri2_vertex2 == 0 && p1_tri2_vertex3 == 0)
+    {
+        if ( triangle_intersert_inSamePlane(tri1p1, tri1p2, tri1p3, tri2p1, tri2p2, tri2p3) )
+            return 1;
+        else
+            return 0;
+    }
+
+
+    if (p1_tri2_vertex1 == 0 && p1_tri2_vertex2*p1_tri2_vertex3 > 0)
+    {
+        if ( is_point_within_triangle( tri1p1, tri1p2, tri1p3, tri2p1) )
+            return 1;
+        else
+            return 0;
+    }
+    else if (p1_tri2_vertex2 == 0 && p1_tri2_vertex1*p1_tri2_vertex3 > 0)
+    {
+        if ( is_point_within_triangle( tri1p1, tri1p2, tri1p3, tri2p2 ) )
+            return 1;
+        else
+            return 0;
+    }
+    else if (p1_tri2_vertex3 == 0 && p1_tri2_vertex1*p1_tri2_vertex2 > 0)
+    {
+        if ( is_point_within_triangle( tri1p1, tri1p2, tri1p3, tri2p3 ) )
+            return 1;
+        else
+            return 0;
+    }
+
+    double p2_tri1_vertex1 = detPoints3D(tri2p1, tri2p2, tri2p3, tri1p1 );
+    double p2_tri1_vertex2 = detPoints3D(tri2p1, tri2p2, tri2p3, tri1p2 );
+    double p2_tri1_vertex3 = detPoints3D(tri2p1, tri2p2, tri2p3, tri1p3 );
+
+    if (p2_tri1_vertex1 > 0 && p2_tri1_vertex2 > 0 && p2_tri1_vertex3 > 0)
+        return 0;
+
+    if (p2_tri1_vertex1 < 0 && p2_tri1_vertex2 < 0 && p2_tri1_vertex3 < 0)
+        return 0;
+
+    if (p2_tri1_vertex1 == 0 && p2_tri1_vertex2*p2_tri1_vertex3 > 0)
+    {
+        if ( is_point_within_triangle(tri2p1, tri2p2, tri2p3, tri1p1) )
+            return 1;
+        else
+            return 0;
+    }
+
+    if (p2_tri1_vertex2 == 0 && p2_tri1_vertex1*p2_tri1_vertex3 > 0 )
+    {
+        if ( is_point_within_triangle(tri2p1, tri2p2, tri2p3, tri1p2) )
+            return 1;
+        else
+            return 0;
+    }
+
+    if ( p2_tri1_vertex3 == 0 && p2_tri1_vertex1*p2_tri1_vertex2 > 0 )
+    {
+        if ( is_point_within_triangle(tri2p1, tri2p2, tri2p3, tri1p3) )
+            return 1;
+        else
+            return 0;
+    }
+
+
+    double *tri1_a = tri1p1;
+    double *tri1_b = tri1p2;
+    double *tri1_c = tri1p3;
+    double *tri2_a = tri2p1;
+    double *tri2_b = tri2p2;
+    double *tri2_c = tri2p3;
+
+    double *m;
+    double im;
+
+    if (p2_tri1_vertex2*p2_tri1_vertex3 >= 0 && p2_tri1_vertex1 != 0)
+    {
+        if (p2_tri1_vertex1 < 0)
+        {
+            m = tri2_b;
+            tri2_b = tri2_c;
+            tri2_c = m;
+
+            im = p1_tri2_vertex2;
+            p1_tri2_vertex2 = p1_tri2_vertex3;
+            p1_tri2_vertex3 = im;
+        }
+    }
+    else if (p2_tri1_vertex1*p2_tri1_vertex3 >= 0 && p2_tri1_vertex2 != 0)
+    {
+        m = tri1_a;
+        tri1_a = tri1_b;
+        tri1_b = tri1_c;
+        tri1_c = m;
+
+        if (p2_tri1_vertex2 < 0)
+        {
+            m = tri2_b;
+            tri2_b = tri2_c;
+            tri2_c = m;
+
+            im = p1_tri2_vertex2;
+            p1_tri2_vertex2 = p1_tri2_vertex3;
+            p1_tri2_vertex3 = im;
+        }
+    }
+    else if (p2_tri1_vertex1*p2_tri1_vertex2 >= 0 && p2_tri1_vertex3 != 0)
+    {
+        m = tri1_a;
+        tri1_a = tri1_c;
+        tri1_c = tri1_b;
+        tri1_b = m;
+
+        if (p2_tri1_vertex3 < 0)
+        {
+            m = tri2_b;
+            tri2_b = tri2_c;
+            tri2_c = m;
+
+            im = p1_tri2_vertex2;
+            p1_tri2_vertex2 = p1_tri2_vertex3;
+            p1_tri2_vertex3 = im;
+        }
+    }
+
+    if (p1_tri2_vertex2*p1_tri2_vertex3 >= 0 && p1_tri2_vertex1 != 0)
+    {
+        if (p1_tri2_vertex1 < 0)
+        {
+            m = tri1_b;
+            tri1_b = tri1_c;
+            tri1_c = m;
+        }
+    }
+    else if (p1_tri2_vertex1*p1_tri2_vertex3 >= 0 && p1_tri2_vertex2 != 0)
+    {
+        m = tri2_a;
+        tri2_a = tri2_b;
+        tri2_b = tri2_c;
+        tri2_c = m;
+
+        if (p1_tri2_vertex2 < 0)
+        {
+            m = tri1_b;
+            tri1_b = tri1_c;
+            tri1_c = m;
+        }
+    }
+    else if (p1_tri2_vertex1*p1_tri2_vertex2 >= 0 && p1_tri2_vertex3 != 0)
+    {
+        m = tri2_a;
+        tri2_a = tri2_c;
+        tri2_c = tri2_b;
+        tri2_b = m;
+
+        if (p1_tri2_vertex3 < 0)
+        {
+            m = tri1_b;
+            tri1_b = tri1_c;
+            tri1_c = m;
+        }
+    }
+
+    if ( (detPoints3D(tri1_a, tri1_b, tri2_a, tri2_b) <= 0) && (detPoints3D(tri1_a, tri1_c, tri2_c, tri2_a) <= 0) )
+        return 1;
+    else
+        return 0;
+}
+
+LOCAL double detPoints3D(const double *a, const double *b, const double *c, const double *d)
+{
+    return (a[0]-d[0])*(b[1]-d[1])*(c[2]-d[2]) +
+	   (b[0]-d[0])*(c[1]-d[1])*(a[2]-d[2]) +
+	   (c[0]-d[0])*(a[1]-d[1])*(b[2]-d[2]) -
+	   (c[0]-d[0])*(b[1]-d[1])*(a[2]-d[2]) -
+	   (b[0]-d[0])*(a[1]-d[1])*(c[2]-d[2]) -
+	   (a[0]-d[0])*(c[1]-d[1])*(b[2]-d[2]);
+}
+
+LOCAL boolean triangle_intersert_inSamePlane(const double *tri1p1, const double *tri1p2, const double *tri1p3, const double *tri2p1, const double *tri2p2, const double *tri2p3)
+{
+    if ( line_triangle_intersert_inSamePlane( tri2p1, tri2p2, tri2p3, tri1p1, tri1p2) )
+        return 1;
+    else if ( line_triangle_intersert_inSamePlane( tri2p1, tri2p2, tri2p3, tri1p2, tri1p3 ) )
+        return 1;
+    else if ( line_triangle_intersert_inSamePlane( tri2p1, tri2p2, tri2p3, tri1p1, tri1p3 ) )
+        return 1;
+    else
+        return 0;
+}
+
+LOCAL boolean line_triangle_intersert_inSamePlane(const double *trip1, const double *trip2, const double *trip3, const double *f1, const double *f2)
+{
+    double p1[2];
+    double p2[2];
+    double p3[2];
+    double p4[2];
+
+    p1[0] = f1[0]; p1[1] = f1[1];
+    p2[0] = f2[0]; p2[1] = f2[1];
+    p3[0] = trip1[0]; p3[1] = trip1[1];
+    p4[0] = trip2[0]; p4[1] = trip2[1];
+
+    if ( segments_intersert( p1, p2, p3, p4 ) )
+        return 1;
+
+    p3[0] = trip2[0]; p3[1] = trip2[1];
+    p4[0] = trip3[0]; p4[1] = trip3[1];
+
+    if ( segments_intersert( p1, p2, p3, p4 ) )
+        return 1;
+
+    p3[0] = trip1[0]; p3[1] = trip1[1];
+    p4[0] = trip3[0]; p4[1] = trip3[1];
+
+    if ( segments_intersert( p1, p2, p3, p4 ) )
+        return 1;
+    
+    return 0;
+}
+
+LOCAL boolean segments_intersert( const double *p1, const double *p2, const double *p3, const double *p4)
+{
+    double d1, d2, d3, d4;
+    d1 = direction( p3, p4, p1 );
+    d2 = direction( p3, p4, p2 );
+    d3 = direction( p1, p2, p3 );
+    d4 = direction( p1, p2, p4 );
+    if ( d1 * d2 < 0 && d3 * d4 < 0 )
+        return 1;
+    else if ( d1 == 0 && on_segment( p3, p4, p1 ) == 1 )
+        return 1;
+    else if ( d2 == 0 && on_segment( p3, p4, p2 ) == 1 )
+        return 1;
+    else if ( d3 == 0 && on_segment( p1, p2, p3 ) == 1 )
+        return 1;
+    else if ( d4 == 0 && on_segment( p1, p2, p4 ) == 1 )
+        return 1;
+    return 0;
+}
+
+LOCAL double direction(const double *p1, const double *p2, const double *p)
+{
+    return (p[0]-p1[0])*(p2[1]-p1[1]) - (p2[0]-p1[0])*(p[1]-p1[1]);
+}
+
+LOCAL boolean on_segment( const double *p1, const double *p2, const double *p)
+{
+    double max = p1[0] > p2[0] ? p1[0] : p2[0] ;
+    double min = p1[0] < p2[0] ? p1[0] : p2[0] ;
+    double max1 = p1[1] > p2[1] ? p1[1] : p2[1] ;
+    double min1 = p1[1] < p2[1] ? p1[1]  : p2[1] ;
+    if ( p[0] >= min && p[0] <= max && p[1] >= min1 && p[1] <= max1 )
+        return 1;
+    else
+        return 0;
+}
+
+LOCAL boolean is_point_within_triangle(const double *trip1, const double *trip2, const double *trip3, const double *point)
+{
+    int i;
+    double v0[3];
+    for (i = 0; i < 3; ++i)
+	v0[i] = trip3[i] - trip1[i];
+    double v1[3];
+    for (i = 0; i < 3; ++i)
+	v1[i] = trip2[i] - trip1[i];
+    double v2[3];
+    for (i = 0; i < 3; ++i)
+	v2[i] = point[i] - trip1[i];
+
+    double dot00 = v0[0]*v0[0] + v0[1]*v0[1] + v0[2]*v0[2];
+    double dot01 = v0[0]*v1[0] + v0[1]*v1[1] + v0[2]*v1[2];
+    double dot02 = v0[0]*v2[0] + v0[1]*v2[1] + v0[2]*v2[2];
+    double dot11 = v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2];
+    double dot12 = v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
+
+    double inverDeno = 1/(dot00*dot11 - dot01*dot01);    
+    double u = (dot11*dot02 - dot01*dot12 )*inverDeno; 
+
+    if (u < 0 || u > 1) // if u out of range, return directly
+        return 0;
+
+    double v = (dot00*dot12 - dot01*dot02)*inverDeno;
+    if (v < 0 || v > 1) // if v out of range, return directly
+        return 0;
+
+    return u + v <= 1;
+}

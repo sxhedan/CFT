@@ -651,7 +651,6 @@ EXPORT void alloc_view(
 }		/*end alloc_view*/
 
 
-
 EXPORT void long_alloc_view(
 	FILE		*file)
 {
@@ -699,6 +698,33 @@ EXPORT void long_alloc_view(
 	(void) fprintf(file,"\n\n");
 }		/*end long_alloc_view*/
 
+
+EXPORT int get_number_of_blockName(
+        FILE            *file,
+        const char      *blockName)
+{
+        ALLOC_HEADER    *h;
+        const char      *ERR;
+        static int      show_number_of_blockName = YES;
+        int		totalNum = 0;
+
+        if (show_number_of_blockName == NO)
+            return;
+        ERR = "\n\nERROR in get_number_of_blockName(), corrupted header\n\n";
+        for (h = first_header; h != NULL; h = h->next)
+        {
+            if (BLOCK_CORRUPTED(h))
+            {
+                screen(ERR);
+                if (file != stdout && file != stderr)
+                    (void) fprintf(file,"%s", ERR);
+                show_number_of_blockName = NO;
+                clean_up(ERROR);
+            }
+            if (!strcmp(h->name, blockName)) totalNum++;
+        }
+        return totalNum;
+}               /*end get_number_of_blockName*/
 
 /*
 *			get_vmalloc_storage_use():

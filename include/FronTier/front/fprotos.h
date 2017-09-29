@@ -578,8 +578,10 @@ IMPORT	int	join_curves_at_closed_nodes(INTERFACE*);
 IMPORT	int	redistribute2d(Front*,boolean,boolean);
 
 	/* fredist3d.c*/
+IMPORT	int	redistribute3d_old(Front*,boolean,boolean);
 IMPORT	int	redistribute3d(Front*,boolean,boolean);
 IMPORT	int     recon_repeat();
+IMPORT	boolean	surface_redistribute_old(Front*,boolean*);
 IMPORT	boolean	surface_redistribute(Front*,boolean*);
 IMPORT	boolean	surface_redistribute_temp(Front*,boolean*);
 IMPORT  boolean surface_redistribute_init(Front*,boolean*);

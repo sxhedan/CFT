@@ -2277,7 +2277,7 @@ LOCAL int propagate_3d_front(
 	    debug_front("np_front","after normal propagation",newfront);
 	    stop_clock("normal_propagate");
 	}
-	
+
 	debug_propagate_3d_front(newfront);
 
 	interface_reconstructed(newfront->interf) = NO;
@@ -2326,6 +2326,7 @@ LOCAL int propagate_3d_front(
 	    DEBUG_LEAVE(propagate_3d_front)
 	    return MODIFY_TIME_STEP; 
 	}
+
 	stop_clock("scatter_front");
 
         //set_cut_ref(NO);
