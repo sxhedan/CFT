@@ -315,8 +315,147 @@ struct FSWEEP
 	double *gamma;	//Dan
 };
 
-class G_CARTESIAN
+struct _CTRI;
+struct _CFACE;
+
+enum _PDIR
 {
+	IN = -1,
+	VERT,
+	OUT
+};
+typedef _PDIR PDIR;
+
+struct _CPOINT
+{
+	double crds[3];
+
+	struct _CPOINT *prev;
+	struct _CPOINT *next;
+};
+typedef struct _CPOINT CPOINT;
+
+struct _CRXPOINT
+{
+	CPOINT *p;
+
+	int dir;	//for crxplist on an edge, direction of the edge
+	PDIR pdir;	//goes into an edge or leave an edge
+
+	struct _CTRI *ctri;
+
+	struct _CRXPOINT *next;
+};
+typedef struct _CRXPOINT CRXPOINT;
+
+struct _CEDGE
+{
+	CPOINT *endp[2];
+	CRXPOINT *crxp;
+	int num_of_crx;
+	int dir;
+
+	struct _CEDGE *next;
+};
+typedef struct _CEDGE CEDGE;
+
+struct _CTRI
+{
+	CPOINT pts[3];
+	CEDGE edges[3];
+	double nor[3];
+
+	CRXPOINT *crxp;
+	CEDGE *pedges;
+	CEDGE *udedges;
+
+	int num_of_crx;
+
+//	struct _CTRI *prev;
+	struct _CTRI *next;
+};
+typedef struct _CTRI CTRI;
+
+struct _VERTEX
+{
+	CPOINT *pt;
+
+//	struct _VERTEX *prev;
+	struct _VERTEX *next;
+};
+typedef struct _VERTEX VERTEX;
+
+struct _POLYGON
+{
+//	CPOINT **pts;
+	VERTEX *vertices;
+	CEDGE *edges;
+	CEDGE *undir_edges;
+
+	CPOINT *tmp_crxp;
+//	COMPONENT comp;
+
+	double nor[3];
+
+//	struct _POLYGON *prev;
+	struct _POLYGON *next;
+//	struct _POLYGON *neighbors;
+};
+typedef struct _POLYGON POLYGON;
+
+struct _POLYHEDRON
+{
+	POLYGON *polygons;
+
+//	COMPONENT comp;
+	double vol;
+
+//	struct _POLYHEDRON *prev;
+	struct _POLYHEDRON *next;
+};
+typedef struct _POLYHEDRON POLYHEDRON;
+
+struct _LINESEG
+{
+	CPOINT *endp[2];
+
+	struct _LINESEG *next;
+};
+typedef struct _LINESEG LINESEG;
+
+struct _CFACE
+{
+	CPOINT *pts[4];
+	CEDGE *edges[4];
+	int dir;
+	bool cut;
+
+	CRXPOINT *crxp;
+	LINESEG *lslist;
+	LINESEG *undir_lslist;
+};
+typedef struct _CFACE CFACE;
+
+struct _CELL
+{
+	int icrds[3];
+	CPOINT pts[8];
+	CEDGE edges[12];
+	CFACE faces[6];
+	double celll[3], cellu[3];
+
+	int num_of_ctris;
+	CTRI *ctri_list_head;
+	bool cut;
+
+	POLYGON *polygons;
+	POLYHEDRON *polyhedrons;
+
+	double vol[2];
+};
+typedef struct _CELL CELL;
+
+class G_CARTESIAN{
 	Front *front;
 public:
 	//G_CARTESIAN();
@@ -353,6 +492,23 @@ public:
 	void checkIntfc(char*);
 	void record_intfc_extrema();
 	void print_intfc_extrema(char*);
+	void cvol();	//Dan
+	void find_tri_cub_crx(TRI*,CELL*);	//Dan
+	void init_cell(CELL*);	//Dan
+	void init_cells();	//Dan
+	void init_grid_cells();	//Dan
+//	void init_ctris();	//Dan
+	void init_tris_in_cells();	//Dan
+//	void copy_from_tri_to_ctri(TRI*,CTRI*);	//Dan
+//	void copy_from_pt_to_cpt(POINT*,CPOINT*);	//Dan
+	void set_cell_polygons();	//Dan
+//	void set_polygons_in_cell(CELL*);	//Dan
+//	void set_polygons_on_cell_faces(CELL*);	//Dan
+//	void find_crx_with_cell(CEDGE*,CELL*);	//Dan
+//	void find_crx_with_tri(CEDGE*,CTRI*);	//Dan
+//	void set_polyhedrons();	//Dan
+//	void add_neighbor_polygons(POLYGON*);	//Dan
+//	void cut_cell_vol();	//Dan
 	double height_at_fraction(double,double,double,int,COMPONENT);
 	void accumulate_fractions_in_layer(double,double*,COMPONENT);
 	double find_particular_fluid_cell_volume(double*,double*,COMPONENT);
@@ -377,6 +533,8 @@ private:
 	COMPONENT *top_comp;
 	EQN_PARAMS *eqn_params;
 	FIELD field;
+	int num_cells;	//cft	Dan
+	CELL *cells;	//cft	Dan
 
 	int top_gmax[MAXD];
 	int lbuf[MAXD],ubuf[MAXD];

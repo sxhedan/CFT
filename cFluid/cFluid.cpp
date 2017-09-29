@@ -239,6 +239,13 @@ static  void gas_driver(
 //	    g_cartesian.print_intfc_extrema(out_name);
 //	}
 
+	//Dan
+	if (true && !RestartRun && g_cartesian.dim == 3)
+	{
+	    g_cartesian.cvol();
+	}
+	//Dan
+
 	if (debugging("trace")) printf("Before time loop\n");
         for (;;)
         {
@@ -333,6 +340,16 @@ static  void gas_driver(
 	    dt = front->dt;
 	    (void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
                         front->time,front->step,front->dt);
+
+	    //Dan
+	    if (front->step > 0 && true && !RestartRun && g_cartesian.dim == 3)
+	    {
+		g_cartesian.cvol();
+		if (front->step > 0)
+		    exit(0);	//FIXME
+	    }
+	    //Dan
+
             fflush(stdout);
         }
 	if (debugging("trace")) printf("After time loop\n");
