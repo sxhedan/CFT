@@ -1898,6 +1898,7 @@ EXPORT  void    set_fm(boolean flag)
 
 
 // Yijie's version: gb+gf exact tangle detection
+/*
 EXPORT	int record_unphysical_ips(
 	int      *smin,
 	int      *smax,
@@ -2062,9 +2063,7 @@ EXPORT	int record_unphysical_ips(
         DEBUG_LEAVE(record_unphysical_ips)
         return num_ip;
 }	//end record_unphysical_ips
-
-
-/*
+*/
 // original version: gb tangle detection
 EXPORT  int record_unphysical_ips(
         int      *smin,
@@ -2160,7 +2159,6 @@ EXPORT  int record_unphysical_ips(
         DEBUG_LEAVE(record_unphysical_ips)
         return num_ip;
 }       //end record_unphysical_ips 
-*/
 
 void show_line_components3d(int*, int*, int, INTERFACE*);
 
