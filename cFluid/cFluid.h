@@ -19,6 +19,13 @@
 #define		gas_comp(comp)   (((comp) == GAS_COMP1 || 	\
 		comp == GAS_COMP2) ? YES : NO)
 
+enum PIC
+{
+	INC = 1,
+	ONCF,
+	OUTC
+};
+
 enum PROB_TYPE {
         ERROR_TYPE = -1,
         TWO_FLUID_BUBBLE = 1,
@@ -317,6 +324,7 @@ struct FSWEEP
 
 struct _CTRI;
 struct _CFACE;
+struct _CPOLYGON;
 
 enum _PDIR
 {
@@ -330,29 +338,18 @@ struct _CPOINT
 {
 	double crds[3];
 
+	int flag;
+
 	struct _CPOINT *prev;
 	struct _CPOINT *next;
 };
 typedef struct _CPOINT CPOINT;
 
-struct _CRXPOINT
-{
-	CPOINT *p;
-
-	int dir;	//for crxplist on an edge, direction of the edge
-	PDIR pdir;	//goes into an edge or leave an edge
-
-	struct _CTRI *ctri;
-
-	struct _CRXPOINT *next;
-};
-typedef struct _CRXPOINT CRXPOINT;
-
 struct _CEDGE
 {
-	CPOINT *endp[2];
-	CRXPOINT *crxp;
-	int num_of_crx;
+	CPOINT endp[2];
+	CPOINT *crxps;
+	int ncrxps;
 	int dir;
 
 	struct _CEDGE *next;
@@ -365,9 +362,7 @@ struct _CTRI
 	CEDGE edges[3];
 	double nor[3];
 
-	CRXPOINT *crxp;
-	CEDGE *pedges;
-	CEDGE *udedges;
+	_CPOLYGON *polyg;
 
 	int num_of_crx;
 
@@ -376,19 +371,10 @@ struct _CTRI
 };
 typedef struct _CTRI CTRI;
 
-struct _VERTEX
-{
-	CPOINT *pt;
-
-//	struct _VERTEX *prev;
-	struct _VERTEX *next;
-};
-typedef struct _VERTEX VERTEX;
-
-struct _POLYGON
+struct _CPOLYGON
 {
 //	CPOINT **pts;
-	VERTEX *vertices;
+	CPOINT *vertices;
 	CEDGE *edges;
 	CEDGE *undir_edges;
 
@@ -397,15 +383,15 @@ struct _POLYGON
 
 	double nor[3];
 
-//	struct _POLYGON *prev;
-	struct _POLYGON *next;
-//	struct _POLYGON *neighbors;
+//	struct _CPOLYGON *prev;
+	struct _CPOLYGON *next;
+//	struct _CPOLYGON *neighbors;
 };
-typedef struct _POLYGON POLYGON;
+typedef struct _CPOLYGON CPOLYGON;
 
 struct _POLYHEDRON
 {
-	POLYGON *polygons;
+	CPOLYGON *polygons;
 
 //	COMPONENT comp;
 	double vol;
@@ -415,24 +401,17 @@ struct _POLYHEDRON
 };
 typedef struct _POLYHEDRON POLYHEDRON;
 
-struct _LINESEG
-{
-	CPOINT *endp[2];
-
-	struct _LINESEG *next;
-};
-typedef struct _LINESEG LINESEG;
-
 struct _CFACE
 {
-	CPOINT *pts[4];
-	CEDGE *edges[4];
-	int dir;
+	CPOINT pts[4];
+	CEDGE edges[4];
+	double l[3], u[3];
+	int dir, side;
 	bool cut;
 
-	CRXPOINT *crxp;
-	LINESEG *lslist;
-	LINESEG *undir_lslist;
+	CEDGE *undirected_edges;
+	CEDGE *edges_in_cf;
+	CEDGE *edges_on_ce;
 };
 typedef struct _CFACE CFACE;
 
@@ -445,10 +424,11 @@ struct _CELL
 	double celll[3], cellu[3];
 
 	int num_of_ctris;
-	CTRI *ctri_list_head;
+	CTRI *ctris;
 	bool cut;
 
-	POLYGON *polygons;
+	CPOLYGON *ctri_polygs;
+	CPOLYGON *cf_polygs;
 	POLYHEDRON *polyhedrons;
 
 	double vol[2];
@@ -507,7 +487,7 @@ public:
 //	void find_crx_with_cell(CEDGE*,CELL*);	//Dan
 //	void find_crx_with_tri(CEDGE*,CTRI*);	//Dan
 //	void set_polyhedrons();	//Dan
-//	void add_neighbor_polygons(POLYGON*);	//Dan
+//	void add_neighbor_polygons(CPOLYGON*);	//Dan
 //	void cut_cell_vol();	//Dan
 	double height_at_fraction(double,double,double,int,COMPONENT);
 	void accumulate_fractions_in_layer(double,double*,COMPONENT);

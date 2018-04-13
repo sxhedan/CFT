@@ -218,7 +218,12 @@ static  void gas_driver(
 	    FT_SetOutputCounter(front);
         }
         else
+	{
+	    g_cartesian.time = front->time;
+	    g_cartesian.step = front->step;
+	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
 	    FT_SetOutputCounter(front);
+	}
 
 	FT_TimeControlFilter(front);
 	assert(g_cartesian.time == front->time);
@@ -345,8 +350,8 @@ static  void gas_driver(
 	    if (front->step > 0 && true && !RestartRun && g_cartesian.dim == 3)
 	    {
 		g_cartesian.cvol();
-		if (front->step > 0)
-		    exit(0);	//FIXME
+//		if (front->step > 0)
+//		    exit(0);	//FIXME
 	    }
 	    //Dan
 

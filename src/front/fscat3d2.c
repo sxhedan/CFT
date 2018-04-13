@@ -133,6 +133,11 @@ EXPORT boolean f_intfc_communication3d2(
 		{
 		    status = reflect_buffer_interface(intfc,i,j,status);
 		    set_current_interface(intfc);
+		    //debugdan	FIXME
+		    //reset_intfc_num_points(intfc);
+		    //vtk_interface_plot("out-test-0219",intfc,NO,0,10);
+		    //exit(0);
+		    //debugdan	FIXME
 		}
 
 	        /*Send buffer region to adjacent domain if necessary*/
@@ -1540,6 +1545,11 @@ LOCAL	boolean  reflect_buffer_interface(
 	    U[dir] = dual_gr.U[dir];
 	}
 	open_null_sides2(rfl_intfc,L,U,dir,(nb+1)%2);
+	//debugdan	FIXME
+	//reset_intfc_num_points(rfl_intfc);
+	//vtk_interface_plot("out-test-0219",rfl_intfc,NO,0,10);
+	//exit(0);
+	//debugdan	FIXME
 	if (rfl_intfc->surfaces == NULL)
 	{
 	    delete_interface(rfl_intfc);
