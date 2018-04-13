@@ -104,9 +104,12 @@ void G_CARTESIAN::init_grid_cells()
 
 	FT_VectorMemoryAlloc((POINTER*)&cells, num_cells, sizeof(CELL));
 
-	for (k = 0; k <= top_gmax[2]; k++)
-	for (j = 0; j <= top_gmax[1]; j++)
-	for (i = 0; i <= top_gmax[0]; i++)
+	//for (k = 0; k <= top_gmax[2]; k++)
+	//for (j = 0; j <= top_gmax[1]; j++)
+	//for (i = 0; i <= top_gmax[0]; i++)
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -249,9 +252,12 @@ void G_CARTESIAN::set_cell_polygons()
 	int i, j, k, index;
 	CELL *c;
 
-	for (k = 0; k <= top_gmax[2]; k++)
-	for (j = 0; j <= top_gmax[2]; j++)
-	for (i = 0; i <= top_gmax[2]; i++)
+	//for (k = 0; k <= top_gmax[2]; k++)
+	//for (j = 0; j <= top_gmax[2]; j++)
+	//for (i = 0; i <= top_gmax[2]; i++)
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -279,6 +285,8 @@ void tri_to_ctri(
 	set_nor(&(ctri->pts[0]),&(ctri->pts[1]),&(ctri->pts[2]),ctri->nor);
 
 	ctri->polyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	ctri->polyg->vertices = NULL;	//FIXME
+	ctri->polyg->undir_edges = NULL;	//FIXME
 
 	return;
 }
@@ -582,6 +590,7 @@ void set_crxps_and_edges_111(
 	    pedge = (CEDGE*)malloc(sizeof(CEDGE));
 	    copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 	    copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
+	    add_crxp_on_tri_edge(&crxp1,&(ctri->edges[(i+1)%3]));
 	    found = YES;
 	}
 	else if (pocf1 && !pocf2)
@@ -592,7 +601,6 @@ void set_crxps_and_edges_111(
 		pedge = (CEDGE*)malloc(sizeof(CEDGE));
 		copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
-		add_crxp_on_tri_edge(&crxp2,&(ctri->edges[(i+1)%3]));
 		found = YES;
 	    }
 	}
@@ -1302,7 +1310,10 @@ void construct_polygon_on_tri(
 
 	//no polygon on tri
 	if (ctri->polyg->undir_edges == NULL)
+	{
+	    //free(ctri->polyg);	//FIXME
 	    return;
+	}
 
 	//inside and outside tris have been excluded? needs double check	TODO
 	//polygon on tri
@@ -2309,11 +2320,6 @@ void add_crxp_on_cf_edge_sorted(
 	}
 
 	f1 = newp->crds[dir] - cf->pts[index].crds[dir];
-	if (f1 < -tol)
-	{
-	    printf("ERROR in add_crxp_on_cf_edge_sorted(): negative f1.\n");
-	    clean_up(ERROR);
-	}
 	prevp = NULL;
 	while (crxp)
 	{
