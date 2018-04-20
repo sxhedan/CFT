@@ -2,6 +2,8 @@
 
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
+#define absmin(a,b) (((fabs(a)) < (fabs(b))) ? (a) : (b))
+#define absmax(a,b) (((fabs(a)) > (fabs(b))) ? (a) : (b))
 
 void tri_to_ctri(TRI*,CTRI*);
 void copy_pt_to_cpt(POINT*,CPOINT*);
@@ -32,6 +34,7 @@ bool same_edge(CEDGE*,CEDGE*);
 void print_edge(CEDGE*);
 void print_edge_list(CEDGE*);
 void print_point(CPOINT*);
+void print_ctri(CTRI*);
 void print_polygon(CPOLYGON*);
 void construct_polygon_on_tri(CTRI*,CELL*);
 void add_polyg_vertex(CPOINT*,CPOLYGON*);
@@ -43,7 +46,7 @@ void add_new_polyg(CPOLYGON*,CPOLYGON**);
 void reverse_polyg(CPOLYGON*);
 void set_directed_polyg(CPOLYGON*,double*);
 void pop_edge(CEDGE**,CEDGE**);
-void find_next_endp(CPOINT,CEDGE**,CPOINT*);
+bool find_next_endp(CPOINT,CEDGE**,CPOINT*);
 bool same_nor_dir(double*,double*);
 void construct_polygons_on_cfs(CELL*);
 void set_polyg_edges_on_cf(CELL*,int);
@@ -58,6 +61,8 @@ void set_polygons_on_cf(CELL*,int);
 void add_next_vertices_on_ce(CPOLYGON*,CFACE*);
 void add_prev_vertices_on_ce(CPOLYGON*,CFACE*);
 void complete_polyg_on_cf(CPOLYGON*,CFACE*);
+bool the_ctri(CTRI*);
+bool debug_same_cpt(CPOINT*,CPOINT*);
 
 void G_CARTESIAN::cvol()
 {
@@ -84,7 +89,7 @@ void G_CARTESIAN::cvol()
 	//cut_cell_vol();
 
 	////free_ctri_list(cells[i]->ctri_list);
-	////free(cells);
+	free(cells);
 
 	printf("Leave cvol().\n");
 
@@ -95,11 +100,17 @@ void G_CARTESIAN::init_grid_cells()
 {
 	int i, j, k, l, ll, index;
 	CELL *c;
+	double tol;
+
+	//FIXME
+	//tol = max(max(top_grid->h[0], top_grid->h[1]), top_grid->h[2]);
+	//tol = tol*tol*tol;
+	//FIXME
 
 	num_cells = 1;
 	for (i = 0; i < dim; i++)
 	    num_cells *= (top_gmax[i]+1);
-	//Initialize cells in buffer zone but don't use them?	FIXME?
+	//Initialize cells in buffer zone but don't use them
 	//start with (lbuf[i] ? lbuf[i] : 1)
 
 	FT_VectorMemoryAlloc((POINTER*)&cells, num_cells, sizeof(CELL));
@@ -118,8 +129,8 @@ void G_CARTESIAN::init_grid_cells()
 	    c->icrds[2] = k;
 	    for (l = 0; l < 3; l++)
 	    {
-		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
-		c->cellu[l] = c->celll[l] + top_grid->h[l];
+		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l]+tol;
+		c->cellu[l] = c->celll[l] + top_grid->h[l]+tol;
 	    }
 
 	    //initialize cell faces
@@ -298,7 +309,7 @@ void set_nor(
 	double	*nor)
 {
 	int i;
-	double v1[3], v2[3];
+	double v1[3], v2[3], l;
 
 	for (i = 0; i < 3; i++)
 	{
@@ -309,6 +320,9 @@ void set_nor(
 	nor[0] = v1[1]*v2[2] - v1[2]*v2[1];
 	nor[1] = -v1[0]*v2[2] + v1[2]*v2[0];
 	nor[2] = v1[0]*v2[1] - v1[1]*v2[0];
+	l = sqrt(nor[0]*nor[0]+nor[1]*nor[1]+nor[2]*nor[2]);
+	for (i = 0; i < 3; i++)
+	    nor[i] = nor[i]/l;
 }
 
 void copy_pt_to_cpt(
@@ -360,9 +374,27 @@ void set_polygons_in_cell(CELL *c)
 	CTRI *ctri;
 	CFACE *cf;
 	CPOLYGON *cpg;
+	bool debug = NO;
+
+	//debugdan	FIXME
+	/*
+	if (c->icrds[0] == 4 && c->icrds[1] == 4 && c->icrds[2] == 44)
+	{
+	    debug = YES;
+	}
+	*/
+	//debugdan	FIXME
 
 	for (ctri = c->ctris; ctri; ctri = ctri->next)
 	{
+	    //debugdan	FIXME
+	    /*
+	    if (the_ctri(ctri))
+	    {
+		printf("DEBUGDAN.\n");
+	    }
+	    */
+	    //debugdan	FIXME
 	    for (i = 0; i < 6; i++)
 	    {
 		cf = &(c->faces[i]);
@@ -395,17 +427,38 @@ void set_polygons_in_cell(CELL *c)
 	}
 	for (ctri = c->ctris; ctri; ctri = ctri->next)
 	{
+	    //debugdan	FIXME
+	    /*
+	    if (the_ctri(ctri))
+	    {
+		printf("DEBUGDAN.\n");
+	    }
+	    */
+	    //debugdan	FIXME
 	    construct_polygon_on_tri(ctri,c);
 	    if (ctri->polyg->vertices)
+	    {
 		add_new_polyg(ctri->polyg,&c->ctri_polygs);
+		if (debug)
+		{
+		    print_ctri(ctri);
+		    print_polygon(ctri->polyg);
+		}
+	    }
 	}
 
-	CPOLYGON *ctri_polygs = c->ctri_polygs;
-	while (ctri_polygs)
+	/*
+	if (debug)
 	{
-	    //print_polygon(ctri_polygs);
-	    ctri_polygs = ctri_polygs->next;
+	    CPOLYGON *ctri_polygs = c->ctri_polygs;
+	    ctri_polygs = c->ctri_polygs;
+	    while (ctri_polygs)
+	    {
+		print_polygon(ctri_polygs);
+		ctri_polygs = ctri_polygs->next;
+	    }
 	}
+	*/
 
 	if (c->ctri_polygs)
 	    construct_polygons_on_cfs(c);
@@ -1014,7 +1067,9 @@ int find_crxps1(
 	    found = NO;
 	    dist1 = cpt1->crds[i] - cf->l[i];
 	    dist2 = cpt2->crds[i] - cf->l[i];
-	    if (dist1*dist2 < -tol)
+	    //if (dist1*dist2 < -tol)
+	    if ((dist1 > tol && dist2 < -tol) ||
+		(dist1 < -tol && dist2 > tol))
 	    {
 		//set the coordinates of the crossing point
 		for (j = 0; j < 3; j++)
@@ -1066,7 +1121,9 @@ int find_crxps1(
 	    found = NO;
 	    dist1 = cpt1->crds[i] - cf->u[i];
 	    dist2 = cpt2->crds[i] - cf->u[i];
-	    if (dist1*dist2 < -tol)
+	    //if (dist1*dist2 < -tol)
+	    if ((dist1 > tol && dist2 < -tol) ||
+		(dist1 < -tol && dist2 > tol))
 	    {
 		//set the coordinates of the crossing point
 		for (j = 0; j < 3; j++)
@@ -1163,10 +1220,13 @@ int find_crxps2(
 		    f2 = p1->crds[j] - tp2->crds[j];
 		}
 	    }
-	    if (f1*f2 < tol)
+	    //if (f1*f2 < tol)
+	    if (!((f1 > tol && f2 > tol) || (f1 < -tol && f2 < -tol)))
 		continue;
 	    crxp.crds[edir] = f2/(f1+f2)*tp1->crds[edir] + f1/(f1+f2)*tp2->crds[edir];
-	    if ((p1->crds[edir]-crxp.crds[edir])*(crxp.crds[edir]-p2->crds[edir]) > tol)
+	    //if ((p1->crds[edir]-crxp.crds[edir])*(crxp.crds[edir]-p2->crds[edir]) > tol)
+	    if ((p1->crds[edir]-crxp.crds[edir] > tol && p2->crds[edir]-crxp.crds[edir] < -tol) ||
+	        (p1->crds[edir]-crxp.crds[edir] < -tol && p2->crds[edir]-crxp.crds[edir] > tol))
 		found = YES;
 	    if (found)
 	    {
@@ -1211,7 +1271,10 @@ bool find_crxp_3d1(
 	f1 = p1->crds[dir] - cf->l[dir];
 	f2 = cf->l[dir] - p2->crds[dir];
 
-	if (f1*f2 < tol)
+	//if (f1*f2 < tol)
+	if (fabs(f1) < tol || fabs(f2) < tol ||
+	    (f1 > tol && f2 < -tol) ||
+	    (f1 < -tol && f2 > tol))
 	{
 	    printf("ERROR in find_crxp_3d1.\n");
 	    return NO;
@@ -1255,29 +1318,39 @@ bool same_edge(
 
 	return NO;
 }
-/*
+
 void print_point(CPOINT *p)
 {
-    cout << "("
-	 << p->crds[0] << ", "
-	 << p->crds[1] << ", "
-	 << p->crds[2] << ")";
+	//printf("(%lf, %lf, %lf)", p->crds[0], p->crds[1], p->crds[2]);
+	printf("(%.12g, %.12g, %.12g)", p->crds[0], p->crds[1], p->crds[2]);
 }
 
 void print_edge(CEDGE *edge)
 {
-    CPOINT *p1, *p2;
+	CPOINT *p1, *p2;
 
-    p1 = &(edge->endp[0]);
-    p2 = &(edge->endp[1]);
+	p1 = &(edge->endp[0]);
+	p2 = &(edge->endp[1]);
 
-    cout << "Edge: ";
-    print_point(p1);
-    cout << ", ";
-    print_point(p2);
-    cout << "\n";
+	printf("Edge: ");
+	print_point(p1);
+	printf(", ");
+	print_point(p2);
+	printf(".\n");
 }
 
+void print_ctri(CTRI *ctri)
+{
+	printf("Tri: ");
+	print_point(&(ctri->pts[0]));
+	printf(", ");
+	print_point(&(ctri->pts[1]));
+	printf(", ");
+	print_point(&(ctri->pts[2]));
+	printf(".\n");
+}
+
+/*
 void print_edge_list(CEDGE *edge_list)
 {
     CPOINT *p1, *p2;
@@ -1338,21 +1411,20 @@ void add_polyg_vertex(
 
 	return;
 }
-/*
+
 void print_polygon(CPOLYGON *pg)
 {
     CPOINT *p;
-    cout << "Polygon: \n";
+    printf("Polygon:\n");
     p = pg->vertices;
     while(p)
     {
 	print_point(p);
-	cout << " ";
+	printf("\n");
 	p = p->next;
     }
-    cout << endl;
 }
-*/
+
 void complete_polyg_undir_edges(
 	CTRI	*ctri,
 	CELL	*cell)
@@ -1514,8 +1586,10 @@ void add_new_polyg(
 	CPOLYGON *newpolyg;
 
 	p = polyg->vertices;
-	if (p)
-	    newpolyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	if (p == NULL)
+	    return;
+	newpolyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	newpolyg->vertices = NULL;
 	while (p)
 	{
 	    add_polyg_vertex(p,newpolyg);
@@ -1575,7 +1649,12 @@ void set_directed_polyg(
 	pop_edge(&(polyg->undir_edges),&edge0);
 	copy_cpt_to_cpt(&(edge0->endp[0]),&p0);
 	copy_cpt_to_cpt(&(edge0->endp[1]),&p1);
-	find_next_endp(p1,&(polyg->undir_edges),&p2);
+	if (!find_next_endp(p1,&(polyg->undir_edges),&p2))
+	{
+	    //free(edge0);
+	    return;
+	    //clean_up(ERROR);
+	}
 	set_nor(&p0,&p1,&p2,pnor);
 	if (same_nor_dir(pnor,nor))
 	{
@@ -1593,12 +1672,14 @@ void set_directed_polyg(
 	    p2 = tmpp;
 	}
 
-	find_next_endp(p0,&(polyg->undir_edges),&p1);
+	if (!find_next_endp(p0,&(polyg->undir_edges),&p1))
+	    clean_up(ERROR);
 	while (!same_cpt(&p1,&p2))
 	{
 	    add_polyg_vertex(&p1,polyg);
 	    p0 = p1;
-	    find_next_endp(p0,&(polyg->undir_edges),&p1);
+	    if (!find_next_endp(p0,&(polyg->undir_edges),&p1))
+		clean_up(ERROR);
 	}
 
 	//free(edge0);
@@ -1621,7 +1702,7 @@ void pop_edge(
 	return;
 }
 
-void find_next_endp(
+bool find_next_endp(
 	CPOINT	p0,
 	CEDGE	**edgelist,
 	CPOINT	*p1)
@@ -1630,8 +1711,9 @@ void find_next_endp(
 
 	if (edgelist == NULL)
 	{
-	    printf("Empty edgelist in find_next_endp().\n");
-	    clean_up(ERROR);
+	    printf("WARNING: Empty edgelist in find_next_endp().\n");
+	    //clean_up(ERROR);
+	    return NO;
 	}
 
 	prev_edge = NULL;
@@ -1651,7 +1733,7 @@ void find_next_endp(
 		    prev_edge->next = edge->next;
 		    //free(edge);
 		}
-		return;
+		return YES;
 	    }
 	    else if (same_cpt(&p0,&(edge->endp[1])))
 	    {
@@ -1666,29 +1748,34 @@ void find_next_endp(
 		    prev_edge->next = edge->next;
 		    //free(edge);
 		}
-		return;
+		return YES;
 	    }
 
 	    prev_edge = edge;
 	    edge = edge->next;
 	}
 
-	printf("ERROR: can't find next endp.\n");
-	clean_up(ERROR);
+	printf("WARNING in find_next_endp(): can't find next endp.\n");
+	return NO;
+	//clean_up(ERROR);
 }
 
 bool same_nor_dir(
 	double	*nor1,
 	double	*nor2)
 {
-	int i;
+	double n1, n2;
 	double tol = 1e-12;
 
-	for (i = 0; i < 3; i++)
-	    if (nor1[i]*nor2[i] < -tol)
-		return NO;
+	n1 = absmax(absmax(nor1[0],nor1[1]),nor1[2]);
+	n2 = absmax(absmax(nor2[0],nor2[1]),nor2[2]);
+	if (n1*n2 > 0)
+	    return YES;
+	else
+	    return NO;
 
-	return YES;
+	printf("ERROR in same_nor_dir(): incorrect nor.\n");
+	clean_up(ERROR);
 }
 
 void construct_polygons_on_cfs(CELL *cell)
@@ -1725,10 +1812,11 @@ void set_polygons_on_cf(
 	while (edge)
 	{
 	    polyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	    polyg->vertices = NULL;
 	    add_polyg_vertex(&(edge->endp[1]),polyg);
 	    add_polyg_vertex(&(edge->endp[0]),polyg);
-	    add_next_vertices_on_ce(polyg,cf);
-	    add_prev_vertices_on_ce(polyg,cf);
+	    //add_next_vertices_on_ce(polyg,cf);
+	    //add_prev_vertices_on_ce(polyg,cf);
 	    complete_polyg_on_cf(polyg,cf);
 	    //cf->edges_in_cf is not //freed after this	FIXME
 	    //remove duplicated point	TODO
@@ -1746,6 +1834,109 @@ void set_polygons_on_cf(
 	return;
 }
 
+void complete_polyg_on_cf(
+	CPOLYGON	*polyg,
+	CFACE		*cf)
+{
+	int niter;
+	CPOINT *startv, *endv, *newv;
+	CEDGE *edge, *preve;
+	bool found;
+
+	startv = polyg->vertices;
+	endv = polyg->vertices;
+	if (!endv)
+	{
+	    printf("ERROR in complete_polyg_on_cf(): no vertex in poly.\n");
+	    clean_up(ERROR);
+	}
+	while (endv->next)
+	    endv = endv->next;
+
+	niter = 0;
+	while (!same_cpt(startv,endv))
+	{
+	    niter++;
+
+	    //find prev vertex on edges_on_ce
+	    edge = cf->edges_on_ce;
+	    preve = NULL;
+	    found = NO;
+	    while (edge)
+	    {
+		if (same_cpt(&(edge->endp[1]),startv))
+		{
+		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
+		    newv->next = startv;
+		    polyg->vertices = newv;
+		    startv = newv;
+		    //remove edge
+		    if (preve == NULL)
+		    {
+			cf->edges_on_ce = edge->next;
+			//free(edge);
+		    }
+		    else
+		    {
+			preve->next = edge->next;
+			//free(edge);
+		    }
+		    found = YES;
+		    break;
+		}
+		else
+		{
+		    preve = edge;
+		    edge = edge->next;
+		}
+	    }
+	    if (found)
+		continue;
+
+	    //if not found in edges_on_ce, search edges_in_cf
+	    edge = cf->edges_in_cf;
+	    while (edge)
+	    {
+		if (same_cpt(&(edge->endp[1]),startv))
+		{
+		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
+		    newv->next = startv;
+		    polyg->vertices = newv;
+		    startv = newv;
+		    break;
+		}
+		else
+		    edge = edge->next;
+	    }
+
+	    if (niter > 5000)
+	    {
+		printf("ERROR in complete_polyg_on_cf(): too many iteration steps.\n");
+		printf("Polygon vertices already set:\n");
+		newv = polyg->vertices;
+		while (newv)
+		{
+		    print_point(newv);
+		    printf("\n");
+		    newv = newv->next;
+		}
+		printf("Edges in cell face:\n");
+		edge = cf->edges_in_cf;
+		while (edge)
+		{
+		    print_edge(edge);
+		    edge = edge->next;
+		}
+		clean_up(ERROR);
+	    }
+	}
+
+	return;
+}
+
+/*
 void complete_polyg_on_cf(
 	CPOLYGON	*polyg,
 	CFACE		*cf)
@@ -1788,16 +1979,31 @@ void complete_polyg_on_cf(
 		else
 		    edge = edge->next;
 	    }
-	    if (niter > 1000)
+	    if (niter > 5000)
 	    {
 		printf("ERROR in complete_polyg_on_cf(): too many iteration steps.\n");
+		printf("Polygon vertices already set:\n");
+		newv = polyg->vertices;
+		while (newv)
+		{
+		    print_point(newv);
+		    printf("\n");
+		    newv = newv->next;
+		}
+		printf("Edges in cell face:\n");
+		edge = cf->edges_in_cf;
+		while (edge)
+		{
+		    print_edge(edge);
+		    edge = edge->next;
+		}
 		clean_up(ERROR);
 	    }
 	}
 
 	return;
 }
-
+*/
 void add_next_vertices_on_ce(
 	CPOLYGON	*polyg,
 	CFACE		*cf)
@@ -1831,6 +2037,7 @@ void add_next_vertices_on_ce(
 		if (same_cpt(&(edge->endp[0]),endv))
 		{
 		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    newv->next = NULL;
 		    copy_cpt_to_cpt(&(edge->endp[1]),newv);
 		    endv->next = newv;
 		    endv = newv;
@@ -1894,6 +2101,7 @@ void add_prev_vertices_on_ce(
 		if (same_cpt(&(edge->endp[1]),startv))
 		{
 		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    newv->next = NULL;
 		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
 		    newv->next = startv;
 		    polyg->vertices = newv;
@@ -1945,7 +2153,9 @@ void set_polyg_edges_on_cf(
 	    {
 		midp.crds[i] = (edge->endp[0].crds[i] + edge->endp[1].crds[i])/2.0;
 	    }
-	    if (point_in_cell_face(&midp,cf))
+	    if (point_in_cell_face(&(edge->endp[0]),cf) ||
+		point_in_cell_face(&(edge->endp[1]),cf) ||
+		point_in_cell_face(&midp,cf))
 	    {
 		if (edir == -1)
 		    add_new_edge(&(edge->endp[0]),&(edge->endp[1]),&(cf->edges_in_cf));
@@ -2292,6 +2502,7 @@ void add_crxp_on_cf_edge_sorted(
 	double tol = 1e-12;
 
 	newp = (CPOINT*)malloc(sizeof(CPOINT));
+	newp->next = NULL;
 	copy_cpt_to_cpt(p,newp);
 	newp->flag = flag;
 
@@ -2340,4 +2551,45 @@ void add_crxp_on_cf_edge_sorted(
 	prevp->next = newp;
 
 	return;
+}
+
+bool the_ctri(CTRI *ctri)
+{
+	CPOINT p0, p1, p2;
+
+	p0.crds[0] = -0.0251126955278;
+	p0.crds[1] = -0.0251126954227;
+	p0.crds[2] = 2.19961122047;
+
+	p1.crds[0] = 0.0251126950244;
+	p1.crds[1] = -0.0251126955093;
+	p1.crds[2] = 2.19961122039;
+/*
+	p2.crds[0] = 0.525;
+	p2.crds[1] = 0.375;
+	p2.crds[2] = 1.83052048782;
+
+	if (debug_same_cpt(&p0,&(ctri->pts[0])) &&
+	    debug_same_cpt(&p1,&(ctri->pts[1])) &&
+	    debug_same_cpt(&p2,&(ctri->pts[2])))
+*/
+	if (debug_same_cpt(&p0,&(ctri->pts[0])) &&
+	    debug_same_cpt(&p1,&(ctri->pts[1])))
+	    return YES;
+
+	return NO;
+}
+
+bool debug_same_cpt(
+	CPOINT	*p1,
+	CPOINT	*p2)
+{
+	int i;
+	double tol = 1e-8;
+
+	for (i = 0; i < 3; i++)
+	    if (fabs(p1->crds[i] - p2->crds[i]) > tol)
+		return NO;
+
+	return YES;
 }
