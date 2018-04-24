@@ -382,6 +382,7 @@ struct _CPOLYGON
 //	COMPONENT comp;
 
 	double nor[3];
+	int mark;
 
 //	struct _CPOLYGON *prev;
 	struct _CPOLYGON *next;
@@ -389,17 +390,17 @@ struct _CPOLYGON
 };
 typedef struct _CPOLYGON CPOLYGON;
 
-struct _POLYHEDRON
+struct _CPOLYHEDRON
 {
 	CPOLYGON *polygons;
 
 //	COMPONENT comp;
 	double vol;
 
-//	struct _POLYHEDRON *prev;
-	struct _POLYHEDRON *next;
+//	struct _CPOLYHEDRON *prev;
+	struct _CPOLYHEDRON *next;
 };
-typedef struct _POLYHEDRON POLYHEDRON;
+typedef struct _CPOLYHEDRON CPOLYHEDRON;
 
 struct _CFACE
 {
@@ -429,7 +430,7 @@ struct _CELL
 
 	CPOLYGON *ctri_polygs;
 	CPOLYGON *cf_polygs;
-	POLYHEDRON *polyhedrons;
+	CPOLYHEDRON *polyhedrons;
 
 	double vol[2];
 };
@@ -482,6 +483,7 @@ public:
 //	void copy_from_tri_to_ctri(TRI*,CTRI*);	//Dan
 //	void copy_from_pt_to_cpt(POINT*,CPOINT*);	//Dan
 	void set_cell_polygons();	//Dan
+	void construct_cell_polyhedrons();	//Dan
 //	void set_polygons_in_cell(CELL*);	//Dan
 //	void set_polygons_on_cell_faces(CELL*);	//Dan
 //	void find_crx_with_cell(CEDGE*,CELL*);	//Dan

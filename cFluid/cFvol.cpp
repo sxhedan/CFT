@@ -63,6 +63,8 @@ void add_prev_vertices_on_ce(CPOLYGON*,CFACE*);
 void complete_polyg_on_cf(CPOLYGON*,CFACE*);
 bool the_ctri(CTRI*);
 bool debug_same_cpt(CPOINT*,CPOINT*);
+void set_polyhedrons_in_cell(CELL*);
+void init_polyg_marks(CELL*);
 
 void G_CARTESIAN::cvol()
 {
@@ -84,6 +86,9 @@ void G_CARTESIAN::cvol()
 
 	printf("Init polygons.\n");
 	set_cell_polygons();
+
+	printf("Construct polyhedrons.\n");
+	construct_cell_polyhedrons();
 
 	printf("Calculate volume for polyhedrons.\n");
 	//cut_cell_vol();
@@ -127,6 +132,8 @@ void G_CARTESIAN::init_grid_cells()
 	    c->icrds[0] = i;
 	    c->icrds[1] = j;
 	    c->icrds[2] = k;
+	    c->ctri_polygs = NULL;
+	    c->cf_polygs = NULL;
 	    for (l = 0; l < 3; l++)
 	    {
 		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l]+tol;
@@ -279,6 +286,24 @@ void G_CARTESIAN::set_cell_polygons()
 	return;
 }
 
+void G_CARTESIAN::construct_cell_polyhedrons()
+{
+	int i, j, k, index;
+	CELL *c;
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    set_polyhedrons_in_cell(c);
+	}
+
+	return;
+}
+
 void tri_to_ctri(
 	TRI	*tri,
 	CTRI	*ctri)
@@ -295,9 +320,9 @@ void tri_to_ctri(
 	}
 	set_nor(&(ctri->pts[0]),&(ctri->pts[1]),&(ctri->pts[2]),ctri->nor);
 
-	ctri->polyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
-	ctri->polyg->vertices = NULL;	//FIXME
-	ctri->polyg->undir_edges = NULL;	//FIXME
+	FT_ScalarMemoryAlloc((POINTER*)&(ctri->polyg),sizeof(CPOLYGON));
+	ctri->polyg->vertices = NULL;
+	ctri->polyg->undir_edges = NULL;
 
 	return;
 }
@@ -463,6 +488,9 @@ void set_polygons_in_cell(CELL *c)
 	if (c->ctri_polygs)
 	    construct_polygons_on_cfs(c);
 
+	//if (c->ctri_polygs)
+	    //add_edges_of_polygs;
+
 	return;
 }
 
@@ -561,7 +589,7 @@ void set_crxps_and_edges_201(
 	found = false;
 	if (pocf[0] && pocf[1])
 	{
-	    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+	    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 	    copy_cpt_to_cpt(&(crxp[0]),&(pedge->endp[0]));
 	    add_crxp_on_tri_edge(&crxp[0],&(ctri->edges[ei[0]]));
 	    copy_cpt_to_cpt(&(crxp[1]),&(pedge->endp[1]));
@@ -574,9 +602,8 @@ void set_crxps_and_edges_201(
 	    add_crxp_on_tri_edge(&crxp[0],&(ctri->edges[ei[0]]));
 	    if (ncrxps == 1)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&(crxp[0]),&(pedge->endp[0]));
-		//add_crxp_on_tri_edge(&crxp[0],&(ctri->edges[ei[0]]));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
 		found = YES;
 	    }
@@ -587,7 +614,7 @@ void set_crxps_and_edges_201(
 	    add_crxp_on_tri_edge(&crxp[1],&(ctri->edges[ei[1]]));
 	    if (ncrxps == 1)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[0]));
 		copy_cpt_to_cpt(&(crxp[1]),&(pedge->endp[1]));
 		add_crxp_on_tri_edge(&crxp[1],&(ctri->edges[ei[1]]));
@@ -599,7 +626,7 @@ void set_crxps_and_edges_201(
 	    ncrxps = find_crxps1(&(crxp[0]),&(crxp[1]),cf,&crxp2,&crxp3);
 	    if (ncrxps == 2)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[0]));
 		copy_cpt_to_cpt(&crxp3,&(pedge->endp[1]));
 		found = YES;
@@ -610,7 +637,7 @@ void set_crxps_and_edges_201(
 	{
 	    add_edge(pedge,&(cf->undirected_edges));
 	    add_edge(pedge,&(ctri->polyg->undir_edges));
-	    //free(pedge);
+	    free(pedge);
 	}
 }
 
@@ -640,7 +667,7 @@ void set_crxps_and_edges_111(
 	pocf2 = point_on_cell_face(&crxp1,cf);
 	if (pocf1 && pocf2)
 	{
-	    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+	    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 	    copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 	    copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
 	    add_crxp_on_tri_edge(&crxp1,&(ctri->edges[(i+1)%3]));
@@ -651,7 +678,7 @@ void set_crxps_and_edges_111(
 	    ncrxps = find_crxps1(&(ctri->pts[i]),&crxp1,cf,&crxp2,&crxp3);
 	    if (ncrxps == 1)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
 		found = YES;
@@ -662,7 +689,7 @@ void set_crxps_and_edges_111(
 	    ncrxps = find_crxps1(&(ctri->pts[i]),&crxp1,cf,&crxp2,&crxp3);
 	    if (ncrxps == 1)	//double check	FIXME
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[0]));
 		copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
 		add_crxp_on_tri_edge(&crxp1,&(ctri->edges[(i+1)%3]));
@@ -674,7 +701,7 @@ void set_crxps_and_edges_111(
 	    ncrxps = find_crxps1(&(ctri->pts[i]),&crxp1,cf,&crxp2,&crxp3);
 	    if (ncrxps == 2)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&crxp2,&(pedge->endp[0]));
 		copy_cpt_to_cpt(&crxp3,&(pedge->endp[1]));
 		found = YES;
@@ -685,7 +712,7 @@ void set_crxps_and_edges_111(
 	{
 	    add_edge(pedge,&(cf->undirected_edges));
 	    add_edge(pedge,&(ctri->polyg->undir_edges));
-	    //free(pedge);
+	    free(pedge);
 	}
 
 	return;
@@ -709,7 +736,7 @@ void set_crxps_and_edges_30(
 	    pocf2 = point_on_cell_face(&(ctri->pts[(i+1)%3]),cf);
 	    if (pocf1 && pocf2)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 		copy_cpt_to_cpt(&(ctri->pts[(i+1)%3]),&(pedge->endp[1]));
 		found = YES;
@@ -719,7 +746,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		if (ncrxps == 1)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
 		    add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -731,7 +758,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		if (ncrxps == 1)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&(ctri->pts[(i+1)%3]),&(pedge->endp[1]));
 		    add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -743,7 +770,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		if (ncrxps == 2)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
 		    add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -756,7 +783,7 @@ void set_crxps_and_edges_30(
 	    {
 		add_edge(pedge,&(cf->undirected_edges));
 		add_edge(pedge,&(ctri->polyg->undir_edges));
-		//free(pedge);
+		free(pedge);
 	    }
 	}
 
@@ -768,7 +795,7 @@ void set_crxps_and_edges_30(
 	    pit2 = point_in_tri_2d(&(cf->pts[(i+1)%4]),ctri,cf->dir);
 	    if (pit1 && pit2)
 	    {
-		pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		copy_cpt_to_cpt(&(cf->pts[i]),&(pedge->endp[0]));
 		copy_cpt_to_cpt(&(cf->pts[(i+1)%4]),&(pedge->endp[1]));
 		found = YES;
@@ -778,7 +805,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps2(cf,i,ctri,&crxp1,&crxp2);
 		if (ncrxps == 1)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&(cf->pts[i]),&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
 		    found = YES;
@@ -789,7 +816,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps2(cf,i,ctri,&crxp1,&crxp2);
 		if (ncrxps == 1)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&(cf->pts[(i+1)%4]),&(pedge->endp[1]));
 		    found = YES;
@@ -800,7 +827,7 @@ void set_crxps_and_edges_30(
 		ncrxps = find_crxps2(cf,i,ctri,&crxp1,&crxp2);
 		if (ncrxps == 2)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
 		    found = YES;
@@ -814,7 +841,7 @@ void set_crxps_and_edges_30(
 		    add_edge(pedge,&(cf->undirected_edges));
 		    add_edge(pedge,&(ctri->polyg->undir_edges));
 		}
-		//free(pedge);
+		free(pedge);
 	    }
 	}
 
@@ -842,7 +869,7 @@ void set_crxps_and_edges_21(
 		pocf2 = point_on_cell_face(&(ctri->pts[(i+1)%3]),cf);
 		if (pocf1 && pocf2)
 		{
-		    pedge = (CEDGE*)malloc(sizeof(CEDGE));
+		    FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 		    copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 		    copy_cpt_to_cpt(&(ctri->pts[(i+1)%3]),&(pedge->endp[1]));
 		    found = YES;
@@ -852,7 +879,7 @@ void set_crxps_and_edges_21(
 		    ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		    if (ncrxps == 1)
 		    {
-			pedge = (CEDGE*)malloc(sizeof(CEDGE));
+			FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 			copy_cpt_to_cpt(&(ctri->pts[i]),&(pedge->endp[0]));
 			copy_cpt_to_cpt(&crxp1,&(pedge->endp[1]));
 			add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -864,7 +891,7 @@ void set_crxps_and_edges_21(
 		    ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		    if (ncrxps == 1)
 		    {
-			pedge = (CEDGE*)malloc(sizeof(CEDGE));
+			FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 			copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 			copy_cpt_to_cpt(&(ctri->pts[(i+1)%3]),&(pedge->endp[1]));
 			add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -876,7 +903,7 @@ void set_crxps_and_edges_21(
 		    ncrxps = find_crxps1(&(ctri->pts[i]),&(ctri->pts[(i+1)%3]),cf,&crxp1,&crxp2);
 		    if (ncrxps == 2)
 		    {
-			pedge = (CEDGE*)malloc(sizeof(CEDGE));
+			FT_ScalarMemoryAlloc((POINTER*)&(pedge),sizeof(CEDGE));
 			copy_cpt_to_cpt(&crxp1,&(pedge->endp[0]));
 			copy_cpt_to_cpt(&crxp2,&(pedge->endp[1]));
 			add_crxp_on_tri_edge(&crxp1,&(ctri->edges[i]));
@@ -889,7 +916,7 @@ void set_crxps_and_edges_21(
 		{
 		    add_edge(pedge,&(cf->undirected_edges));
 		    add_edge(pedge,&(ctri->polyg->undir_edges));
-		    //free(pedge);
+		    free(pedge);
 		}
 	    }
 	}
@@ -915,7 +942,7 @@ void add_crxp_on_tri_edge(
 		return;
 	    tmpp = tmpp->next;
 	}
-	newcrxp = (CPOINT*)malloc(sizeof(CPOINT));
+	FT_ScalarMemoryAlloc((POINTER*)&(newcrxp),sizeof(CPOINT));
 	copy_cpt_to_cpt(crxp,newcrxp);
 	newcrxp->next = edge->crxps;
 	edge->crxps = newcrxp;
@@ -940,7 +967,7 @@ void add_edge(
 	    tmp_edge = tmp_edge->next;
 	}
 
-	new_edge = (CEDGE*)malloc(sizeof(CEDGE));
+	FT_ScalarMemoryAlloc((POINTER*)&(new_edge),sizeof(CEDGE));
 	copy_cpt_to_cpt(&(edge->endp[0]),&(new_edge->endp[0]));
 	copy_cpt_to_cpt(&(edge->endp[1]),&(new_edge->endp[1]));
 
@@ -1375,7 +1402,6 @@ void construct_polygon_on_tri(
 	{
 	    for (i = 2; i >=0; i--)
 	    {
-		//check direction	TODO
 		add_polyg_vertex(&(ctri->pts[i]),ctri->polyg);
 	    }
 	    return;
@@ -1384,7 +1410,7 @@ void construct_polygon_on_tri(
 	//no polygon on tri
 	if (ctri->polyg->undir_edges == NULL)
 	{
-	    //free(ctri->polyg);	//FIXME
+	    free(ctri->polyg);
 	    return;
 	}
 
@@ -1404,7 +1430,7 @@ void add_polyg_vertex(
 {
 	CPOINT *newp;
 
-	newp = (CPOINT*)malloc(sizeof(CPOINT));
+	FT_ScalarMemoryAlloc((POINTER*)&(newp),sizeof(CPOINT));
 	copy_cpt_to_cpt(p,newp);
 	newp->next = pg->vertices;
 	pg->vertices = newp;
@@ -1540,12 +1566,12 @@ void add_new_edge(
 	    clean_up(ERROR);
 	}
 */
-	newedge = (CEDGE*)malloc(sizeof(CEDGE));
+	FT_ScalarMemoryAlloc((POINTER*)&(newedge),sizeof(CEDGE));
 	copy_cpt_to_cpt(p0,&(newedge->endp[0]));
 	copy_cpt_to_cpt(p1,&(newedge->endp[1]));
 	add_edge(newedge,edgelist);
 
-	//free(newedge);
+	free(newedge);
 }
 
 void add_new_dir_edge(
@@ -1555,7 +1581,7 @@ void add_new_dir_edge(
 {
 	CEDGE *newedge;
 
-	newedge = (CEDGE*)malloc(sizeof(CEDGE));
+	FT_ScalarMemoryAlloc((POINTER*)&(newedge),sizeof(CEDGE));
 	if (p0->flag == 0)
 	{
 	    copy_cpt_to_cpt(p1,&(newedge->endp[0]));
@@ -1575,7 +1601,7 @@ void add_new_dir_edge(
 	}
 	add_edge(newedge,edgelist);
 
-	//free(newedge);
+	free(newedge);
 }
 
 void add_new_polyg(
@@ -1588,7 +1614,7 @@ void add_new_polyg(
 	p = polyg->vertices;
 	if (p == NULL)
 	    return;
-	newpolyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	FT_ScalarMemoryAlloc((POINTER*)&(newpolyg),sizeof(CPOLYGON));
 	newpolyg->vertices = NULL;
 	while (p)
 	{
@@ -1645,15 +1671,13 @@ void set_directed_polyg(
 	CPOINT p0, p1, p2, tmpp;
 	CEDGE *edge0;
 
-	//edge0 = (CEDGE*)malloc(sizeof(CEDGE));
 	pop_edge(&(polyg->undir_edges),&edge0);
 	copy_cpt_to_cpt(&(edge0->endp[0]),&p0);
 	copy_cpt_to_cpt(&(edge0->endp[1]),&p1);
 	if (!find_next_endp(p1,&(polyg->undir_edges),&p2))
 	{
-	    //free(edge0);
+	    free(edge0);
 	    return;
-	    //clean_up(ERROR);
 	}
 	set_nor(&p0,&p1,&p2,pnor);
 	if (same_nor_dir(pnor,nor))
@@ -1668,7 +1692,7 @@ void set_directed_polyg(
 	    add_polyg_vertex(&p1,polyg);
 	    add_polyg_vertex(&p2,polyg);
 	    tmpp = p0;
-	    p0 = p2;	//FIXME
+	    p0 = p2;
 	    p2 = tmpp;
 	}
 
@@ -1682,7 +1706,7 @@ void set_directed_polyg(
 		clean_up(ERROR);
 	}
 
-	//free(edge0);
+	free(edge0);
 	return;
 }
 
@@ -1726,12 +1750,12 @@ bool find_next_endp(
 		if (prev_edge == NULL)
 		{
 		    *edgelist = edge->next;
-		    //free(edge);
+		    free(edge);
 		}
 		else
 		{
 		    prev_edge->next = edge->next;
-		    //free(edge);
+		    free(edge);
 		}
 		return YES;
 	    }
@@ -1741,12 +1765,12 @@ bool find_next_endp(
 		if (prev_edge == NULL)
 		{
 		    *edgelist = edge->next;
-		    //free(edge);
+		    free(edge);
 		}
 		else
 		{
 		    prev_edge->next = edge->next;
-		    //free(edge);
+		    free(edge);
 		}
 		return YES;
 	    }
@@ -1811,21 +1835,21 @@ void set_polygons_on_cf(
 	}
 	while (edge)
 	{
-	    polyg = (CPOLYGON*)malloc(sizeof(CPOLYGON));
+	    FT_ScalarMemoryAlloc((POINTER*)&(polyg),sizeof(CPOLYGON));
 	    polyg->vertices = NULL;
 	    add_polyg_vertex(&(edge->endp[1]),polyg);
 	    add_polyg_vertex(&(edge->endp[0]),polyg);
 	    //add_next_vertices_on_ce(polyg,cf);
 	    //add_prev_vertices_on_ce(polyg,cf);
 	    complete_polyg_on_cf(polyg,cf);
-	    //cf->edges_in_cf is not //freed after this	FIXME
+	    //cf->edges_in_cf is not freed after this	FIXME
 	    //remove duplicated point	TODO
 	    p = polyg->vertices;
 	    polyg->vertices = p->next;
 	    polyg->next = cell->cf_polygs;
 	    cell->cf_polygs = polyg;
-	    //free(p);
-	    //free(edge);
+	    free(p);
+	    free(edge);
 	    if (!cf->edges_on_ce)
 		break;
 	    pop_edge(&(cf->edges_on_ce),&edge);
@@ -1866,7 +1890,7 @@ void complete_polyg_on_cf(
 	    {
 		if (same_cpt(&(edge->endp[1]),startv))
 		{
-		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    FT_ScalarMemoryAlloc((POINTER*)&(newv),sizeof(CPOINT));
 		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
 		    newv->next = startv;
 		    polyg->vertices = newv;
@@ -1875,12 +1899,12 @@ void complete_polyg_on_cf(
 		    if (preve == NULL)
 		    {
 			cf->edges_on_ce = edge->next;
-			//free(edge);
+			free(edge);
 		    }
 		    else
 		    {
 			preve->next = edge->next;
-			//free(edge);
+			free(edge);
 		    }
 		    found = YES;
 		    break;
@@ -1900,7 +1924,7 @@ void complete_polyg_on_cf(
 	    {
 		if (same_cpt(&(edge->endp[1]),startv))
 		{
-		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    FT_ScalarMemoryAlloc((POINTER*)&(newv),sizeof(CPOINT));
 		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
 		    newv->next = startv;
 		    polyg->vertices = newv;
@@ -2036,7 +2060,7 @@ void add_next_vertices_on_ce(
 	    {
 		if (same_cpt(&(edge->endp[0]),endv))
 		{
-		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    FT_ScalarMemoryAlloc((POINTER*)&(newv),sizeof(CPOINT));
 		    newv->next = NULL;
 		    copy_cpt_to_cpt(&(edge->endp[1]),newv);
 		    endv->next = newv;
@@ -2045,14 +2069,14 @@ void add_next_vertices_on_ce(
 		    if (!preve)
 		    {
 			cf->edges_on_ce = edge->next;
-			//free(edge);
+			free(edge);
 			found = YES;
 			break;
 		    }
 		    else
 		    {
 			preve->next = edge->next;
-			//free(edge);
+			free(edge);
 			found = YES;
 			break;
 		    }
@@ -2100,7 +2124,7 @@ void add_prev_vertices_on_ce(
 	    {
 		if (same_cpt(&(edge->endp[1]),startv))
 		{
-		    newv = (CPOINT*)malloc(sizeof(CPOINT));
+		    FT_ScalarMemoryAlloc((POINTER*)&(newv),sizeof(CPOINT));
 		    newv->next = NULL;
 		    copy_cpt_to_cpt(&(edge->endp[0]),newv);
 		    newv->next = startv;
@@ -2110,14 +2134,14 @@ void add_prev_vertices_on_ce(
 		    if (!preve)
 		    {
 			cf->edges_on_ce = edge->next;
-			//free(edge);
+			free(edge);
 			found = YES;
 			break;
 		    }
 		    else
 		    {
 			preve->next = edge->next;
-			//free(edge);
+			free(edge);
 			found = YES;
 			break;
 		    }
@@ -2501,7 +2525,7 @@ void add_crxp_on_cf_edge_sorted(
 	CEDGE *edge;
 	double tol = 1e-12;
 
-	newp = (CPOINT*)malloc(sizeof(CPOINT));
+	FT_ScalarMemoryAlloc((POINTER*)&(newp),sizeof(CPOINT));
 	newp->next = NULL;
 	copy_cpt_to_cpt(p,newp);
 	newp->flag = flag;
@@ -2592,4 +2616,49 @@ bool debug_same_cpt(
 		return NO;
 
 	return YES;
+}
+
+void set_polyhedrons_in_cell(CELL *c)
+{
+	CPOLYGON *polyg;
+	CPOLYHEDRON *polyh;
+
+	init_polyg_marks(c);
+
+	polyg = c->cf_polygs;
+	if (polyg == NULL)
+	    return;
+
+	while (polyg)
+	{
+	    if (polyg->mark == 1)
+	    {
+		polyg = polyg->next;
+		continue;
+	    }
+	    polyg = polyg->next;
+	}
+
+	return;
+}
+
+void init_polyg_marks(CELL *c)
+{
+	CPOLYGON *polyg;
+
+	polyg = c->ctri_polygs;
+	while (polyg)
+	{
+	    polyg->mark = 0;
+	    polyg = polyg->next;
+	}
+
+	polyg = c->cf_polygs;
+	while (polyg)
+	{
+	    polyg->mark = 0;
+	    polyg = polyg->next;
+	}
+
+	return;
 }
