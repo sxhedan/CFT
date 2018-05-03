@@ -375,7 +375,7 @@ struct _CPOLYGON
 {
 //	CPOINT **pts;
 	CPOINT *vertices;
-	CEDGE *edges;
+	//CEDGE *edges;
 	CEDGE *undir_edges;
 
 	CPOINT *tmp_crxp;
@@ -392,7 +392,7 @@ typedef struct _CPOLYGON CPOLYGON;
 
 struct _CPOLYHEDRON
 {
-	CPOLYGON *polygons;
+	CPOLYGON *faces;
 
 //	COMPONENT comp;
 	double vol;
