@@ -405,6 +405,8 @@ struct _SETOFCPOLYGS
 	CPOLYGON *polygs;
 
 	CBOUNDARY *boundaries;
+
+	_SETOFCPOLYGS *next;
 };
 typedef struct _SETOFCPOLYGS SETOFCPOLYGS;
 

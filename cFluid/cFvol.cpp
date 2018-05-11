@@ -86,6 +86,7 @@ void mark_polyg_edges(CPOLYGON*);
 void BFS_add_nb_polygs(CPOLYGON*,SETOFCPOLYGS*,CPOLYGON*);
 bool find_polyg_with_edge(CPOLYGON**,CEDGE*,CPOLYGON*);
 void add_scp_boundary(CEDGE*,SETOFCPOLYGS*);
+void insert_scp(SETOFCPOLYGS*,SETOFCPOLYGS**);
 
 bool debugdan = NO;
 
@@ -157,6 +158,8 @@ void G_CARTESIAN::init_grid_cells()
 	    c->icrds[2] = k;
 	    c->ctri_polygs = NULL;
 	    c->cf_polygs = NULL;
+	    c->scpocs = NULL;
+	    c->scpics = NULL;
 	    for (l = 0; l < 3; l++)
 	    {
 		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l]+tol;
@@ -2998,14 +3001,59 @@ void set_scps(CELL *c)
 	init_polygs_marks(c);
 	init_polygs_edges(c);
 
+	//sets of connected polygons on cell faces
 	polyg = c->cf_polygs;
-	FT_ScalarMemoryAlloc((POINTER*)&scp,sizeof(SETOFCPOLYGS));
-	init_scp(scp);
-	c->scpocs = scp;
-	add_polyg_to_scp(polyg,scp);
-	polyg->inscp = YES;
-	//mark_polyg_edges(polyg);
-	BFS_add_nb_polygs(polyg,scp,c->cf_polygs);
+	while (polyg)
+	{
+	    if (polyg->inscp)
+	    {
+		polyg = polyg->next;
+		continue;
+	    }
+
+	    FT_ScalarMemoryAlloc((POINTER*)&scp,sizeof(SETOFCPOLYGS));
+	    init_scp(scp);
+	    insert_scp(scp,&(c->scpocs));
+
+	    add_polyg_to_scp(polyg,scp);
+	    polyg->inscp = YES;
+
+	    BFS_add_nb_polygs(polyg,scp,c->cf_polygs);
+
+	    polyg = polyg->next;
+	}
+
+	//sets of connected polygons in cell
+	polyg = c->ctri_polygs;
+	while (polyg)
+	{
+	    if (polyg->inscp)
+	    {
+		polyg = polyg->next;
+		continue;
+	    }
+
+	    FT_ScalarMemoryAlloc((POINTER*)&scp,sizeof(SETOFCPOLYGS));
+	    init_scp(scp);
+	    insert_scp(scp,&(c->scpics));
+
+	    add_polyg_to_scp(polyg,scp);
+	    polyg->inscp = YES;
+
+	    BFS_add_nb_polygs(polyg,scp,c->ctri_polygs);
+
+	    polyg = polyg->next;
+	}
+
+	return;
+}
+
+void insert_scp(
+	SETOFCPOLYGS	*scp,
+	SETOFCPOLYGS	**scplist)
+{
+	scp->next = *scplist;
+	*scplist = scp;
 
 	return;
 }
