@@ -72,13 +72,22 @@ bool the_ctri(CTRI*);
 bool the_cpt(CPOINT*);
 bool debug_same_cpt(CPOINT*,CPOINT*);
 void set_polyhedrons_in_cell(CELL*);
-void init_polyg_marks(CELL*);
+void set_scps(CELL*);
+void init_scp(SETOFCPOLYGS*);
+void init_polygs_marks(CELL*);
+void init_polygs_edges(CELL*);
 void add_new_polygon(CPOLYGON*,CPOLYGON**);
 void copy_polyg_to_polyg(CPOLYGON*,CPOLYGON*);
 void construct_polyh(CPOLYHEDRON*,CPOLYGON*,CELL*);
 void BFS_add_nb_polygs(CPOLYHEDRON*,CPOLYGON*,CELL*);
 void find_nb_polygs(CPOLYGON**,CPOLYGON*,CELL*);
-void find_polyg_with_edge(CPOLYGON**,CPOINT*,CPOINT*,CELL*);
+void add_polyg_to_scp(CPOLYGON*,SETOFCPOLYGS*);
+void mark_polyg_edges(CPOLYGON*);
+void BFS_add_nb_polygs(CPOLYGON*,SETOFCPOLYGS*,CPOLYGON*);
+bool find_polyg_with_edge(CPOLYGON**,CEDGE*,CPOLYGON*);
+void add_scp_boundary(CEDGE*,SETOFCPOLYGS*);
+
+bool debugdan = NO;
 
 void G_CARTESIAN::cvol()
 {
@@ -102,7 +111,7 @@ void G_CARTESIAN::cvol()
 	set_cell_polygons();
 
 	printf("Construct polyhedrons.\n");
-	//construct_cell_polyhedrons();
+	construct_cell_polyhedrons();
 
 	printf("Calculate volume for polyhedrons.\n");
 	//cut_cell_vol();
@@ -395,14 +404,13 @@ void set_polygons_in_cell(CELL *c)
 	CTRI *ctri;
 	CFACE *cf;
 	CPOLYGON *cpg;
-	bool debug = NO;
 
 	//debugdan	FIXME
 	/*
-	if (c->icrds[0] == 4 && c->icrds[1] == 4 && c->icrds[2] == 44)
-	{
-	    debug = YES;
-	}
+	if (c->icrds[0] == 12 && c->icrds[1] == 10 && c->icrds[2] == 37)
+	    debugdan = YES;
+	else
+	    debugdan = NO;
 	*/
 	//debugdan	FIXME
 
@@ -460,11 +468,13 @@ void set_polygons_in_cell(CELL *c)
 	    if (ctri->polyg->vertices)
 	    {
 		add_new_polyg(ctri->polyg,&c->ctri_polygs);
-		if (debug)
+		/*
+		if (debugdan)
 		{
 		    print_ctri(ctri);
 		    print_polygon(ctri->polyg);
 		}
+		*/
 	    }
 	}
 
@@ -966,6 +976,7 @@ void add_edge(
 	FT_ScalarMemoryAlloc((POINTER*)&(new_edge),sizeof(CEDGE));
 	copy_cpt_to_cpt(&(edge->endp[0]),&(new_edge->endp[0]));
 	copy_cpt_to_cpt(&(edge->endp[1]),&(new_edge->endp[1]));
+	new_edge->mark = 0;
 
 	new_edge->next = *edgelist;
 	*edgelist = new_edge;
@@ -1568,6 +1579,7 @@ void add_new_edge(
 	add_edge(newedge,edgelist);
 
 	free(newedge);
+	return;
 }
 
 void add_new_dir_edge(
@@ -1823,7 +1835,6 @@ void set_polygons_on_cf(
 	CFACE *cf;
 
 	cf = &(cell->faces[icf]);
-	//pop_edge(&(cf->edges_on_ce),&edge);
 	edge = cf->edges_on_ce;
 	if (!edge)
 	{
@@ -1836,19 +1847,11 @@ void set_polygons_on_cf(
 	    polyg->vertices = NULL;
 	    add_polyg_vertex(&(edge->endp[1]),polyg);
 	    add_polyg_vertex(&(edge->endp[0]),polyg);
-	    //add_next_vertices_on_ce(polyg,cf);
-	    //add_prev_vertices_on_ce(polyg,cf);
 	    complete_polyg_on_cf(polyg,cf);
-	    //remove duplicated point?	TODO
-	    p = polyg->vertices;
-	    polyg->vertices = p->next;
 	    polyg->next = cell->cf_polygs;
 	    cell->cf_polygs = polyg;
-	    free(p);
-	    //free(edge);
 	    if (!cf->edges_on_ce)
 		break;
-	   // pop_edge(&(cf->edges_on_ce),&edge);
 	    edge = cf->edges_on_ce;
 	}
 
@@ -2960,46 +2963,191 @@ void G_CARTESIAN::construct_cell_polyhedrons()
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
 
-	    set_polyhedrons_in_cell(c);
+	    if (c->ctri_polygs == NULL)
+		continue;
+
+	    //set sets of connected polygons
+	    set_scps(c);
+
+	    //set_polyhedrons_in_cell(c);
 	}
 
 	return;
 }
-
+/*
 void set_polyhedrons_in_cell(CELL *c)
 {
-	CPOLYGON *polyg;
 	CPOLYHEDRON *polyh;
 
-	polyg = c->cf_polygs;
-	if (polyg == NULL)
+	if (c->cf_polygs == NULL)
 	    return;
 
-	init_polyg_marks(c);
+	//set sets of connected polygons
+	set_scps(c);
 
-	while (polyg)
+	return;
+}
+*/
+
+void set_scps(CELL *c)
+{
+	CEDGE *edge;
+	CPOLYGON *polyg;
+	SETOFCPOLYGS *scp;
+
+	init_polygs_marks(c);
+	init_polygs_edges(c);
+
+	polyg = c->cf_polygs;
+	FT_ScalarMemoryAlloc((POINTER*)&scp,sizeof(SETOFCPOLYGS));
+	init_scp(scp);
+	c->scpocs = scp;
+	add_polyg_to_scp(polyg,scp);
+	polyg->inscp = YES;
+	//mark_polyg_edges(polyg);
+	BFS_add_nb_polygs(polyg,scp,c->cf_polygs);
+
+	return;
+}
+
+void init_scp(SETOFCPOLYGS *scp)
+{
+	scp->polygs = NULL;
+	scp->boundaries = NULL;
+
+	return;
+}
+
+void BFS_add_nb_polygs(
+	CPOLYGON	*polyg,
+	SETOFCPOLYGS	*scp,
+	CPOLYGON	*polyglist)
+{
+	CEDGE *edge;
+	CEDGE ie;
+	CPOLYGON *nb_polyg;
+
+	edge = polyg->edges;
+	while (edge)
 	{
-	    if (polyg->mark == 1)
+	    ie.endp[0] = edge->endp[1];
+	    ie.endp[1] = edge->endp[0];
+	    if (!find_polyg_with_edge(&nb_polyg,&ie,polyglist))
 	    {
-		polyg = polyg->next;
+		//edge is boundary
+		add_scp_boundary(edge,scp);
+		edge = edge->next;
 		continue;
 	    }
-	    FT_ScalarMemoryAlloc((POINTER*)&(polyh),sizeof(CPOLYHEDRON));
-	    polyh->faces = NULL;
-	    add_new_polygon(polyg,&(polyh->faces));
-
-	    //construct polyhedron
-	    construct_polyh(polyh,polyg,c);
-
-	    //add polyhedron
-
-	    polyg = polyg->next;
+	    else
+	    {
+		if (!nb_polyg->inscp)
+		{
+		    add_polyg_to_scp(nb_polyg,scp);
+		    nb_polyg->inscp = YES;
+		    BFS_add_nb_polygs(nb_polyg,scp,polyglist);
+		}
+		edge = edge->next;
+	    }
 	}
 
 	return;
 }
 
-void init_polyg_marks(CELL *c)
+void add_scp_boundary(
+	CEDGE		*edge,
+	SETOFCPOLYGS	*scp)
+{
+	if (scp->boundaries == NULL)
+	{
+	    FT_ScalarMemoryAlloc((POINTER*)&(scp->boundaries),sizeof(CBOUNDARY));
+	    scp->boundaries->edges = NULL;
+	    scp->boundaries->next = NULL;
+	}
+	add_edge(edge,&(scp->boundaries->edges));
+
+	return;
+}
+
+bool find_polyg_with_edge(
+	CPOLYGON	**polyg,
+	CEDGE		*edge,
+	CPOLYGON	*polyglist)
+{
+	CEDGE *cpedge;
+	CPOLYGON *cpolyg;
+
+	cpolyg = polyglist;
+	while (cpolyg)
+	{
+	    cpedge = cpolyg->edges;
+	    if (cpedge == NULL)
+	    {
+		printf("ERROR in find_polyg_with_edge(): empty polygon.\n");
+		clean_up(ERROR);
+	    }
+	    while (cpedge)
+	    {
+		if (same_cpt(&(cpedge->endp[0]),&(edge->endp[0])) &&
+		    same_cpt(&(cpedge->endp[1]),&(edge->endp[1])))
+		{
+		    //copy_polyg_to_polyg(cpolyg,polyg);
+		    *polyg = cpolyg;
+		    return YES;
+		}
+		cpedge = cpedge->next;
+	    }
+
+	    cpolyg = cpolyg->next;
+	}
+
+	*polyg = NULL;
+	return NO;
+}
+/*
+void copy_polyg_to_polyg(
+	CPOLYGON	*polyg0,
+	CPOLYGON	*polyg1)
+{
+	CPOINT *p;
+
+	p = polyg0->vertices;
+	if (p == NULL)
+	    return;
+	while (p)
+	{
+	    add_polyg_vertex(p,polyg1);
+	    p = p->next;
+	}
+	reverse_polyg(polyg1);
+
+	return;
+}
+*/
+void mark_polyg_edges(CPOLYGON *polyg)
+{
+	CEDGE *edge;
+
+	edge = polyg->edges;
+	while (edge)
+	{
+	    edge->mark++;
+	    edge = edge->next;
+	}
+
+	return;
+}
+
+void add_polyg_to_scp(
+	CPOLYGON	*polyg,
+	SETOFCPOLYGS	*scp)
+{
+	add_new_polygon(polyg,&(scp->polygs));
+
+	return;
+}
+
+void init_polygs_marks(CELL *c)
 {
 	CPOLYGON *polyg;
 
@@ -3007,6 +3155,7 @@ void init_polyg_marks(CELL *c)
 	while (polyg)
 	{
 	    polyg->mark = 0;
+	    polyg->inscp = NO;
 	    polyg = polyg->next;
 	}
 
@@ -3014,6 +3163,48 @@ void init_polyg_marks(CELL *c)
 	while (polyg)
 	{
 	    polyg->mark = 0;
+	    polyg->inscp = NO;
+	    polyg = polyg->next;
+	}
+
+	return;
+}
+
+void init_polygs_edges(CELL *c)
+{
+	CPOLYGON *polyg;
+	CEDGE *edge;
+	CPOINT *p0, *p1;
+
+	polyg = c->ctri_polygs;
+	while (polyg)
+	{
+	    p0 = polyg->vertices;
+	    p1 = p0->next;
+	    while (p1)
+	    {
+		add_new_edge(p0,p1,&(polyg->edges));
+		p0 = p1;
+		p1 = p0->next;
+	    }
+	    p1 = polyg->vertices;
+	    add_new_edge(p0,p1,&(polyg->edges));
+	    polyg = polyg->next;
+	}
+
+	polyg = c->cf_polygs;
+	while (polyg)
+	{
+	    p0 = polyg->vertices;
+	    p1 = p0->next;
+	    while (p1)
+	    {
+		add_new_edge(p0,p1,&(polyg->edges));
+		p0 = p1;
+		p1 = p0->next;
+	    }
+	    p1 = polyg->vertices;
+	    add_new_edge(p0,p1,&(polyg->edges));
 	    polyg = polyg->next;
 	}
 
@@ -3051,23 +3242,21 @@ void copy_polyg_to_polyg(
 	    FT_ScalarMemoryAlloc((POINTER*)&newp,sizeof(CPOINT));
 	    newp->next = NULL;
 	    copy_cpt_to_cpt(p,newp);
-	    prevp = newp;
 	    if (prevp == NULL)
 	    {
 		newpolyg->vertices = newp;
-		prevp = newp;
 	    }
 	    else
 	    {
 		prevp->next = newp;
-		prevp = newp;
 	    }
+	    prevp = newp;
 	    p = p->next;
 	}
 
 	return;
 }
-
+/*
 void construct_polyh(
 	CPOLYHEDRON	*polyh,
 	CPOLYGON	*polyg,
@@ -3085,6 +3274,7 @@ void BFS_add_nb_polygs(
 	CPOLYGON *nb_polyg_list;
 
 	find_nb_polygs(&nb_polyg_list,polyg,c);
+	//if (nb_polyg_list == NULL)
 
 	return;
 }
@@ -3095,49 +3285,68 @@ void find_nb_polygs(
 	CELL		*c)
 {
 	CPOINT *p1, *p2;
-	CPOLYGON *nb_polyg;
+	CPOLYGON *nb_epolygs;
 
-	p2 = polyg->vertices;
-	if (p2 == NULL)
+	p1 = polyg->vertices;
+	if (p1 == NULL)
 	{
-	    printf("ERROR in find_nb_polygs().\n");
+	    printf("ERROR in find_nb_polygs(): empty polygon.\n");
 	    clean_up(ERROR);
 	}
-	p1 = p2->next;
-	//if (p1 == NULL)
-	//{
-	//    printf("ERROR in find_nb_polygs().\n");
-	//    clean_up(ERROR);
-	//}
+	p2 = p1->next;
 
-	while (p1)
+	while (p2)
 	{
-	    find_polyg_with_edge(&nb_polyg,p1,p2,c);
-	    if (nb_polyg != NULL)
+	    find_polyg_with_edge(&nb_epolygs,p2,p1,c);
+	    if (nb_epolygs != NULL)
 	    {
 		//add nb_polyg
 		;
 	    }
-	    p2 = p1;
-	    p1 = p1->next;
+	    p1 = p2;
+	    p2 = p1->next;
 	}
 
 	return;
 }
 
 void find_polyg_with_edge(
-	CPOLYGON	**polyg,
+	CPOLYGON	**polygs,
 	CPOINT		*p1,
 	CPOINT		*p2,
 	CELL		*c)
 {
+	CPOINT *v1, *v2;
 	CPOLYGON *cpolyg;
 
 	cpolyg = c->ctri_polygs;
 	while (cpolyg)
 	{
+	    v1 = cpolyg->vertices;
+	    v2 = v1->next;
+	    if (v1 == NULL)
+	    {
+		printf("ERROR in find_polyg_with_edge(): empty polygon.\n");
+		clean_up(ERROR);
+	    }
+	    while (v2)
+	    {
+		if (same_cpt(v1,p1) && same_cpt(v2,p2))
+		{
+		    //could be more than one
+		    //return;
+		}
+		v1 = v2;
+		v2 = v1->next;
+	    }
+	    //last one
+	    v2 = cpolyg->vertices;
+
 	    cpolyg = cpolyg->next;
 	}
 
+	//cpolyg = c->cf_polygs;
+
 	return;
 }
+*/

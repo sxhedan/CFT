@@ -351,6 +351,7 @@ struct _CEDGE
 	CPOINT *crxps;
 	int ncrxps;
 	int dir;
+	int mark;
 
 	struct _CEDGE *next;
 };
@@ -375,7 +376,7 @@ struct _CPOLYGON
 {
 //	CPOINT **pts;
 	CPOINT *vertices;
-	//CEDGE *edges;
+	CEDGE *edges;
 	CEDGE *undir_edges;
 
 	CPOINT *tmp_crxp;
@@ -383,12 +384,29 @@ struct _CPOLYGON
 
 	double nor[3];
 	int mark;
+	bool inscp;
 
 //	struct _CPOLYGON *prev;
 	struct _CPOLYGON *next;
 //	struct _CPOLYGON *neighbors;
 };
 typedef struct _CPOLYGON CPOLYGON;
+
+struct _CBOUNDARY
+{
+	CEDGE *edges;
+
+	_CBOUNDARY *next;
+};
+typedef struct _CBOUNDARY CBOUNDARY;
+
+struct _SETOFCPOLYGS
+{
+	CPOLYGON *polygs;
+
+	CBOUNDARY *boundaries;
+};
+typedef struct _SETOFCPOLYGS SETOFCPOLYGS;
 
 struct _CPOLYHEDRON
 {
@@ -413,6 +431,8 @@ struct _CFACE
 	CEDGE *undirected_edges;
 	CEDGE *edges_in_cf;
 	CEDGE *edges_on_ce;
+
+//	SETOFCPOLYGS *cpoc;	//TODO
 };
 typedef struct _CFACE CFACE;
 
@@ -430,6 +450,10 @@ struct _CELL
 
 	CPOLYGON *ctri_polygs;
 	CPOLYGON *cf_polygs;
+
+	SETOFCPOLYGS *scpocs;	//sets of connected polygons on cell faces
+	SETOFCPOLYGS *scpics;	//sets of connected polygons in cell
+
 	CPOLYHEDRON *polyhedrons;
 
 	double vol[2];
