@@ -11,7 +11,7 @@ void copy_cpt_to_cpt(CPOINT*,CPOINT*);
 void insert_tri_to_ctri_list(TRI*,CELL*);
 void set_polygons_in_cell(CELL*);
 void init_cf_pts_and_edges(CFACE *cf);
-void set_nor(CPOINT*,CPOINT*,CPOINT*,double*);
+bool set_nor(CPOINT*,CPOINT*,CPOINT*,double*);
 bool tri_in_cell(CTRI*,CELL*);
 bool point_in_cell(CPOINT*,CELL*);
 void ctri_inter_with_cf(CTRI*,CFACE*,int*);
@@ -30,7 +30,7 @@ int find_crxps1(CPOINT*,CPOINT*,CFACE*,CPOINT*,CPOINT*);
 int find_crxps2(CFACE*,int,CTRI*,CPOINT*,CPOINT*);
 bool find_crxp_3d1(CPOINT*,CPOINT*,CFACE*,CPOINT*);
 bool same_cpt(CPOINT*,CPOINT*);
-bool same_edge(CEDGE*,CEDGE*);
+bool same_undir_edge(CEDGE*,CEDGE*);
 void print_edge(CEDGE*);
 void print_edge_list(CEDGE*);
 void print_point(CPOINT*);
@@ -87,6 +87,22 @@ void BFS_add_nb_polygs(CPOLYGON*,SETOFCPOLYGS*,CPOLYGON*);
 bool find_polyg_with_edge(CPOLYGON**,CEDGE*,CPOLYGON*);
 void add_scp_boundary(CEDGE*,SETOFCPOLYGS*);
 void insert_scp(SETOFCPOLYGS*,SETOFCPOLYGS**);
+void reset_scp_boundaries(SETOFCPOLYGS*);
+void complete_bdry_with_init_edge(CBOUNDARY*,CEDGE**);
+void set_scp_dir(SETOFCPOLYGS*,CELL*);
+void init_polyh(CPOLYHEDRON*,CELL*);
+void add_scp_to_polyh(SETOFCPOLYGS*,CPOLYHEDRON*);
+void add_scp_polygs_to_polyh(SETOFCPOLYGS*,CPOLYHEDRON*);
+void add_scp_bdries_to_polyh(SETOFCPOLYGS*,CPOLYHEDRON*);
+void add_new_bdry(CBOUNDARY*,CBOUNDARY**);
+void add_scp_with_ibdries(CPOLYHEDRON*);
+void inverse_bdry(CBOUNDARY*,CBOUNDARY*);
+bool find_scp_with_bdry(SETOFCPOLYGS**,CBOUNDARY*,CPOLYHEDRON*);
+bool find_bdry_with_edge(CBOUNDARY*,CEDGE*);
+bool same_dir_edge(CEDGE*,CEDGE*);
+void init_scps_bdries_marks(CELL*);
+void init_scps_marks(CELL*);
+void init_scpics_marks(CELL*);
 
 bool debugdan = NO;
 
@@ -117,7 +133,6 @@ void G_CARTESIAN::cvol()
 	printf("Calculate volume for polyhedrons.\n");
 	//cut_cell_vol();
 
-	//free_ctri_list(cells[i]->ctri_list);
 	free(cells);
 
 	printf("Leave cvol().\n");
@@ -335,27 +350,41 @@ void tri_to_ctri(
 	return;
 }
 
-void set_nor(
+bool set_nor(
 	CPOINT	*p0,
 	CPOINT	*p1,
 	CPOINT	*p2,
 	double	*nor)
 {
 	int i;
-	double v1[3], v2[3], l;
+	double v1[3], v2[3], l1, l2, l;
+	double tol = 1e-12;
 
 	for (i = 0; i < 3; i++)
 	{
 	    v1[i] = p1->crds[i] - p0->crds[i];
-	    v2[i] = p2->crds[i] - p0->crds[i];
+	    v2[i] = p2->crds[i] - p1->crds[i];
+	}
+	l1 = sqrt(v1[0]*v1[0]+v1[1]*v1[1]+v1[2]*v1[2]);
+	l2 = sqrt(v2[0]*v2[0]+v2[1]*v2[1]+v2[2]*v2[2]);
+	for (i = 0; i < 3; i++)
+	{
+	    v1[i] = v1[i]/l1;
+	    v2[i] = v2[i]/l2;
 	}
 
 	nor[0] = v1[1]*v2[2] - v1[2]*v2[1];
 	nor[1] = -v1[0]*v2[2] + v1[2]*v2[0];
 	nor[2] = v1[0]*v2[1] - v1[1]*v2[0];
+
+	if (fabs(nor[0]) < tol && fabs(nor[1]) < tol && fabs(nor[2]) < tol)
+	    return NO;
+
 	l = sqrt(nor[0]*nor[0]+nor[1]*nor[1]+nor[2]*nor[2]);
 	for (i = 0; i < 3; i++)
 	    nor[i] = nor[i]/l;
+
+	return YES;
 }
 
 void copy_pt_to_cpt(
@@ -971,7 +1000,7 @@ void add_edge(
 	tmp_edge = *edgelist;
 	while (tmp_edge)
 	{
-	    if (same_edge(tmp_edge,edge))
+	    if (same_undir_edge(tmp_edge,edge))
 		return;
 	    tmp_edge = tmp_edge->next;
 	}
@@ -996,7 +1025,7 @@ bool edge_exists_in_edge_list(
 	tmpe = edgelist;
 	while (tmpe)
 	{
-	    if (same_edge(tmpe,edge))
+	    if (same_undir_edge(tmpe,edge))
 		return YES;
 	    tmpe = tmpe->next;
 	}
@@ -1343,7 +1372,7 @@ bool same_cpt(
 	return YES;
 }
 
-bool same_edge(
+bool same_undir_edge(
 	CEDGE	*edge1,
 	CEDGE	*edge2)
 {
@@ -1690,7 +1719,11 @@ void set_directed_polyg(
 	    free(edge0);
 	    return;
 	}
-	set_nor(&p0,&p1,&p2,pnor);
+	if (!set_nor(&p0,&p1,&p2,pnor))
+	{
+	    printf("ERROR in set_directed_polyg(): points are on the same line.\n");
+	    clean_up(ERROR);
+	}
 	if (same_nor_dir(pnor,nor))
 	{
 	    add_polyg_vertex(&p2,polyg);
@@ -2972,25 +3005,337 @@ void G_CARTESIAN::construct_cell_polyhedrons()
 	    //set sets of connected polygons
 	    set_scps(c);
 
-	    //set_polyhedrons_in_cell(c);
+	    //set polyhedrons based on scps
+	    set_polyhedrons_in_cell(c);
 	}
 
 	return;
 }
-/*
+
 void set_polyhedrons_in_cell(CELL *c)
 {
 	CPOLYHEDRON *polyh;
+	SETOFCPOLYGS *scp;
+	CBOUNDARY *bdry;
 
-	if (c->cf_polygs == NULL)
+	if (c->scpocs == NULL)
 	    return;
 
-	//set sets of connected polygons
-	set_scps(c);
+	//init_scps_bdries_marks(c);
+	init_scps_marks(c);
+
+	scp = c->scpocs;
+	while (scp)
+	{
+	    if (scp->inpolyh)
+	    {
+		scp = scp->next;
+		continue;
+	    }
+
+	    init_scpics_marks(c);
+
+	    FT_ScalarMemoryAlloc((POINTER*)&polyh,sizeof(CPOLYHEDRON));
+	    init_polyh(polyh,c);
+	    polyh->scp_dir = scp->dir;
+	    add_scp_to_polyh(scp,polyh);
+
+	    if (polyh->boundaries)
+	    {
+		//find scp with inverse polyh->boundaries (should be unique) and add scp
+		add_scp_with_ibdries(polyh);
+	    }
+
+	    polyh->next = c->polyhs;
+	    c->polyhs = polyh;
+
+	    scp = scp->next;
+	}
 
 	return;
 }
-*/
+
+void init_scpics_marks(CELL *c)
+{
+	SETOFCPOLYGS *scp;
+
+	scp = c->scpics;
+	while (scp)
+	{
+	    scp->inpolyh = NO;
+	    scp = scp->next;
+	}
+
+	return;
+}
+
+void init_scps_marks(CELL *c)
+{
+	SETOFCPOLYGS *scp;
+
+	scp = c->scpocs;
+	while (scp)
+	{
+	    scp->oncf = YES;
+	    scp = scp->next;
+	}
+
+	scp = c->scpics;
+	while (scp)
+	{
+	    scp->oncf = NO;
+	    scp = scp->next;
+	}
+
+	return;
+}
+
+void init_scps_bdries_marks(CELL *c)
+{
+	SETOFCPOLYGS *scp;
+	CBOUNDARY *bdry;
+
+	scp = c->scpocs;
+	while (scp)
+	{
+	    bdry = scp->boundaries;
+	    while (bdry)
+	    {
+		bdry->mark = 0;
+		bdry = bdry->next;
+	    }
+	    scp = scp->next;
+	}
+
+	scp = c->scpics;
+	while (scp)
+	{
+	    bdry = scp->boundaries;
+	    while (bdry)
+	    {
+		bdry->mark = 0;
+		bdry = bdry->next;
+	    }
+	    scp = scp->next;
+	}
+
+	return;
+}
+
+void add_scp_with_ibdries(CPOLYHEDRON *polyh)
+{
+	CBOUNDARY *bdry, *ibdry;
+	SETOFCPOLYGS *scp;
+
+	bdry = polyh->boundaries;
+	while (bdry)
+	{
+	    FT_ScalarMemoryAlloc((POINTER*)&ibdry,sizeof(CBOUNDARY));
+	    inverse_bdry(bdry,ibdry);
+	    if (find_scp_with_bdry(&scp,ibdry,polyh))
+	    {
+		//bdry->mark++;
+		add_scp_to_polyh(scp,polyh);
+	    }
+
+	    polyh->boundaries = bdry->next;
+	    free(bdry);
+	    bdry = polyh->boundaries;
+	}
+
+	return;
+}
+
+bool find_scp_with_bdry(
+	SETOFCPOLYGS	**scp,
+	CBOUNDARY	*bdry,
+	CPOLYHEDRON	*polyh)
+{
+	CEDGE *edge;
+	SETOFCPOLYGS *scp0;
+
+	edge = bdry->edges;
+
+	scp0 = polyh->cell->scpocs;
+	while (scp0)
+	{
+	    if (scp0->inpolyh || (scp0->dir != polyh->scp_dir))
+	    {
+		scp0 = scp0->next;
+		continue;
+	    }
+
+	    if (find_bdry_with_edge(scp0->boundaries,edge))
+	    {
+		*scp = scp0;
+		return YES;
+	    }
+
+	    scp0 = scp0->next;
+	}
+
+	scp0 = polyh->cell->scpics;
+	while (scp0)
+	{
+	    if (scp0->inpolyh)
+	    {
+		scp0 = scp0->next;
+		continue;
+	    }
+
+	    if (find_bdry_with_edge(scp0->boundaries,edge))
+	    {
+		*scp = scp0;
+		return YES;
+	    }
+
+	    scp0 = scp0->next;
+	}
+
+	return NO;
+}
+
+bool find_bdry_with_edge(
+	CBOUNDARY	*bdries,
+	CEDGE		*edge)
+{
+	CEDGE *edge0;
+	CBOUNDARY *bdry;
+
+	bdry = bdries;
+	while (bdry)
+	{
+	    edge0 = bdry->edges;
+	    while (edge0)
+	    {
+		if (same_dir_edge(edge0,edge))
+		{
+		    bdry->mark++;
+		    return YES;
+		}
+		edge0 = edge0->next;
+	    }
+	    bdry = bdry->next;
+	}
+
+	return NO;
+}
+
+bool same_dir_edge(
+	CEDGE	*edge1,
+	CEDGE	*edge2)
+{
+	if ((same_cpt(&(edge1->endp[0]),&(edge2->endp[0])) &&
+	    same_cpt(&(edge1->endp[1]),&(edge2->endp[1]))))
+	    return YES;
+
+	return NO;
+}
+
+void inverse_bdry(
+	CBOUNDARY	*bdry,
+	CBOUNDARY	*ibdry)
+{
+	CEDGE *edge;
+
+	edge = bdry->edges;
+	while (edge)
+	{
+	    add_new_edge(&(edge->endp[1]),&(edge->endp[0]),&(ibdry->edges));
+	    edge = edge->next;
+	}
+
+	//ibdry->mark = bdry->mark;
+
+	return;
+}
+
+void add_scp_to_polyh(
+	SETOFCPOLYGS	*scp,
+	CPOLYHEDRON	*polyh)
+{
+	//add scp->polygs to polyh
+	add_scp_polygs_to_polyh(scp,polyh);
+	//add scp->boundaries to polyh
+	add_scp_bdries_to_polyh(scp,polyh);
+	scp->inpolyh = YES;
+
+	return;
+}
+
+void add_scp_polygs_to_polyh(
+	SETOFCPOLYGS	*scp,
+	CPOLYHEDRON	*polyh)
+{
+	CPOLYGON *polyg;
+
+	polyg = scp->polygs;
+	while (polyg)
+	{
+	    add_new_polyg(polyg,&(polyh->faces));
+	    polyg = polyg->next;
+	}
+
+	return;
+}
+
+void add_scp_bdries_to_polyh(
+	SETOFCPOLYGS	*scp,
+	CPOLYHEDRON	*polyh)
+{
+	CBOUNDARY *bdry;
+
+	bdry = scp->boundaries;
+	while (bdry)
+	{
+	    if (scp->oncf && (bdry->mark > 0))
+	    {
+		bdry = bdry->next;
+	    }
+
+	    add_new_bdry(bdry,&(polyh->boundaries));
+	    bdry = bdry->next;
+	}
+
+	return;
+}
+
+void add_new_bdry(
+	CBOUNDARY	*bdry,
+	CBOUNDARY	**bdrylist)
+{
+	CEDGE *edge;
+	CBOUNDARY *newbdry;
+
+	FT_ScalarMemoryAlloc((POINTER*)&newbdry,sizeof(CBOUNDARY));
+	newbdry->next = NULL;
+
+	edge = bdry->edges;
+	while (edge)
+	{
+	    add_edge(edge,&(newbdry->edges));
+	    edge = edge->next;
+	}
+
+	newbdry->mark = bdry->mark;
+
+	newbdry->next = *bdrylist;
+	*bdrylist = newbdry;
+
+	return;
+}
+
+void init_polyh(
+	CPOLYHEDRON	*polyh,
+	CELL		*c)
+{
+	polyh->faces = NULL;
+	polyh->boundaries = NULL;
+	polyh->cell = c;
+	polyh->next = NULL;
+
+	return;
+}
 
 void set_scps(CELL *c)
 {
@@ -3020,6 +3365,11 @@ void set_scps(CELL *c)
 
 	    BFS_add_nb_polygs(polyg,scp,c->cf_polygs);
 
+	    reset_scp_boundaries(scp);
+
+	    //set direction for scp on cell face
+	    set_scp_dir(scp,c);
+
 	    polyg = polyg->next;
 	}
 
@@ -3042,7 +3392,172 @@ void set_scps(CELL *c)
 
 	    BFS_add_nb_polygs(polyg,scp,c->ctri_polygs);
 
+	    reset_scp_boundaries(scp);
+
 	    polyg = polyg->next;
+	}
+
+	return;
+}
+
+void set_scp_dir(
+	SETOFCPOLYGS	*scp,
+	CELL		*c)
+{
+	int i;
+	double v1[3], v2[3], nor[3];
+	CPOINT *p0, *p1, *p2;
+	double tol = 1e-12;
+
+	p0 = scp->polygs->vertices;
+	p1 = p0->next;
+	p2 = p1->next;
+
+	while (true)
+	{
+	    if (same_cpt(p0,p1) || same_cpt(p1,p2))
+	    {
+		printf("ERROR in set_scp_dir(): duplicated points in a polygon.\n");
+		clean_up(ERROR);
+	    }
+
+	    if (!set_nor(p0,p1,p2,nor))
+	    {
+		p0 = p1;
+		p1 = p2;
+		p2 = p2->next;
+		if (p2 == NULL)
+		{
+		    printf("ERROR in set_scp_dir().\n");
+		    clean_up(ERROR);
+		}
+		continue;
+	    }
+	    break;
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+	    if (fabs(p0->crds[i] - p1->crds[i]) < tol &&
+		fabs(p1->crds[i] - p2->crds[i]) < tol)
+		break;
+	}
+
+	if (fabs(p0->crds[i] - c->celll[i]) < tol)
+	{
+	    if (nor[i] > 0)
+		scp->dir = INW;
+	    else
+		scp->dir = OUTW;
+	}
+	else if (fabs(p0->crds[i] - c->cellu[i]) < tol)
+	{
+	    if (nor[i] > 0)
+		scp->dir = OUTW;
+	    else
+		scp->dir = INW;
+	}
+	else
+	{
+	    printf("ERROR in set_scp_dir(): polygon is not on cell face.\n");
+	    clean_up(ERROR);
+	}
+
+	return;
+}
+
+void reset_scp_boundaries(SETOFCPOLYGS *scp)
+{
+	CBOUNDARY *bdry, *newbdry;
+	int count = 0;
+
+	bdry = scp->boundaries;
+	scp->boundaries = NULL;
+
+	if (bdry->edges == NULL)
+	{
+	    printf("ERROR in reset_scp_boundaries(): empty boundary.\n");
+	    clean_up(ERROR);
+	}
+	while (bdry->edges)
+	{
+	    FT_ScalarMemoryAlloc((POINTER*)&newbdry,sizeof(CBOUNDARY));
+	    complete_bdry_with_init_edge(newbdry,&(bdry->edges));
+
+	    newbdry->next = scp->boundaries;
+	    scp->boundaries = newbdry;
+
+	    count++;
+	    if (count > 1000)
+	    {
+		printf("ERROR in reset_scp_boundaries().\n");
+		clean_up(ERROR);
+	    }
+	}
+
+	free(bdry);
+	return;
+}
+
+void complete_bdry_with_init_edge(
+	CBOUNDARY	*bdry,
+	CEDGE		**init_edge)
+{
+	CPOINT p0, p1;
+	CEDGE *edge, *preve;
+	int count = 0;
+
+	edge = *init_edge;
+	copy_cpt_to_cpt(&(edge->endp[0]),&p0);
+	copy_cpt_to_cpt(&(edge->endp[1]),&p1);
+	add_edge(edge,&(bdry->edges));
+	//remove first edge in bdry->edges
+	*init_edge = edge->next;
+	free(edge);
+
+	while (true)
+	{
+	    edge = *init_edge;
+	    preve = NULL;
+	    while (edge)
+	    {
+		if (same_cpt(&(edge->endp[1]),&p0))
+		{
+		    add_edge(edge,&(bdry->edges));
+		    copy_cpt_to_cpt(&(edge->endp[0]),&p0);
+		    if (preve == NULL)
+		    {
+			*init_edge = edge->next;
+		    }
+		    else
+		    {
+			preve->next = edge->next;
+		    }
+		    break;
+		}
+		else
+		{
+		    preve = edge;
+		    edge = edge->next;
+		}
+	    }
+
+	    if (same_cpt(&(edge->endp[0]),&p1))
+	    {
+		free(edge);
+		break;
+	    }
+	    else
+	    {
+		free(edge);
+	    }
+
+	    count++;
+	    if (count > 10000)
+	    {
+		printf("ERROR in complete_bdry_with_init_edge().\n");
+		clean_up(ERROR);
+	    }
 	}
 
 	return;
@@ -3062,6 +3577,8 @@ void init_scp(SETOFCPOLYGS *scp)
 {
 	scp->polygs = NULL;
 	scp->boundaries = NULL;
+	scp->dir = UNSET;
+	scp->inpolyh = NO;
 
 	return;
 }
@@ -3279,11 +3796,9 @@ void copy_polyg_to_polyg(
 	CPOLYGON	*newpolyg)
 {
 	CPOINT *p, *newp, *prevp;
+	CEDGE *edge;
 
 	p = polyg->vertices;
-	if (p == NULL)
-	    return;
-
 	prevp = NULL;
 	while (p)
 	{
@@ -3301,6 +3816,14 @@ void copy_polyg_to_polyg(
 	    prevp = newp;
 	    p = p->next;
 	}
+
+	edge = polyg->edges;
+	while (edge)
+	{
+	    add_edge(edge,&(newpolyg->edges));
+	    edge = edge->next;
+	}
+
 
 	return;
 }

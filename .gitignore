@@ -19,3 +19,4 @@ Makefile
 /src/make.files
 /cFluid/cFluid
 /cFluid/tags
+/cFluid/out*

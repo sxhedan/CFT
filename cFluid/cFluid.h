@@ -26,6 +26,13 @@ enum PIC
 	OUTC
 };
 
+enum SCP_DIR
+{
+	UNSET = -1,
+	INW = 1,
+	OUTW
+};
+
 enum PROB_TYPE {
         ERROR_TYPE = -1,
         TWO_FLUID_BUBBLE = 1,
@@ -325,14 +332,7 @@ struct FSWEEP
 struct _CTRI;
 struct _CFACE;
 struct _CPOLYGON;
-
-enum _PDIR
-{
-	IN = -1,
-	VERT,
-	OUT
-};
-typedef _PDIR PDIR;
+struct _CELL;
 
 struct _CPOINT
 {
@@ -340,7 +340,7 @@ struct _CPOINT
 
 	int flag;
 
-	struct _CPOINT *prev;
+	//struct _CPOINT *prev;
 	struct _CPOINT *next;
 };
 typedef struct _CPOINT CPOINT;
@@ -367,7 +367,7 @@ struct _CTRI
 
 	int num_of_crx;
 
-//	struct _CTRI *prev;
+	//struct _CTRI *prev;
 	struct _CTRI *next;
 };
 typedef struct _CTRI CTRI;
@@ -382,6 +382,7 @@ struct _CPOLYGON
 	CPOINT *tmp_crxp;
 //	COMPONENT comp;
 
+	double area;
 	double nor[3];
 	int mark;
 	bool inscp;
@@ -396,6 +397,8 @@ struct _CBOUNDARY
 {
 	CEDGE *edges;
 
+	int mark;
+
 	_CBOUNDARY *next;
 };
 typedef struct _CBOUNDARY CBOUNDARY;
@@ -406,6 +409,11 @@ struct _SETOFCPOLYGS
 
 	CBOUNDARY *boundaries;
 
+	SCP_DIR dir;
+	bool oncf;
+	bool incell;
+	bool inpolyh;
+
 	_SETOFCPOLYGS *next;
 };
 typedef struct _SETOFCPOLYGS SETOFCPOLYGS;
@@ -414,8 +422,13 @@ struct _CPOLYHEDRON
 {
 	CPOLYGON *faces;
 
+	CBOUNDARY *boundaries;
+
+	_CELL *cell;
+
 //	COMPONENT comp;
 	double vol;
+	SCP_DIR scp_dir;
 
 //	struct _CPOLYHEDRON *prev;
 	struct _CPOLYHEDRON *next;
@@ -456,7 +469,7 @@ struct _CELL
 	SETOFCPOLYGS *scpocs;	//sets of connected polygons on cell faces
 	SETOFCPOLYGS *scpics;	//sets of connected polygons in cell
 
-	CPOLYHEDRON *polyhedrons;
+	CPOLYHEDRON *polyhs;
 
 	double vol[2];
 };
@@ -504,19 +517,10 @@ public:
 	void init_cell(CELL*);	//Dan
 	void init_cells();	//Dan
 	void init_grid_cells();	//Dan
-//	void init_ctris();	//Dan
 	void init_tris_in_cells();	//Dan
-//	void copy_from_tri_to_ctri(TRI*,CTRI*);	//Dan
-//	void copy_from_pt_to_cpt(POINT*,CPOINT*);	//Dan
 	void set_cell_polygons();	//Dan
 	void construct_cell_polyhedrons();	//Dan
-//	void set_polygons_in_cell(CELL*);	//Dan
-//	void set_polygons_on_cell_faces(CELL*);	//Dan
-//	void find_crx_with_cell(CEDGE*,CELL*);	//Dan
-//	void find_crx_with_tri(CEDGE*,CTRI*);	//Dan
-//	void set_polyhedrons();	//Dan
-//	void add_neighbor_polygons(CPOLYGON*);	//Dan
-//	void cut_cell_vol();	//Dan
+	void cut_cell_vol();	//Dan
 	double height_at_fraction(double,double,double,int,COMPONENT);
 	void accumulate_fractions_in_layer(double,double*,COMPONENT);
 	double find_particular_fluid_cell_volume(double*,double*,COMPONENT);
