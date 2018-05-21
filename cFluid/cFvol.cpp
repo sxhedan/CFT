@@ -103,6 +103,13 @@ bool same_dir_edge(CEDGE*,CEDGE*);
 void init_scps_bdries_marks(CELL*);
 void init_scps_marks(CELL*);
 void init_scpics_marks(CELL*);
+void set_pf_areas(CELL*);
+double area_of_polygon(CPOLYGON*);
+void cross_product(double*,double*,double*);
+double dot_product(double*,double*);
+void set_polyh_vol(CELL*);
+double vol_of_polyh(CPOLYHEDRON*);
+void set_polyg_nor(CPOLYGON*);
 
 bool debugdan = NO;
 
@@ -131,7 +138,7 @@ void G_CARTESIAN::cvol()
 	construct_cell_polyhedrons();
 
 	printf("Calculate volume for polyhedrons.\n");
-	//cut_cell_vol();
+	cut_cell_vol();
 
 	free(cells);
 
@@ -3921,3 +3928,166 @@ void find_polyg_with_edge(
 	return;
 }
 */
+
+void G_CARTESIAN::cut_cell_vol()
+{
+	int i, j, k, index;
+	CELL *c;
+	CPOLYHEDRON *polyh;
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    if (c->polyhs == NULL)
+		continue;
+
+	    //set areas of polyhedrons' faces
+	    set_pf_areas(c);
+
+	    //set volume of polyhedrons
+	    set_polyh_vol(c);
+	}
+
+	return;
+}
+
+void set_pf_areas(CELL *c)
+{
+	CPOLYHEDRON *polyh;
+	CPOLYGON *polyg;
+
+	polyh = c->polyhs;
+	while (polyh)
+	{
+	    polyg = polyh->faces;
+	    while (polyg)
+	    {
+		polyg->area = area_of_polygon(polyg);
+		//debugdan	check area calculation	TODO
+		polyg = polyg->next;
+	    }
+	    polyh = polyh->next;
+	}
+
+	return;
+}
+
+double area_of_polygon(CPOLYGON *polyg)
+{
+	int i;
+	double area = 0;
+	double vcp[3], sumofvcp[3], nor[3];
+	CPOINT *v0, *v1, *v2;
+
+	v0 = polyg->vertices;
+	v1 = v0->next;
+	v2 = v1->next;
+	if ((v1 == NULL) || (v2 == NULL))
+	{
+	    printf("ERROR in area_of_polygon(): incorrect polygon.\n");
+	    clean_up(ERROR);
+	}
+	set_nor(v0,v1,v2,nor);
+	for (i = 0; i < 3; i++)
+	    sumofvcp[i] = 0.0;
+	while (v1)
+	{
+	    cross_product(v0->crds,v1->crds,vcp);
+	    for (i = 0; i < 3; i++)
+		sumofvcp[i] += vcp[i];
+	    v0 = v1;
+	    v1 = v0->next;
+	}
+	v1 = polyg->vertices;
+	cross_product(v0->crds,v1->crds,vcp);
+	for (i = 0; i < 3; i++)
+	    sumofvcp[i] += vcp[i];
+
+	area = fabs(dot_product(sumofvcp,nor)/2.0);
+
+	return area;
+}
+
+void cross_product(
+	double	*v0,
+	double	*v1,
+	double	*p)
+{
+	p[0] = v0[1]*v1[2] - v0[2]*v1[1];
+	p[1] = -v0[0]*v1[2] + v0[2]*v1[0];
+	p[2] = v0[0]*v1[1] - v0[1]*v1[0];
+
+	return;
+}
+
+double dot_product(
+	double	*v0,
+	double	*v1)
+{
+	return (v0[0]*v1[0] + v0[1]*v1[1] + v0[2]*v1[2]);
+}
+
+void set_polyh_vol(CELL *c)
+{
+	CPOLYHEDRON *polyh;
+
+	polyh = c->polyhs;
+	while (polyh)
+	{
+	    polyh->vol = vol_of_polyh(polyh);
+
+	    polyh = polyh->next;
+	}
+
+	return;
+}
+
+double vol_of_polyh(CPOLYHEDRON *polyh)
+{
+	double vol = 0.0;
+	CPOLYGON *polyg;
+
+	polyg = polyh->faces;
+	while (polyg)
+	{
+	    set_polyg_nor(polyg);
+
+	    vol += (polyg->area * dot_product(polyg->vertices->crds,polyg->nor))/3.0;
+
+	    polyg = polyg->next;
+	}
+
+	return fabs(vol);
+}
+
+void set_polyg_nor(CPOLYGON *polyg)
+{
+	CPOINT *p0, *p1, *p2;
+
+	p0 = polyg->vertices;
+	if (p0 == NULL)
+	{
+	    printf("ERROR in set_polyg_nor().\n");
+	    clean_up(ERROR);
+	}
+	p1 = p0->next;
+	if (p1 == NULL)
+	{
+	    printf("ERROR in set_polyg_nor().\n");
+	    clean_up(ERROR);
+	}
+	p2 = p1->next;
+	if (p2 == NULL)
+	{
+	    printf("ERROR in set_polyg_nor().\n");
+	    clean_up(ERROR);
+	}
+
+	set_nor(p0,p1,p2,polyg->nor);
+
+	return;
+}
