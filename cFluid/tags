@@ -3,7 +3,7 @@
 !_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
-!_TAG_PROGRAM_VERSION	5.8	//
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
 A	../src/intfc/geom.h	/^	double *A, *L, *U;$/;"	m	struct:__anon49
 A	../src/intfc/geom.h	/^	double *A, *phase;$/;"	m	struct:__anon48
 A	../src/intfc/geom.h	/^        double A;$/;"	m	struct:__anon68
@@ -135,6 +135,7 @@ Boundary_hsb	../src/intfc/int.h	896;"	d
 Boundary_point	../src/intfc/int.h	1155;"	d
 Boundary_tri	../src/intfc/int.h	1186;"	d
 Btris	../src/intfc/int.h	1157;"	d
+CBOUNDARY	cFluid.h	/^typedef struct _CBOUNDARY CBOUNDARY;$/;"	t	typeref:struct:_CBOUNDARY
 CBond	../src/intfc/userhooks.c	/^EXPORT	C_BOND *CBond($/;"	f
 CEDGE	cFluid.h	/^typedef struct _CEDGE CEDGE;$/;"	t	typeref:struct:_CEDGE
 CELL	cFluid.h	/^typedef struct _CELL CELL;$/;"	t	typeref:struct:_CELL
@@ -142,6 +143,7 @@ CELL_INFO	../src/front/funtan2d.c	/^typedef struct _CELL_INFO CELL_INFO;$/;"	t	t
 CELL_TYPE	../src/intfc/int.h	/^typedef enum _CELL_TYPE CELL_TYPE;$/;"	t	typeref:enum:_CELL_TYPE
 CENTER	../src/intfc/int.h	/^        CENTER = 0x40$/;"	e	enum:_GRID_DIRECTION
 CFACE	cFluid.h	/^typedef struct _CFACE CFACE;$/;"	t	typeref:struct:_CFACE
+CFTCELL	cFluid.h	/^typedef struct _CFTCELL CFTCELL;$/;"	t	typeref:struct:_CFTCELL
 CHAR	../src/util/vmalloc.h	63;"	d
 CHECK_ADD_TO_DEBUG	../src/util/navdecs.h	260;"	d
 CHECK_ALLOC_SIZE	../src/util/vmalloc.h	72;"	d
@@ -183,6 +185,7 @@ CORRESPOND	../src/front/fcorrspnd.c	/^typedef struct _CORRESPOND CORRESPOND;$/;"
 CORR_POSSIBLE	../src/front/fcorrspnd.c	/^LOCAL const int CORR_POSSIBLE = 0x1;$/;"	v
 COSMOS_PARAMS	../src/intfc/geom.h	/^} COSMOS_PARAMS;$/;"	t	typeref:struct:__anon59
 COUNTER_CLOCK	../src/intfc/geom.h	/^	COUNTER_CLOCK=1,$/;"	e	enum:__anon47
+CPAM	cFluid.h	/^typedef struct _CPAM CPAM;$/;"	t	typeref:struct:_CPAM
 CPOINT	cFluid.h	/^typedef struct _CPOINT CPOINT;$/;"	t	typeref:struct:_CPOINT
 CPOINTER	../src/util/cdecs.h	/^typedef  const void *CPOINTER;	\/* Constant Pointer to Unknown Data Types. *\/$/;"	t
 CPOLYGON	cFluid.h	/^typedef struct _CPOLYGON CPOLYGON;$/;"	t	typeref:struct:_CPOLYGON
@@ -271,6 +274,7 @@ DEBUG	../src/util/fnamedebug.h	82;"	d
 DEBUG	../src/util/fnamedebug.h	83;"	d
 DEBUG	../src/util/fnamedebug.h	87;"	d
 DEBUG	../src/util/fnamedebug.h	88;"	d
+DEBUGDAN	cFvol.cpp	/^bool DEBUGDAN = false;$/;"	v
 DEBUG_CROSS_BONDS	../src/intfc/isub.c	2137;"	d	file:
 DEBUG_CUT	../src/front/fscat2d.c	/^LOCAL int DEBUG_CUT = NO; $/;"	v
 DEBUG_ENTER	../src/util/fnamedebug.h	78;"	d
@@ -736,6 +740,7 @@ GridSegCrossing	../src/intfc/map.c	/^EXPORT	int GridSegCrossing($/;"	f
 Grid_size_of_redistribution	../src/front/fdecs.h	1066;"	d
 Gvel	cFluid.h	/^	double ***Gvel;$/;"	m	struct:EQN_PARAMS
 H	../src/intfc/geom.h	/^        double H;$/;"	m	struct:__anon66
+HALFTS	cFluid.h	/^	HALFTS,$/;"	e	enum:TS_LEVEL
 HDF_DATA_TYPE	../src/front/fdecs.h	/^typedef	enum {HDF_RASTER, HDF_SDS} HDF_DATA_TYPE;$/;"	t	typeref:enum:__anon16
 HDF_FRAME_OPTS	../src/front/fdecs.h	/^typedef struct _HDF_FRAME_OPTS HDF_FRAME_OPTS;$/;"	t	typeref:struct:_HDF_FRAME_OPTS
 HDF_L0	../src/front/fdecs.h	1453;"	d
@@ -806,9 +811,8 @@ IMESH_MAJOR_VERSION	../src/intfc/iMesh.h	4;"	d
 IMESH_MINOR_VERSION	../src/intfc/iMesh.h	5;"	d
 IMPLOSION	cFluid.h	/^        IMPLOSION,$/;"	e	enum:PROB_TYPE
 IMPORT	../src/util/cdecs.h	301;"	d
-IN	cFluid.h	/^	IN = -1,$/;"	e	enum:_PDIR
 INACCURATE_INTEGRAL	../src/util/cdecs.h	/^	INACCURATE_INTEGRAL  = 1,$/;"	e	enum:_QUADRATURE_STATUS
-INC	cFluid.h	/^	INC = 1,$/;"	e	enum:PIC
+INC	cFluid.h	/^	INC,$/;"	e	enum:PIC
 INCIDENT	../src/front/fuserint.h	/^        INCIDENT,$/;"	e	enum:__anon31
 INCLUDE_BOUNDARIES	../src/intfc/int.h	/^	INCLUDE_BOUNDARIES    = 1,$/;"	e	enum:_USE_BOUNDARIES
 INCONSISTENT_RECONSTRUCTION	../src/front/fdecs.h	/^	INCONSISTENT_RECONSTRUCTION   = 0x5$/;"	e	enum:__anon6
@@ -836,6 +840,7 @@ INTRIANGLE	../src/intfc/triangle.c	/^    INTRIANGLE,$/;"	e	enum:locateresult	fil
 INTRP_CELL	../src/front/fdecs.h	/^typedef struct _INTRP_CELL INTRP_CELL;$/;"	t	typeref:struct:_INTRP_CELL
 INVALID_EPSILON	../src/util/cdecs.h	/^	INVALID_EPSILON      = 6$/;"	e	enum:_QUADRATURE_STATUS
 INVALID_REMAP	../src/intfc/geom.h	/^	INVALID_REMAP     = 0,$/;"	e	enum:__anon43
+INW	cFluid.h	/^	INW = 1,$/;"	e	enum:SCP_DIR
 IOUTPUT	../src/util/output.c	/^typedef struct _IOUTPUT IOUTPUT;$/;"	t	typeref:struct:_IOUTPUT	file:
 IO_NODE_ID	../src/util/cdecs.h	/^	IO_NODE_ID = 0,    \/* processor node used as IO node*\/$/;"	e	enum:__anon104
 IO_TYPE	../src/util/cdecs.h	/^typedef struct _IO_TYPE IO_TYPE;$/;"	t	typeref:struct:_IO_TYPE
@@ -1056,6 +1061,7 @@ NAV_ENTER	../src/util/navdecs.h	276;"	d
 NAV_ENTER	../src/util/navdecs.h	71;"	d
 NAV_LEAVE	../src/util/navdecs.h	283;"	d
 NAV_LEAVE	../src/util/navdecs.h	72;"	d
+NBCELL	cFluid.h	/^typedef struct _NBCELL NBCELL;$/;"	t	typeref:struct:_NBCELL
 NCLIST	../src/front/funtan3d.c	/^typedef struct _NCLIST NCLIST;$/;"	t	typeref:struct:_NCLIST	file:
 NCSURF	../src/front/funtan3d.c	/^typedef struct _NCSURF NCSURF;$/;"	t	typeref:struct:_NCSURF	file:
 NEGATIVE_ORIENTATION	../src/intfc/geom.h	/^	NEGATIVE_ORIENTATION=2,$/;"	e	enum:__anon46
@@ -1068,6 +1074,7 @@ NEUMANN_CURVE_P	../src/front/fuserint.h	/^	NEUMANN_CURVE_P = FIRST_PHYSICS_HSBDR
 NEUMANN_CURVE_W	../src/front/fuserint.h	/^	NEUMANN_CURVE_W,	\/*fixed curve on wall *\/$/;"	e	enum:__anon32
 NEUMANN_HSBDRY	../src/front/fuserint.h	/^	NEUMANN_HSBDRY,$/;"	e	enum:__anon32
 NEUMANN_NODE	../src/front/fuserint.h	/^	NEUMANN_NODE	        = NEUMANN_HSBDRY,$/;"	e	enum:__anon32
+NEWTS	cFluid.h	/^	NEWTS$/;"	e	enum:TS_LEVEL
 NEW_COMP	../src/intfc/int.h	/^	NEW_COMP         = -3,$/;"	e	enum:__anon84
 NLblocks	cFluid.h	/^	int             NLblocks,ilower,iupper;$/;"	m	class:G_CARTESIAN
 NNLIST	../src/front/fdecs.h	/^typedef struct _NNLIST NNLIST;$/;"	t	typeref:struct:_NNLIST
@@ -1160,6 +1167,7 @@ NumberFloats	../src/front/fdecs.h	1278;"	d
 NumberOfLevels	../src/front/fdecs.h	/^        int                       NumberOfLevels;$/;"	m	struct:_Front
 Numi	../src/intfc/igview.c	/^	int Numi;$/;"	m	struct:DATA	file:
 OFF_FRONT	../src/front/fgb2d.c	/^	OFF_FRONT = 0x0010  \/* Off front BLK *\/$/;"	e	enum:__anon18	file:
+OLDTS	cFluid.h	/^	OLDTS = 1,$/;"	e	enum:TS_LEVEL
 ONCF	cFluid.h	/^	ONCF,$/;"	e	enum:PIC
 ONE	../src/intfc/triangledefs.h	/^enum BinaryDigit { ZERO = 0, ONE = 1};$/;"	e	enum:BinaryDigit
 ONED	../src/intfc/geom.h	47;"	d
@@ -1182,12 +1190,12 @@ ORDINARY_REDISTRIBUTE	../src/front/fdecs.h	/^	ORDINARY_REDISTRIBUTE  = 1,$/;"	e	
 ORIENTATION	../src/intfc/geom.h	/^} ORIENTATION;$/;"	t	typeref:enum:__anon46
 ORIENTATION_NOT_SET	../src/intfc/geom.h	/^	ORIENTATION_NOT_SET=-1$/;"	e	enum:__anon46
 ORIENTS_AGREE	../src/front/fcorrspnd.c	/^LOCAL const int ORIENTS_AGREE = 0x2;$/;"	v
-OUT	cFluid.h	/^	OUT$/;"	e	enum:_PDIR
 OUTC	cFluid.h	/^	OUTC$/;"	e	enum:PIC
 OUTPUT	../src/util/cdecs.h	/^typedef void OUTPUT;$/;"	t
 OUTSIDE	../src/intfc/triangle.c	/^    OUTSIDE$/;"	e	enum:locateresult	file:
 OUTSIDE_DOMAIN	../src/intfc/int.h	/^	OUTSIDE_DOMAIN = -2,$/;"	e	enum:_DOMAIN_FLAG
 OUTSIDE_WALL	../src/intfc/int.h	/^	OUTSIDE_WALL = 2$/;"	e	enum:_EDGE_FLAG
+OUTW	cFluid.h	/^	OUTW$/;"	e	enum:SCP_DIR
 OUT_OF_BOUNDS_CROSS	../src/front/fdecs.h	/^	OUT_OF_BOUNDS_CROSS = 0x4,$/;"	e	enum:__anon9
 OVERLAP	../src/front/fscat2d.c	/^} OVERLAP;$/;"	t	typeref:struct:_OVERLAP	file:
 O_CURVE	../src/intfc/int.h	/^typedef struct _O_CURVE O_CURVE;$/;"	t	typeref:struct:_O_CURVE
@@ -1213,7 +1221,6 @@ PASSIVE_BOUNDARY	../src/front/fuserint.h	/^	PASSIVE_BOUNDARY	      = FIRST_USER_
 PASSIVE_CURVE	../src/front/fuserint.h	/^        PASSIVE_CURVE           = PASSIVE_HSBDRY,$/;"	e	enum:__anon32
 PASSIVE_HSBDRY	../src/front/fuserint.h	/^	PASSIVE_HSBDRY		   =  1,$/;"	e	enum:__anon32
 PASSIVE_NODE	../src/front/fuserint.h	/^	PASSIVE_NODE	        = PASSIVE_HSBDRY,$/;"	e	enum:__anon32
-PDIR	cFluid.h	/^typedef _PDIR PDIR;$/;"	t
 PERIODIC	../src/intfc/geom.h	/^        PERIODIC,$/;"	e	enum:_PERT_BDRY_TYPE
 PERIODIC_BOUNDARY	../src/intfc/int.h	/^	PERIODIC_BOUNDARY     =  1,$/;"	e	enum:__anon83
 PERT_BDRY_TYPE	../src/intfc/geom.h	/^typedef enum _PERT_BDRY_TYPE PERT_BDRY_TYPE;$/;"	t	typeref:enum:_PERT_BDRY_TYPE
@@ -1404,12 +1411,14 @@ SAVE_HOOKS	../src/intfc/userint.h	/^	SAVE_HOOKS,$/;"	e	enum:_PRESERVE_USER_HOOKS
 SA_FLAGS	../src/util/cleanup.c	118;"	d	file:
 SA_FLAGS	../src/util/cleanup.c	139;"	d	file:
 SCHEME_PARAMS	cFluid.h	/^struct SCHEME_PARAMS$/;"	s
+SCP_DIR	cFluid.h	/^enum SCP_DIR$/;"	g
 SC_TOL	../src/front/fcrstatus.c	/^LOCAL const double SC_TOL = 1.5; \/*TOLERANCE*\/$/;"	v
 SDS_compression_type	../src/front/fdecs.h	1467;"	d
 SEAM	../src/intfc/isurgery.c	/^typedef struct _SEAM SEAM;$/;"	t	typeref:struct:_SEAM	file:
 SECOND_CLEAN_UP	../src/util/cleanup.c	116;"	d	file:
 SECOND_CLEAN_UP	../src/util/cleanup.c	137;"	d	file:
 SECOND_ORDER	cFluid.h	/^        SECOND_ORDER,$/;"	e	enum:POINT_PROP_SCHEME
+SETOFCPOLYGS	cFluid.h	/^typedef struct _SETOFCPOLYGS SETOFCPOLYGS;$/;"	t	typeref:struct:_SETOFCPOLYGS
 SFMT	../src/util/cdecs.h	147;"	d
 SFORTRAN_NAME	../src/util/cdecs.h	370;"	d
 SFORTRAN_NAME	../src/util/cdecs.h	376;"	d
@@ -1440,7 +1449,8 @@ SMALL	../src/intfc/iredist.c	/^        SMALL = 1,$/;"	e	enum:_TRI_STATUS	file:
 SMALL	../src/intfc/iredist_o2.c	/^        SMALL = 1,$/;"	e	enum:_TRI_STATUS	file:
 SMOOTH_PARA	../src/intfc/int.h	/^}       SMOOTH_PARA;$/;"	t	typeref:struct:__anon90
 SMOOTH_TOL	../src/intfc/int.h	/^}       SMOOTH_TOL;$/;"	t	typeref:struct:__anon91
-SOD_OBLIQ	cFluid.h	/^	SOD_OBLIQ$/;"	e	enum:PROB_TYPE
+SOD_3D	cFluid.h	/^	SOD_3D$/;"	e	enum:PROB_TYPE
+SOD_OBLIQ	cFluid.h	/^	SOD_OBLIQ,$/;"	e	enum:PROB_TYPE
 SOLID_COMP	cFluid.h	14;"	d
 SOME	../src/util/cdecs.h	/^	SOME=             1,	\/* Indicates debugging requested not with all *\/$/;"	e	enum:_DEBUG_MODE
 SOURCE_HSBDRY	../src/front/fuserint.h	/^	SOURCE_HSBDRY,$/;"	e	enum:__anon32
@@ -1589,6 +1599,7 @@ TRUE	../src/util/cdecs.h	/^		TRUE               = 1,$/;"	e	enum:_boolean
 TRUEfloat	../src/util/cdecs.h	/^typedef float   TRUEfloat;$/;"	t
 TSTEP_CONTROL	../src/front/fdecs.h	/^typedef struct _TSTEP_CONTROL TSTEP_CONTROL;$/;"	t	typeref:struct:_TSTEP_CONTROL
 TSTEP_FIELD_WIDTH	../src/front/fdecs.h	/^        TSTEP_FIELD_WIDTH   = 7,$/;"	e	enum:__anon15
+TS_LEVEL	cFluid.h	/^enum TS_LEVEL$/;"	g
 TVD_FIRST_ORDER	cFluid.h	/^	TVD_FIRST_ORDER		=	1,$/;"	e	enum:NUM_SCHEME
 TVD_FOURTH_ORDER	cFluid.h	/^        TVD_FOURTH_ORDER,$/;"	e	enum:NUM_SCHEME
 TVD_SECOND_ORDER	cFluid.h	/^        TVD_SECOND_ORDER,$/;"	e	enum:NUM_SCHEME
@@ -1679,6 +1690,7 @@ UNPHYSICAL	../src/front/fdecs.h	/^	UNPHYSICAL = 0,$/;"	e	enum:__anon8
 UNPHYSICAL_EDGE	../src/front/fgb3dutil.c	/^  	UNPHYSICAL_EDGE = 0,$/;"	e	enum:_EDGE_TYPE	file:
 UNPROPAGATED_NODE	../src/front/fuserint.h	/^	UNPROPAGATED_NODE = 1,$/;"	e	enum:_NODE_PROPAGATION_STATUS
 UNSET	../src/front/fgb2d.c	/^	UNSET = 0x0000,$/;"	e	enum:__anon18	file:
+UNSET	cFluid.h	/^	UNSET = -1,$/;"	e	enum:SCP_DIR
 UNSET_RIEMANN_SOLVER_WAVE_TYPE	cFluid.h	/^	UNSET_RIEMANN_SOLVER_WAVE_TYPE = -1,$/;"	e	enum:RIEMANN_SOLVER_WAVE_TYPE
 UNTRACK_FLAG	../src/front/fdecs.h	/^typedef struct _UNTRACK_FLAG UNTRACK_FLAG;$/;"	t	typeref:struct:_UNTRACK_FLAG
 UNUSED_COMP	../src/intfc/int.h	/^	UNUSED_COMP      = -5,$/;"	e	enum:__anon84
@@ -1700,7 +1712,6 @@ VEL_COMPUTED_NODE	../src/front/fuserint.h	/^	VEL_COMPUTED_NODE,$/;"	e	enum:_NODE
 VERSIONONE	../src/intfc/imkcurve.c	41;"	d	file:
 VERSIONTHREE	../src/intfc/imkcurve.c	43;"	d	file:
 VERSIONTWO	../src/intfc/imkcurve.c	42;"	d	file:
-VERT	cFluid.h	/^	VERT,$/;"	e	enum:_PDIR
 VERTICAL_MOTION	../src/front/fuserint.h	/^	VERTICAL_MOTION,$/;"	e	enum:_MOTION_TYPE
 VIOLATINGPOINT	../src/intfc/triangle.c	/^    VIOLATINGPOINT,$/;"	e	enum:insertsiteresult	file:
 VIRTUAL	../src/front/fuserint.h	/^        VIRTUAL,$/;"	e	enum:__anon31
@@ -1715,10 +1726,10 @@ VX	../src/intfc/iprt3d.c	/^LOCAL GPT VX,VY;$/;"	v
 VY	../src/intfc/iprt3d.c	/^LOCAL GPT VX,VY;$/;"	v
 Vertex	../src/front/funtan3d.c	/^typedef struct  _Vertex  Vertex;$/;"	t	typeref:struct:_Vertex	file:
 Vertex_of_point	../src/intfc/int.h	1260;"	d
-WALLMODEL_APLUS	cFcartsn.cpp	3313;"	d	file:
-WALLMODEL_KAPPA	cFcartsn.cpp	3314;"	d	file:
-WALLMODEL_PRT	cFcartsn.cpp	3315;"	d	file:
-WALLMODEL_STRETCHING	cFcartsn.cpp	3312;"	d	file:
+WALLMODEL_APLUS	cFcartsn.cpp	4832;"	d	file:
+WALLMODEL_KAPPA	cFcartsn.cpp	4833;"	d	file:
+WALLMODEL_PRT	cFcartsn.cpp	4834;"	d	file:
+WALLMODEL_STRETCHING	cFcartsn.cpp	4831;"	d	file:
 WEDGE	../src/intfc/int.h	/^typedef struct _WEDGE WEDGE;$/;"	t	typeref:struct:_WEDGE
 WENO_FIRST_ORDER	cFluid.h	/^        WENO_FIRST_ORDER,$/;"	e	enum:NUM_SCHEME
 WENO_FOURTH_ORDER	cFluid.h	/^        WENO_FOURTH_ORDER,$/;"	e	enum:NUM_SCHEME
@@ -1738,7 +1749,7 @@ WLSP_compute_normal3d0	../src/intfc/isub.c	/^EXPORT  boolean  WLSP_compute_norma
 WLSP_compute_normal3d_cyl	../src/intfc/isub.c	/^EXPORT boolean WLSP_compute_normal3d_cyl($/;"	f
 WRITE	../src/util/cdecs.h	/^	WRITE,$/;"	e	enum:__anon106
 WRITE_LIST	../src/util/output.c	/^typedef struct _WRITE_LIST WRITE_LIST;$/;"	t	typeref:struct:_WRITE_LIST	file:
-Wall_Temp	cFcartsn.cpp	3316;"	d	file:
+Wall_Temp	cFcartsn.cpp	4835;"	d	file:
 Wv_on_pc	../src/front/fdecs.h	/^typedef struct _Wv_on_pc Wv_on_pc;$/;"	t	typeref:struct:_Wv_on_pc
 XY_PLANE	../src/intfc/int.h	/^    XY_PLANE = 2$/;"	e	enum:_COORDINATE_PLANE
 XZ_PLANE	../src/intfc/int.h	/^    XZ_PLANE = 1,$/;"	e	enum:_COORDINATE_PLANE
@@ -1776,6 +1787,7 @@ _BOX_INFO	../src/front/funtan2d.c	/^struct _BOX_INFO$/;"	s	file:
 _BPOINT	../src/intfc/setb2d.c	/^typedef struct  _BPOINT {$/;"	s	file:
 _BURGERS_PARAMS	../src/front/fvelo.h	/^struct _BURGERS_PARAMS$/;"	s
 _Bond	../src/intfc/userint.h	/^	BOND	*(*_Bond)(POINT*,POINT*);$/;"	m	struct:_I_USER_INTERFACE
+_CBOUNDARY	cFluid.h	/^struct _CBOUNDARY$/;"	s
 _CBond	../src/intfc/userint.h	/^	C_BOND *(*_CBond)(C_BOND*,POINT*,POINT*,TRI*,TRI*);$/;"	m	struct:_I_USER_INTERFACE
 _CDECS_H	../src/util/cdecs.h	60;"	d
 _CEDGE	cFluid.h	/^struct _CEDGE$/;"	s
@@ -1784,6 +1796,7 @@ _CELL_INFO	../src/front/funtan2d.c	/^struct _CELL_INFO$/;"	s	file:
 _CELL_TYPE	../src/intfc/int.h	/^enum _CELL_TYPE {$/;"	g
 _CFACE	cFluid.h	/^struct _CFACE$/;"	s
 _CFLUID_H	cFluid.h	6;"	d
+_CFTCELL	cFluid.h	/^struct _CFTCELL$/;"	s
 _CIRCULAR_ROTATION_PARAMS	../src/front/fvelo.h	/^struct _CIRCULAR_ROTATION_PARAMS$/;"	s
 _CLIST	../src/front/ftop.c	/^struct _CLIST {$/;"	s	file:
 _COMM_BOX	../src/intfc/geom.h	/^struct _COMM_BOX {$/;"	s
@@ -1795,6 +1808,7 @@ _CONTINUE_PAST_BOUNDARY_INDEX	../src/front/fdecs.h	/^	_CONTINUE_PAST_BOUNDARY_IN
 _CONTINUE_PAST_FIXED_NODE_INDEX	../src/front/fdecs.h	/^	_CONTINUE_PAST_FIXED_NODE_INDEX,$/;"	e	enum:_F_NODE_FLAG_INDEX
 _COORDINATE_PLANE	../src/intfc/int.h	/^enum _COORDINATE_PLANE {$/;"	g
 _CORRESPOND	../src/front/fcorrspnd.c	/^struct _CORRESPOND {$/;"	s	file:
+_CPAM	cFluid.h	/^struct _CPAM$/;"	s
 _CPOINT	cFluid.h	/^struct _CPOINT$/;"	s
 _CPOLYGON	cFluid.h	/^struct _CPOLYGON$/;"	s
 _CPOLYHEDRON	cFluid.h	/^struct _CPOLYHEDRON$/;"	s
@@ -1931,6 +1945,7 @@ _MinScaledSeparation	../src/intfc/userint.h	/^		double	_MinScaledSeparation;$/;"
 _Min_sin_sqr	../src/intfc/userint.h	/^		double   _Min_sin_sqr;$/;"	m	struct:_I_USER_INTERFACE::_I_INTERFACE_TOLERANCES
 _NAME_LIST	../src/util/fsort.c	/^struct _NAME_LIST {$/;"	s	file:
 _NAVDECS_H	../src/util/navdecs.h	62;"	d
+_NBCELL	cFluid.h	/^struct _NBCELL$/;"	s
 _NCLIST	../src/front/funtan3d.c	/^struct _NCLIST {$/;"	s	file:
 _NCSURF	../src/front/funtan3d.c	/^struct _NCSURF {$/;"	s	file:
 _NEIGHBORHOOD	../src/intfc/int.h	/^struct _NEIGHBORHOOD{$/;"	s
@@ -1955,7 +1970,6 @@ _O_CURVE_FAMILY	../src/intfc/int.h	/^struct _O_CURVE_FAMILY$/;"	s
 _O_NODE	../src/intfc/int.h	/^struct _O_NODE$/;"	s
 _O_SURFACE	../src/intfc/int.h	/^struct _O_SURFACE$/;"	s
 _PATCH_BDRY_FLAG	../src/intfc/int_amr.h	/^struct _PATCH_BDRY_FLAG{$/;"	s
-_PDIR	cFluid.h	/^enum _PDIR$/;"	g
 _PERT_BDRY_TYPE	../src/intfc/geom.h	/^enum _PERT_BDRY_TYPE {$/;"	g
 _PHYS_VIRTUALS_PRESET_INDEX	../src/front/fdecs.h	/^	_PHYS_VIRTUALS_PRESET_INDEX,$/;"	e	enum:_F_NODE_FLAG_INDEX
 _PLOTDECS_H	../src/util/plotdecs.h	160;"	d
@@ -2000,6 +2014,7 @@ _Restart_data	../src/front/fdecs.h	/^	RESTART_DATA	_Restart_data;$/;"	m	struct:_
 _RobustFac	../src/intfc/userint.h	/^		double   _RobustFac;$/;"	m	struct:_I_USER_INTERFACE::_I_INTERFACE_TOLERANCES
 _SAMPLE	../src/front/fdecs.h	/^struct _SAMPLE {$/;"	s
 _SEAM	../src/intfc/isurgery.c	/^struct _SEAM {$/;"	s	file:
+_SETOFCPOLYGS	cFluid.h	/^struct _SETOFCPOLYGS$/;"	s
 _SET_VIRTUALS_BY_ADJACENT_BOND_INDEX	../src/front/fdecs.h	/^	_SET_VIRTUALS_BY_ADJACENT_BOND_INDEX,$/;"	e	enum:_F_NODE_FLAG_INDEX
 _SHEAR_MOTION_PARAMS	../src/front/fvelo.h	/^struct _SHEAR_MOTION_PARAMS$/;"	s
 _SHEAR_MOTION_PARAMS	../src/intfc/testintfc.c	/^struct _SHEAR_MOTION_PARAMS$/;"	s	file:
@@ -2524,6 +2539,8 @@ add_crxp_on_cf_edge_sorted	cFvol.cpp	/^void add_crxp_on_cf_edge_sorted($/;"	f
 add_crxp_on_tri_edge	cFvol.cpp	/^void add_crxp_on_tri_edge($/;"	f
 add_edge	cFvol.cpp	/^void add_edge($/;"	f
 add_matching_pt_to_hash_table	../src/front/fscat3d1.c	/^LOCAL boolean add_matching_pt_to_hash_table($/;"	f
+add_nbc_by_face	cFvol.cpp	/^void add_nbc_by_face($/;"	f
+add_new_bdry	cFvol.cpp	/^void add_new_bdry($/;"	f
 add_new_dir_edge	cFvol.cpp	/^void add_new_dir_edge($/;"	f
 add_new_edge	cFvol.cpp	/^void add_new_edge($/;"	f
 add_new_point	cFvol.cpp	/^void add_new_point($/;"	f
@@ -2536,8 +2553,14 @@ add_oldhs_to_correspond	../src/front/fcorrspnd.c	/^LOCAL int add_oldhs_to_corres
 add_p_as_nth_vert	cFvol.cpp	/^void add_p_as_nth_vert($/;"	f
 add_perturbation	../src/intfc/geom.h	/^        boolean add_perturbation;$/;"	m	struct:__anon66
 add_plan_surf	../src/intfc/geom.h	/^        boolean add_plan_surf;$/;"	m	struct:__anon66
+add_polyg_to_scp	cFvol.cpp	/^void add_polyg_to_scp($/;"	f
 add_polyg_vertex	cFvol.cpp	/^void add_polyg_vertex($/;"	f
 add_prev_vertices_on_ce	cFvol.cpp	/^void add_prev_vertices_on_ce($/;"	f
+add_scp_bdries_to_polyh	cFvol.cpp	/^void add_scp_bdries_to_polyh($/;"	f
+add_scp_boundary	cFvol.cpp	/^void add_scp_boundary($/;"	f
+add_scp_polygs_to_polyh	cFvol.cpp	/^void add_scp_polygs_to_polyh($/;"	f
+add_scp_to_polyh	cFvol.cpp	/^void add_scp_to_polyh($/;"	f
+add_scp_with_ibdries	cFvol.cpp	/^void add_scp_with_ibdries(CPOLYHEDRON *polyh)$/;"	f
 add_state_to_totals	cFcartsn.cpp	/^void G_CARTESIAN::add_state_to_totals(STATE* st, Big_State *bst)$/;"	f	class:G_CARTESIAN
 add_time	../src/util/times.c	/^LOCAL double add_time[ADD_MAX_LEN], add_time_st[ADD_MAX_LEN];$/;"	v
 add_time_clear	../src/util/times.c	/^EXPORT void add_time_clear(int ind)$/;"	f
@@ -2659,6 +2682,7 @@ area	../src/intfc/geom.h	/^	    double          area;      \/* Total (Remappped)
 area	../src/intfc/int.h	/^	double		area;$/;"	m	struct:_BLK_TRI
 area	../src/intfc/int.h	/^        double           area;$/;"	m	struct:_SURF
 area	../src/intfc/table.h	/^	double		***area;	\/* Surface area in each Grid Block *\/$/;"	m	struct:Table
+area	cFluid.h	/^	double area;$/;"	m	struct:_CPOLYGON
 areaLeft	../src/intfc/imkcurve.c	/^LOCAL boolean areaLeft(double x, double y, double meniscus)$/;"	f
 areaOne	../src/intfc/imkcurve.c	/^LOCAL boolean areaOne(double x, double y, double meniscus)$/;"	f
 areaRight	../src/intfc/imkcurve.c	/^LOCAL boolean areaRight(double x, double y, double meniscus)$/;"	f
@@ -2687,6 +2711,7 @@ area_glider_case13	../src/intfc/iblkc2.c	/^LOCAL double area_glider_case13($/;"	
 area_hexagon_case05	../src/intfc/iblkc2.c	/^LOCAL double area_hexagon_case05($/;"	f
 area_of_closed_curve	../src/intfc/isub.c	/^EXPORT	double area_of_closed_curve($/;"	f
 area_of_loop	../src/front/funtan2d.c	/^LOCAL 	double area_of_loop($/;"	f
+area_of_polygon	cFvol.cpp	/^double area_of_polygon(CPOLYGON *polyg)$/;"	f
 area_of_rect_grid	../src/intfc/igrid.c	/^LOCAL	double area_of_rect_grid($/;"	f
 area_plane_case01	../src/intfc/iblkc2.c	/^LOCAL double area_plane_case01($/;"	f
 area_twister_case07	../src/intfc/iblkc2.c	/^LOCAL double area_twister_case07($/;"	f
@@ -2802,6 +2827,7 @@ bdry_type1	../src/front/frp.h	/^	int bdry_type1, bdry_type2;$/;"	m	struct:_RPROB
 bdry_type2	../src/front/frp.h	/^	int bdry_type1, bdry_type2;$/;"	m	struct:_RPROBLEM
 bdry_vel	cFluid.h	/^        double bdry_vel;            \/* Boundary velocity *\/$/;"	m	struct:VAR_BDRY_PARAMS
 begin_pt	../src/intfc/isurgery.c	/^  	POINT 	*begin_pt;$/;"	m	struct:_SEAM	file:
+behind_state	cFconserv.cpp	/^void behind_state($/;"	f
 behind_state	cFinit.cpp	/^static void behind_state($/;"	f	file:
 beta	cFluid.h	/^        double beta;$/;"	m	struct:SCHEME_PARAMS
 bg	../src/intfc/igview.c	/^	int bg[3];$/;"	m	struct:DATA	file:
@@ -2949,6 +2975,8 @@ bondstore	../src/intfc/table.h	/^	BOND		**bondstore;	\/* Storage for BOND Lists 
 boolean	../src/util/cdecs.h	/^typedef enum _boolean boolean;$/;"	t	typeref:enum:_boolean
 bound	../src/front/fdecs.h	/^        int    bound[MAXD]; \/* grid location index on subdomain *\/$/;"	m	struct:_Wv_on_pc
 bound_tris_set	../src/intfc/itrisset.c	/^EXPORT	int	bound_tris_set($/;"	f
+boundaries	cFluid.h	/^	CBOUNDARY *boundaries;$/;"	m	struct:_CPOLYHEDRON
+boundaries	cFluid.h	/^	CBOUNDARY *boundaries;$/;"	m	struct:_SETOFCPOLYGS
 boundary	../src/front/fdecs.h	/^        int 	boundary[MAXD][2];$/;"	m	struct:_F_BASIC_DATA
 boundary	../src/intfc/int.h	/^	int	  boundary;$/;"	m	struct:_C_CURVE
 boundary	../src/intfc/int.h	/^	int boundary;		\/* tri bonds on interface curves? *\/$/;"	m	struct:_TRI
@@ -3070,16 +3098,21 @@ cdt_of_tri	../src/front/funtan3d.c	107;"	d	file:
 cdt_retriangulate_surface_along_c_curves	../src/front/funtan3d.c	/^LOCAL  boolean  cdt_retriangulate_surface_along_c_curves($/;"	f
 cdt_side_index	../src/front/funtan3d.c	/^	int         cdt_side_index[3];$/;"	m	struct:_Vertex	file:
 cdt_triangulate_one_tri	../src/front/funtan3d.c	/^LOCAL boolean cdt_triangulate_one_tri($/;"	f
+cell	cFluid.h	/^	struct _CELL *cell;$/;"	m	struct:_CPOLYHEDRON	typeref:struct:_CPOLYHEDRON::_CELL
 cell_ceil	../src/intfc/geom.h	241;"	d
 cell_center	../src/intfc/geom.h	242;"	d
 cell_center	cFluid.h	/^	std::vector<L_RECTANGLE> 	cell_center;$/;"	m	class:G_CARTESIAN
 cell_edge	../src/intfc/geom.h	243;"	d
 cell_floor	../src/intfc/geom.h	240;"	d
 cell_index	../src/intfc/geom.h	239;"	d
+cell_to_polyh	cFvol.cpp	/^void cell_to_polyh($/;"	f
 cell_volume	../src/intfc/int.h	/^	double		cell_volume;		\/* volume of regular cell *\/$/;"	m	struct:_BLK_CRX
 cell_width	../src/intfc/geom.h	245;"	d
 celll	cFluid.h	/^	double celll[3], cellu[3];$/;"	m	struct:_CELL
-cells	cFluid.h	/^	CELL *cells;	\/\/cft	Dan$/;"	m	class:G_CARTESIAN
+cells	cFluid.h	/^	CELL *cells;$/;"	m	class:G_CARTESIAN
+cells_halft	cFluid.h	/^	CELL *cells_old, *cells_halft, *cells_new;$/;"	m	class:G_CARTESIAN
+cells_new	cFluid.h	/^	CELL *cells_old, *cells_halft, *cells_new;$/;"	m	class:G_CARTESIAN
+cells_old	cFluid.h	/^	CELL *cells_old, *cells_halft, *cells_new;$/;"	m	class:G_CARTESIAN
 cellu	cFluid.h	/^	double celll[3], cellu[3];$/;"	m	struct:_CELL
 cen	../src/front/fvelo.h	/^	double cen[MAXD];$/;"	m	struct:_BURGERS_PARAMS
 cen	../src/front/fvelo.h	/^	double cen[MAXD];$/;"	m	struct:_RADIAL_MOTION_PARAMS
@@ -3108,6 +3141,65 @@ cfl_fudge	../src/front/fdecs.h	/^	double	cfl_fudge;$/;"	m	struct:_TSTEP_CONTROL
 cfluid_compute_force_and_torque	cFsub.cpp	/^extern	void cfluid_compute_force_and_torque($/;"	f
 cfluid_compute_force_and_torque2d	cFsub.cpp	/^static	void cfluid_compute_force_and_torque2d($/;"	f	file:
 cfluid_compute_force_and_torque3d	cFsub.cpp	/^static	void cfluid_compute_force_and_torque3d($/;"	f	file:
+cflux	cFluid.h	/^	FSWEEP cflux[2][3];$/;"	m	class:G_CARTESIAN
+cft_WENO_flux	cFcftweno.cpp	/^void G_CARTESIAN::cft_WENO_flux($/;"	f	class:G_CARTESIAN
+cft_addFluxInDirection	cFcartsn.cpp	/^void G_CARTESIAN::cft_addFluxInDirection($/;"	f	class:G_CARTESIAN
+cft_addFluxInDirection3d	cFcartsn.cpp	/^void G_CARTESIAN::cft_addFluxInDirection3d($/;"	f	class:G_CARTESIAN
+cft_add_cftcell_index	cFconserv.cpp	/^void G_CARTESIAN::cft_add_cftcell_index($/;"	f	class:G_CARTESIAN
+cft_add_pam	cFconserv.cpp	/^void G_CARTESIAN::cft_add_pam($/;"	f	class:G_CARTESIAN
+cft_allocDirVstFluxCflux	cFcartsn.cpp	/^void G_CARTESIAN::cft_allocDirVstFluxCflux($/;"	f	class:G_CARTESIAN
+cft_allocMeshCflux	cFcartsn.cpp	/^void G_CARTESIAN::cft_allocMeshCflux($/;"	f	class:G_CARTESIAN
+cft_appendGhostBuffer	cFcartsn.cpp	/^void G_CARTESIAN::cft_appendGhostBuffer($/;"	f	class:G_CARTESIAN
+cft_check_mass	cFconserv.cpp	/^void G_CARTESIAN::cft_check_mass()$/;"	f	class:G_CARTESIAN
+cft_clean_edges	cFconserv.cpp	/^void G_CARTESIAN::cft_clean_edges(CELL *c)$/;"	f	class:G_CARTESIAN
+cft_clean_faces	cFconserv.cpp	/^void G_CARTESIAN::cft_clean_faces(CELL *c)$/;"	f	class:G_CARTESIAN
+cft_computeAdvection	cFcartsn.cpp	/^void G_CARTESIAN::cft_computeAdvection(void)$/;"	f	class:G_CARTESIAN
+cft_computeMeshFlux	cFcartsn.cpp	/^void G_CARTESIAN::cft_computeMeshFlux($/;"	f	class:G_CARTESIAN
+cft_construct_cell_polyhedrons	cFvol.cpp	/^void G_CARTESIAN::cft_construct_cell_polyhedrons()$/;"	f	class:G_CARTESIAN
+cft_driver	cFluid.cpp	/^static  void cft_driver($/;"	f	file:
+cft_effective_index	cFconserv.cpp	/^bool G_CARTESIAN::cft_effective_index($/;"	f	class:G_CARTESIAN
+cft_free_bdry	cFconserv.cpp	/^void G_CARTESIAN::cft_free_bdry(CBOUNDARY **bdry)$/;"	f	class:G_CARTESIAN
+cft_free_bdry_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_bdry_list(CBOUNDARY **bdry)$/;"	f	class:G_CARTESIAN
+cft_free_cells	cFconserv.cpp	/^void G_CARTESIAN::cft_free_cells(TS_LEVEL ts)$/;"	f	class:G_CARTESIAN
+cft_free_ctri	cFconserv.cpp	/^void G_CARTESIAN::cft_free_ctri(CTRI **ctri)$/;"	f	class:G_CARTESIAN
+cft_free_ctri_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_ctri_list(CTRI **ctri)$/;"	f	class:G_CARTESIAN
+cft_free_edge	cFconserv.cpp	/^void G_CARTESIAN::cft_free_edge(CEDGE **edge)$/;"	f	class:G_CARTESIAN
+cft_free_edge_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_edge_list(CEDGE **edge)$/;"	f	class:G_CARTESIAN
+cft_free_p_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_p_list(CPOINT **p)$/;"	f	class:G_CARTESIAN
+cft_free_pam	cFconserv.cpp	/^void G_CARTESIAN::cft_free_pam(CPAM **pam)$/;"	f	class:G_CARTESIAN
+cft_free_pam_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_pam_list(CPAM **pam)$/;"	f	class:G_CARTESIAN
+cft_free_polyg	cFconserv.cpp	/^void G_CARTESIAN::cft_free_polyg(CPOLYGON **polyg)$/;"	f	class:G_CARTESIAN
+cft_free_polyg_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_polyg_list(CPOLYGON **polyg)$/;"	f	class:G_CARTESIAN
+cft_free_polyh	cFconserv.cpp	/^void G_CARTESIAN::cft_free_polyh(CPOLYHEDRON **polyh)$/;"	f	class:G_CARTESIAN
+cft_free_polyh_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_polyh_list(CPOLYHEDRON **polyh)$/;"	f	class:G_CARTESIAN
+cft_free_scp	cFconserv.cpp	/^void G_CARTESIAN::cft_free_scp(SETOFCPOLYGS **scp)$/;"	f	class:G_CARTESIAN
+cft_free_scp_list	cFconserv.cpp	/^void G_CARTESIAN::cft_free_scp_list(SETOFCPOLYGS **scp)$/;"	f	class:G_CARTESIAN
+cft_init_cftcell	cFconserv.cpp	/^void G_CARTESIAN::cft_init_cftcell(CELL *c)$/;"	f	class:G_CARTESIAN
+cft_init_cut_cells	cFvol.cpp	/^void G_CARTESIAN::cft_init_cut_cells(TS_LEVEL ts)$/;"	f	class:G_CARTESIAN
+cft_init_tris_in_cells	cFvol.cpp	/^void G_CARTESIAN::cft_init_tris_in_cells()$/;"	f	class:G_CARTESIAN
+cft_merge_polyhs	cFvol.cpp	/^void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)$/;"	f	class:G_CARTESIAN
+cft_newts_cut_cells	cFconserv.cpp	/^void G_CARTESIAN::cft_newts_cut_cells()$/;"	f	class:G_CARTESIAN
+cft_ng_addFluxInDirection3d	cFcartsn.cpp	/^void G_CARTESIAN::cft_ng_addFluxInDirection3d($/;"	f	class:G_CARTESIAN
+cft_reset_cell	cFconserv.cpp	/^void G_CARTESIAN::cft_reset_cell(CELL *c)$/;"	f	class:G_CARTESIAN
+cft_reset_cflux	cFcartsn.cpp	/^void G_CARTESIAN::cft_reset_cflux()$/;"	f	class:G_CARTESIAN
+cft_setMeshVst	cFcartsn.cpp	/^void G_CARTESIAN::cft_setMeshVst($/;"	f	class:G_CARTESIAN
+cft_set_cell_polygons	cFvol.cpp	/^void G_CARTESIAN::cft_set_cell_polygons()$/;"	f	class:G_CARTESIAN
+cft_set_comp	cFvol.cpp	/^void G_CARTESIAN::cft_set_comp()$/;"	f	class:G_CARTESIAN
+cft_set_cut_cell_vol	cFvol.cpp	/^void G_CARTESIAN::cft_set_cut_cell_vol()$/;"	f	class:G_CARTESIAN
+cft_set_cut_cells	cFvol.cpp	/^void G_CARTESIAN::cft_set_cut_cells(TS_LEVEL ts)$/;"	f	class:G_CARTESIAN
+cft_set_face_flux	cFconserv.cpp	/^void G_CARTESIAN::cft_set_face_flux()$/;"	f	class:G_CARTESIAN
+cft_set_flux_at_halft_cftcell	cFconserv.cpp	/^void G_CARTESIAN::cft_set_flux_at_halft_cftcell(CFTCELL *cftc)$/;"	f	class:G_CARTESIAN
+cft_set_init_polyh_states	cFconserv.cpp	/^void G_CARTESIAN::cft_set_init_polyh_states()$/;"	f	class:G_CARTESIAN
+cft_set_maps_for_cftcell	cFconserv.cpp	/^void G_CARTESIAN::cft_set_maps_for_cftcell(CFTCELL *cftc)$/;"	f	class:G_CARTESIAN
+cft_set_mass_at_oldt_cftcell	cFconserv.cpp	/^void G_CARTESIAN::cft_set_mass_at_oldt_cftcell(CFTCELL *cftc)$/;"	f	class:G_CARTESIAN
+cft_set_polyhs_comps	cFvol.cpp	/^void G_CARTESIAN::cft_set_polyhs_comps()$/;"	f	class:G_CARTESIAN
+cft_set_vols_for_cftcell	cFconserv.cpp	/^void G_CARTESIAN::cft_set_vols_for_cftcell(CFTCELL *cftc)$/;"	f	class:G_CARTESIAN
+cft_solve	cFcartsn.cpp	/^void G_CARTESIAN::cft_solve(double dt)$/;"	f	class:G_CARTESIAN
+cft_solveRungeKutta	cFcartsn.cpp	/^void G_CARTESIAN::cft_solveRungeKutta(int order)$/;"	f	class:G_CARTESIAN
+cft_update_cell_states	cFconserv.cpp	/^void G_CARTESIAN::cft_update_cell_states(CELL *c)$/;"	f	class:G_CARTESIAN
+cft_update_states	cFconserv.cpp	/^void G_CARTESIAN::cft_update_states()$/;"	f	class:G_CARTESIAN
+cft_update_states_new	cFconserv.cpp	/^void G_CARTESIAN::cft_update_states_new()$/;"	f	class:G_CARTESIAN
+cftcell	cFluid.h	/^	struct _CFTCELL *cftcell;$/;"	m	struct:_CELL	typeref:struct:_CELL::_CFTCELL
 cg_comps	../src/intfc/table.h	/^	COMPONENT       *cg_comps;$/;"	m	struct:Table
 cg_over	../src/front/fdecs.h	/^        POINTER                   cg_over;   \/* pointer of CompositeGrid *\/$/;"	m	struct:_Front
 change	../src/intfc/int.h	/^            boolean   change;$/;"	m	struct:_HYPER_SURF::_DYNAMIC_COMP_CHANGE
@@ -3249,6 +3341,8 @@ comp	../src/intfc/int.h	/^        COMPONENT               *comp;          \/* an
 comp	../src/intfc/int.h	/^        COMPONENT       ***comp;$/;"	m	struct:_BLK_CRX
 comp	../src/intfc/int.h	/^        COMPONENT       ***comp;$/;"	m	struct:_BLK_CRX2
 comp	../src/intfc/int.h	/^        COMPONENT ***comp;$/;"	m	struct:_EG_CRX
+comp	cFluid.h	/^	COMPONENT comp;$/;"	m	struct:_CELL
+comp	cFluid.h	/^	COMPONENT comp;$/;"	m	struct:_CPOLYHEDRON
 comp	cFluid.h	/^	int comp;			 $/;"	m	class:L_RECTANGLE
 comp	cFluid.h	/^        COMPONENT *comp;$/;"	m	struct:SWEEP
 comp	cFluid.h	/^        COMPONENT comp;$/;"	m	struct:FLOW_THROUGH_PARAMS
@@ -3284,6 +3378,7 @@ compare_tri_ref	../src/front/fscat3d1.c	/^int compare_tri_ref(const void *a, con
 compare_tri_sort	../src/intfc/itrisset.c	/^LOCAL	int compare_tri_sort($/;"	f
 compare_tris	../src/intfc/comp3d.c	/^LOCAL	int compare_tris(const void *a, const void *b)$/;"	f
 compare_tris_pointers	../src/front/fpatch3d.c	/^int compare_tris_pointers(const void *a, const void *b)$/;"	f
+complete_bdry_with_init_edge	cFvol.cpp	/^void complete_bdry_with_init_edge($/;"	f
 complete_polyg_on_cf	cFvol.cpp	/^void complete_polyg_on_cf($/;"	f
 complete_polyg_undir_edges	cFvol.cpp	/^void complete_polyg_undir_edges($/;"	f
 compon1d	../src/intfc/table.h	/^	COMPONENT       *compon1d;        \/* COMPONENT in each Grid Block *\/$/;"	m	struct:Table
@@ -3335,13 +3430,11 @@ constr_params	../src/front/fdecs.h	/^        POINTER constr_params;$/;"	m	struct
 constr_position	../src/front/fscat3d1.c	/^LOCAL 	double *constr_position($/;"	f
 constrainededge	../src/intfc/triangle.c	/^LOCAL void constrainededge($/;"	f
 construct_bdry_blk	../src/intfc/iblkb.c	/^EXPORT	int construct_bdry_blk($/;"	f
-construct_cell_polyhedrons	cFvol.cpp	/^void G_CARTESIAN::construct_cell_polyhedrons()$/;"	f	class:G_CARTESIAN
 construct_comp2_blk	../src/intfc/iblkc2.c	/^EXPORT	int construct_comp2_blk($/;"	f
 construct_comp2_blk2d	../src/intfc/imkcurve.c	/^LOCAL	int construct_comp2_blk2d($/;"	f
 construct_comp3_blk	../src/intfc/iblkc3.c	/^EXPORT	int construct_comp3_blk($/;"	f
 construct_polygon_on_tri	cFvol.cpp	/^void construct_polygon_on_tri($/;"	f
 construct_polygons_on_cfs	cFvol.cpp	/^void construct_polygons_on_cfs(CELL *cell)$/;"	f
-construct_polyh	cFvol.cpp	/^void construct_polyh($/;"	f
 construct_reflect_bdry	../src/front/fscat3d1.c	/^boolean  construct_reflect_bdry($/;"	f
 construct_vander_bivar	../src/intfc/iredist_o2.c	/^void  construct_vander_bivar($/;"	f
 cont	../src/util/plotdecs.h	272;"	d
@@ -3407,8 +3500,9 @@ copysign	../src/util/machine.c	/^EXPORT	double	copysign(double x, double y)$/;"	
 cor	../src/intfc/int.h	/^        double   cor, cos;$/;"	m	struct:__anon90
 cor_point	../src/intfc/int.h	/^            POINTER     cor_point;$/;"	m	union:_POINT::__anon72
 corner_coords	../src/intfc/int.h	/^	double		****corner_coords;	\/* for volume fraction *\/$/;"	m	struct:_BLK_CRX
-corner_index	cFcartsn.cpp	7760;"	d	file:
+corner_index	cFcartsn.cpp	9655;"	d	file:
 corner_index	cFsub.cpp	1182;"	d	file:
+corr_polyh_in_cell	cFconserv.cpp	/^bool corr_polyh_in_cell($/;"	f
 corr_possible	../src/front/fcorrspnd.c	81;"	d	file:
 correct_and_identify_node_types	../src/front/funtan2d.c	/^LOCAL	boolean correct_and_identify_node_types($/;"	f
 correct_exterior_curve	../src/front/fbdry3.c	/^LOCAL	boolean correct_exterior_curve($/;"	f
@@ -3474,6 +3568,7 @@ cross_bonds	../src/intfc/isect2d.c	/^EXPORT boolean cross_bonds($/;"	f
 cross_line_segment_triangle	cFcartsn.cpp	/^boolean G_CARTESIAN::cross_line_segment_triangle($/;"	f	class:G_CARTESIAN
 cross_or_extend_to_cross_two_propagated_curves	../src/front/fcrossext.c	/^EXPORT	int cross_or_extend_to_cross_two_propagated_curves($/;"	f
 cross_prod	../src/intfc/iprt3d.c	/^LOCAL void cross_prod(GPT v1, GPT v2, GPT *result)$/;"	f
+cross_product	cFvol.cpp	/^void cross_product($/;"	f
 cross_rect_grid_bdry	../src/front/ftop.c	/^EXPORT   boolean  cross_rect_grid_bdry($/;"	f
 cross_segments	../src/front/fscat2d.c	/^LOCAL boolean cross_segments($/;"	f
 cross_sign	../src/intfc/isub.c	/^EXPORT int cross_sign($/;"	f
@@ -3629,7 +3724,6 @@ cut_side	../src/front/fscat3d1.c	404;"	d	file:
 cut_split_tris	../src/front/fscat3d1.c	/^int     cut_split_tris($/;"	f
 cut_surf_along_line	../src/front/fscat3d1.c	/^void	cut_surf_along_line($/;"	f
 cut_surface	../src/front/fscat3d1.c	/^EXPORT	void cut_surface($/;"	f
-cvol	cFvol.cpp	/^void G_CARTESIAN::cvol()$/;"	f	class:G_CARTESIAN
 cylin_Area	../src/intfc/igrid.c	/^LOCAL	double cylin_Area($/;"	f
 cylin_Volume	../src/intfc/igrid.c	/^LOCAL	double cylin_Volume($/;"	f
 d	../src/intfc/comp3d.c	/^	double   d, d2;		\/* distance and square distance pt to tri *\/$/;"	m	struct:__anon38	file:
@@ -3674,8 +3768,10 @@ debug_propagate_3d_front	../src/front/fadv.c	/^LOCAL void debug_propagate_3d_fro
 debug_same_cpt	cFvol.cpp	/^bool debug_same_cpt($/;"	f
 debug_show_boundary_curve_states	../src/front/fbdry1.c	/^EXPORT	void	debug_show_boundary_curve_states($/;"	f
 debug_trace	../src/util/debug.c	/^EXPORT void debug_trace(void)$/;"	f
+debugdan	cFconserv.cpp	/^bool debugdan = false;$/;"	v
 debugging	../src/util/debug.c	/^EXPORT	boolean debugging($/;"	f
 debugging_names	../src/util/debug.c	/^EXPORT	char **debugging_names($/;"	f
+debugmerge	cFvol.cpp	/^bool debugmerge = false;$/;"	v
 decode	../src/intfc/triangle.c	736;"	d	file:
 deep_copy_front	../src/front/fdecs.h	872;"	d
 deep_free_front	../src/front/fdecs.h	873;"	d
@@ -3751,6 +3847,7 @@ dens	cFluid.h	/^	double *dens;$/;"	m	struct:FIELD
 dens	cFluid.h	/^	double dens;			\/* density *\/$/;"	m	struct:STATE
 dens	cFluid.h	/^        double *dens;            \/* density vector *\/$/;"	m	struct:SWEEP
 dens_Hugoniot	cFeos.cpp	/^extern double dens_Hugoniot($/;"	f
+dens_flux	cFluid.h	/^	double dens_flux;$/;"	m	struct:_CPOLYGON
 dens_flux	cFluid.h	/^        double *dens_flux;       \/* density flux *\/$/;"	m	struct:FSWEEP
 dequeue	../src/front/fredist3d.c	/^LOCAL POINTER_Q *dequeue($/;"	f
 dequeue	../src/intfc/iredist.c	/^LOCAL POINTER_Q *dequeue($/;"	f
@@ -3809,6 +3906,7 @@ dir	../src/front/fdecs.h	/^	const double        *dir;$/;"	m	struct:_Tan_stencil
 dir	../src/front/fvelo.h	/^	double dir[MAXD];$/;"	m	struct:_SHEAR_MOTION_PARAMS
 dir	../src/intfc/int.h	/^        int                dir, index, icl[3];$/;"	m	struct:_CRXING
 dir	../src/intfc/testintfc.c	/^	double dir[MAXD];$/;"	m	struct:_SHEAR_MOTION_PARAMS	file:
+dir	cFluid.h	/^	SCP_DIR dir;$/;"	m	struct:_SETOFCPOLYGS
 dir	cFluid.h	/^	int dir, side;$/;"	m	struct:_CFACE
 dir	cFluid.h	/^	int dir;$/;"	m	struct:_CEDGE
 dir1	../src/front/fdecs.h	/^        const double        *dir1;$/;"	m	struct:_Tan_stencil
@@ -3857,6 +3955,7 @@ domain_id	../src/intfc/iscatter.c	/^EXPORT  int domain_id($/;"	f
 done_stiching	../src/front/funtan3d.c	/^	boolean    done_stiching;$/;"	m	struct:_Cdt_Side	file:
 dont_insert_on_h_extend	../src/front/fdecs.h	163;"	d
 dot_prod	../src/intfc/iprt3d.c	/^LOCAL double dot_prod(GPT v1, GPT v2)$/;"	f
+dot_product	cFvol.cpp	/^double dot_product($/;"	f
 double_extend_to_cross	../src/front/fdecs.h	169;"	d
 double_vortex_vel	../src/front/fvelo.c	/^EXPORT int double_vortex_vel($/;"	f
 dp2	../src/intfc/int.h	/^        double              a[3], dp2[3], ds2[3];$/;"	m	struct:_CRXING
@@ -3907,6 +4006,8 @@ edgelist	../src/intfc/triangledefs.h	/^    int             *edgelist;           
 edgemarkerlist	../src/intfc/triangledefs.h	/^    int             *edgemarkerlist;\/* Unused with Voronoi diagram Out only *\/$/;"	m	struct:triangulateio
 edges	../src/intfc/geom.h	/^	double *edges[3];	\/* Coordinate cell edges *\/$/;"	m	struct:_RECT_GRID
 edges	../src/intfc/triangle.c	/^LOCAL long edges;                              \/* Number of output edges. *\/$/;"	v
+edges	cFluid.h	/^	CEDGE *edges;$/;"	m	struct:_CBOUNDARY
+edges	cFluid.h	/^	CEDGE *edges;$/;"	m	struct:_CPOLYGON
 edges	cFluid.h	/^	CEDGE edges[12];$/;"	m	struct:_CELL
 edges	cFluid.h	/^	CEDGE edges[3];$/;"	m	struct:_CTRI
 edges	cFluid.h	/^	CEDGE edges[4];$/;"	m	struct:_CFACE
@@ -4015,6 +4116,7 @@ extrapolation_permitted	../src/front/fmap.c	/^LOCAL	boolean extrapolation_permit
 f	../src/front/fgb3d.c	/^	double		f[2][3];$/;"	m	struct:_FBOX	file:
 f	../src/front/fpatrecon.h	/^        double           f[2][3];$/;"	m	struct:_BBOX
 f	../src/util/ppsub.c	/^typedef union _FLI {double f;long l;int i;} FLI;$/;"	m	union:_FLI	file:
+f2is	cFcftweno.cpp	/^static void f2is($/;"	f	file:
 f2is	cFweno.cpp	/^static void f2is($/;"	f	file:
 f_2drproblem	../src/front/frp1.c	/^EXPORT int f_2drproblem($/;"	f
 f_CBond	../src/front/fint.c	/^EXPORT	C_BOND *f_CBond($/;"	f
@@ -4240,8 +4342,10 @@ f_wlsp_curvature	../src/front/fuserintfc.c	/^EXPORT  double   f_wlsp_curvature($
 f_wlsp_normal	../src/front/fuserintfc.c	/^LOCAL  void f_wlsp_normal($/;"	f
 f_wlsp_tangent	../src/front/fuserintfc.c	/^LOCAL void f_wlsp_tangent($/;"	f
 f_zoom_interface	../src/front/fscatter.c	/^EXPORT	INTERFACE *f_zoom_interface($/;"	f
+face	cFluid.h	/^	struct _CPOLYGON *face;$/;"	m	struct:_NBCELL	typeref:struct:_NBCELL::_CPOLYGON
 face_crx_from_comp	../src/intfc/imksurf.c	/^LOCAL   boolean face_crx_from_comp($/;"	f
 face_crx_in_dir	../src/intfc/imksurf.c	/^LOCAL	boolean face_crx_in_dir($/;"	f
+face_in_polyh	cFvol.cpp	/^bool face_in_polyh($/;"	f
 face_index3d	../src/intfc/isub.c	/^EXPORT int  face_index3d($/;"	f
 faces	cFluid.h	/^	CFACE faces[6];$/;"	m	struct:_CELL
 faces	cFluid.h	/^	CPOLYGON *faces;$/;"	m	struct:_CPOLYHEDRON
@@ -4299,6 +4403,7 @@ find_Cartesian_coordinates	../src/intfc/iscatter.c	/^EXPORT	void find_Cartesian_
 find_D_extend_status	../src/front/fcrstatus.c	/^EXPORT int find_D_extend_status($/;"	f
 find_H_extend_status	../src/front/fcrstatus.c	/^EXPORT int find_H_extend_status($/;"	f
 find_bdry_curves_at_node	../src/front/fbdry3.c	/^LOCAL	void find_bdry_curves_at_node($/;"	f
+find_bdry_with_edge	cFvol.cpp	/^bool find_bdry_with_edge($/;"	f
 find_blk_tri	../src/intfc/idiagnostic.c	/^EXPORT 	void 	find_blk_tri($/;"	f
 find_block	cFcartsn.cpp	/^boolean	find_block($/;"	f
 find_block	cFsub.cpp	/^LOCAL	boolean find_block($/;"	f
@@ -4333,7 +4438,7 @@ find_loop	../src/front/ftop.c	/^EXPORT O_CURVE_FAMILY *find_loop($/;"	f
 find_match_bond	../src/front/fscat3d2.c	/^LOCAL   BOND * find_match_bond($/;"	f
 find_mid_state	cFgriemann.cpp	/^extern bool find_mid_state($/;"	f
 find_min_sect_box	../src/intfc/itrisset.c	/^LOCAL	void	find_min_sect_box($/;"	f
-find_nb_polygs	cFvol.cpp	/^void find_nb_polygs($/;"	f
+find_nb_cell_with_face	cFvol.cpp	/^void find_nb_cell_with_face($/;"	f
 find_nearest_pts	../src/front/fgb3d.c	/^LOCAL   int  find_nearest_pts($/;"	f
 find_nearest_pts_pair	../src/front/fgb3d.c	/^LOCAL   int  find_nearest_pts_pair($/;"	f
 find_nearest_tri_pair	../src/front/fgb3d.c	/^LOCAL	void find_nearest_tri_pair($/;"	f
@@ -4346,7 +4451,8 @@ find_partial_time_cross	../src/front/fcrstatus.c	/^LOCAL void find_partial_time_
 find_partial_time_cross_by_extension	../src/front/fcrstatus.c	/^LOCAL void find_partial_time_cross_by_extension($/;"	f
 find_particular_fluid_cell_volume	cFcartsn.cpp	/^double G_CARTESIAN::find_particular_fluid_cell_volume($/;"	f	class:G_CARTESIAN
 find_physical_curve_at_node	../src/front/fnodesub.c	/^EXPORT	CURVE *find_physical_curve_at_node($/;"	f
-find_polyg_with_edge	cFvol.cpp	/^void find_polyg_with_edge($/;"	f
+find_polyg_with_edge	cFvol.cpp	/^bool find_polyg_with_edge($/;"	f
+find_polyh_face_oncf_with_max_area	cFvol.cpp	/^void find_polyh_face_oncf_with_max_area($/;"	f
 find_position_along_wall	../src/front/fprop3d.c	/^EXPORT	void find_position_along_wall($/;"	f
 find_proj_vector	../src/intfc/iprt3d.c	/^LOCAL void find_proj_vector(void)$/;"	f
 find_propagation_orientation	../src/front/fnodesub.c	/^EXPORT void find_propagation_orientation($/;"	f
@@ -4357,6 +4463,7 @@ find_rpn_with_physical_node	../src/front/frp2.c	/^EXPORT	void find_rpn_with_phys
 find_scaled_extrem_edge	../src/front/fredist3d.c	/^LOCAL  int find_scaled_extrem_edge($/;"	f
 find_scaled_extrem_edge	../src/intfc/iredist.c	/^LOCAL  int find_scaled_extrem_edge($/;"	f
 find_scaled_extrem_edge	../src/intfc/iredist_o2.c	/^LOCAL   int find_scaled_extrem_edge($/;"	f
+find_scp_with_bdry	cFvol.cpp	/^bool find_scp_with_bdry($/;"	f
 find_secant_to_curve	../src/front/fnodesub.c	/^EXPORT	void find_secant_to_curve($/;"	f
 find_separation_point	../src/util/roots.c	/^EXPORT boolean find_separation_point($/;"	f
 find_single_adj_bond_match	../src/front/fscat2d.c	/^LOCAL OVERLAP *find_single_adj_bond_match($/;"	f
@@ -4628,6 +4735,8 @@ getComponent	cFcartsn.cpp	/^int G_CARTESIAN::getComponent($/;"	f	class:G_CARTESI
 getDistance	cFcartsn.cpp	/^double G_CARTESIAN::getDistance(double *c0, double *c1)$/;"	f	class:G_CARTESIAN
 getIntfcRestartName	../src/front/fpatch3d.c	/^char	*getIntfcRestartName($/;"	f
 getNearestInterfacePoint	cFcartsn.cpp	/^void G_CARTESIAN::getNearestInterfacePoint($/;"	f	class:G_CARTESIAN
+getPolyhCent	cFconserv.cpp	/^void getPolyhCent($/;"	f
+getRMState	cFconserv.cpp	/^void getRMState($/;"	f
 getRMState	cFinit.cpp	/^static void getRMState($/;"	f	file:
 getRTState	cFinit.cpp	/^static void getRTState($/;"	f	file:
 getRectangleCenter	cFcartsn.cpp	/^void G_CARTESIAN::getRectangleCenter($/;"	f	class:G_CARTESIAN
@@ -4653,6 +4762,8 @@ getStateYvort	cFsub.cpp	/^double getStateYvort(POINTER state)$/;"	f
 getStateZmom	cFsub.cpp	/^double getStateZmom(POINTER state)$/;"	f
 getStateZvel	cFsub.cpp	/^double getStateZvel(POINTER state)$/;"	f
 getStateZvort	cFsub.cpp	/^double getStateZvort(POINTER state)$/;"	f
+getTESTState	cFconserv.cpp	/^void getTESTState($/;"	f
+getTESTState	cFinit.cpp	/^static void getTESTState($/;"	f	file:
 getVelocity	cFcartsn.cpp	/^void G_CARTESIAN::getVelocity(double *p, double *U)$/;"	f	class:G_CARTESIAN
 getVorticity	cFcartsn.cpp	/^double G_CARTESIAN::getVorticity(int i, int j)$/;"	f	class:G_CARTESIAN
 getVorticityX	cFcartsn.cpp	/^double G_CARTESIAN::getVorticityX(int i, int j, int k)$/;"	f	class:G_CARTESIAN
@@ -4772,6 +4883,7 @@ h_min	cFluid.h	/^	double	h_min, h_min_01, h_min_05;$/;"	m	struct:Intfc_extrema
 h_min_01	cFluid.h	/^	double	h_min, h_min_01, h_min_05;$/;"	m	struct:Intfc_extrema
 h_min_05	cFluid.h	/^	double	h_min, h_min_01, h_min_05;$/;"	m	struct:Intfc_extrema
 half_angular_width	cFluid.h	/^        double half_angular_width; \/* Half-angle of the piston's surface *\/$/;"	m	struct:VAR_BDRY_PARAMS
+halfts_pams	cFluid.h	/^	struct _CPAM *halfts_pams;$/;"	m	struct:_CFTCELL	typeref:struct:_CFTCELL::_CPAM
 hardware_is_little_endian	../src/util/vtk.c	/^boolean hardware_is_little_endian()$/;"	f
 hdf_L0	../src/front/fdecs.h	1454;"	d
 hdf_U0	../src/front/fdecs.h	1456;"	d
@@ -5278,6 +5390,7 @@ iccerrboundC	../src/intfc/triangle.c	/^LOCAL double iccerrboundA, iccerrboundB, 
 icl	../src/intfc/int.h	/^        int                dir, index, icl[3];$/;"	m	struct:_CRXING
 icoords	cFcartsn.cpp	/^int icoords[3];$/;"	m	class:ToFill	file:
 icoords	cFluid.h	/^	int icoords[MAXD];$/;"	m	class:L_RECTANGLE
+icount	cFluid.h	/^	int icount;$/;"	m	struct:_CFTCELL
 icrds	cFluid.h	/^	int icrds[3];$/;"	m	struct:_CELL
 id_curve_by_points	../src/intfc/trisurf.c	/^LOCAL CURVE *id_curve_by_points($/;"	f
 ident_Area	../src/intfc/igrid.c	/^EXPORT	double ident_Area($/;"	f
@@ -5311,6 +5424,8 @@ in_name	../src/front/testfront.c	/^char *in_name,*out_name,sc_name[100];$/;"	v
 in_name	cFluid.cpp	/^char *in_name,*restart_state_name,*restart_name,*out_name;$/;"	v
 in_order	../src/util/fsort.c	/^LOCAL	int in_order($/;"	f
 in_tri_recorded	../src/front/fgb3d.c	/^LOCAL   int in_tri_recorded[MAX_NUM_UNPHY_IP];$/;"	v
+inbc	cFluid.h	/^	int inbc[3];$/;"	m	struct:_NBCELL
+incell	cFluid.h	/^	bool incell;$/;"	m	struct:_SETOFCPOLYGS
 incident_curve_crosses_fixed_node	../src/front/frp2.c	/^EXPORT	int incident_curve_crosses_fixed_node($/;"	f
 incircle	../src/intfc/triangle.c	/^LOCAL double incircle(point pa, point pb, point pc, point pd)$/;"	f
 incircleadapt	../src/intfc/triangle.c	/^LOCAL double incircleadapt($/;"	f
@@ -5331,6 +5446,7 @@ index_of_pointer	../src/intfc/idiagnostic.c	/^EXPORT 	int 	index_of_pointer($/;"
 index_of_pointer_in_array	../src/intfc/array.h	52;"	d
 index_of_read_file	../src/util/output.c	/^LOCAL IOUTPUT *index_of_read_file($/;"	f
 index_of_write_file	../src/util/output.c	/^LOCAL WRITE_LIST *index_of_write_file($/;"	f
+indices	cFluid.h	/^	int indices[125];$/;"	m	struct:_CFTCELL
 indx	../src/intfc/int.h	/^	int		indx;$/;"	m	struct:_POINT
 infect	../src/intfc/triangle.c	913;"	d	file:
 infected	../src/intfc/triangle.c	923;"	d	file:
@@ -5356,6 +5472,7 @@ initRiemannProb	cFinit.cpp	/^void G_CARTESIAN::initRiemannProb($/;"	f	class:G_CA
 initSampleVelocity	cFcartsn.cpp	/^void G_CARTESIAN::initSampleVelocity(char *in_name)$/;"	f	class:G_CARTESIAN
 initShockSineWaveStates	cFinit.cpp	/^void G_CARTESIAN::initShockSineWaveStates()$/;"	f	class:G_CARTESIAN
 initSinePertIntfc	cFinit.cpp	/^void G_CARTESIAN::initSinePertIntfc($/;"	f	class:G_CARTESIAN
+initSod3DProb	cFinit.cpp	/^void G_CARTESIAN::initSod3DProb($/;"	f	class:G_CARTESIAN
 initSodObliqProb	cFinit.cpp	/^void G_CARTESIAN::initSodObliqProb($/;"	f	class:G_CARTESIAN
 initVSTRMIntfc	cFinit.cpp	/^void G_CARTESIAN::initVSTRMIntfc($/;"	f	class:G_CARTESIAN
 initVSTRMStates	cFinit.cpp	/^void G_CARTESIAN::initVSTRMStates()$/;"	f	class:G_CARTESIAN
@@ -5388,7 +5505,6 @@ init_flame_params	../src/front/fvelo.c	/^EXPORT void init_flame_params($/;"	f
 init_front	../src/front/finit.c	/^EXPORT void init_front($/;"	f
 init_front_states	../src/front/finit.c	/^EXPORT void init_front_states($/;"	f
 init_front_time_step_control	../src/front/finit.c	/^LOCAL	void	init_front_time_step_control($/;"	f
-init_grid_cells	cFvol.cpp	/^void G_CARTESIAN::init_grid_cells()$/;"	f	class:G_CARTESIAN
 init_hyperboloid_params	../src/intfc/imksurf.c	/^LOCAL 	POINTER init_hyperboloid_params($/;"	f
 init_i_random_pert_params	../src/intfc/imksurf.c	/^LOCAL 	POINTER init_i_random_pert_params($/;"	f
 init_intfc_curvature3d	../src/front/fadv.c	/^EXPORT void   init_intfc_curvature3d($/;"	f
@@ -5397,12 +5513,15 @@ init_io	../src/front/dtestfront.c	/^static	void init_io($/;"	f	file:
 init_line_params	../src/intfc/imkcurve.c	/^LOCAL	POINTER init_line_params(RECT_GRID *gr)$/;"	f
 init_multi_circle_params	../src/intfc/imkcurve.c	/^LOCAL	POINTER init_multi_circle_params(RECT_GRID *gr)$/;"	f
 init_multi_ellipsoid_params	../src/intfc/imksurf.c	/^LOCAL 	POINTER init_multi_ellipsoid_params($/;"	f
+init_new_polyg	cFvol.cpp	/^void init_new_polyg(CPOLYGON *polyg)$/;"	f
 init_norv_params	../src/front/fvelo.c	/^EXPORT void init_norv_params($/;"	f
 init_o_curve	../src/front/frp1.c	/^EXPORT void init_o_curve($/;"	f
 init_ocurve_lists	../src/front/frp1.c	/^EXPORT	void init_ocurve_lists($/;"	f
 init_paraboloid_params	../src/intfc/imksurf.c	/^LOCAL 	POINTER init_paraboloid_params($/;"	f
 init_plane_params	../src/intfc/imksurf.c	/^LOCAL 	POINTER init_plane_params($/;"	f
-init_polyg_marks	cFvol.cpp	/^void init_polyg_marks(CELL *c)$/;"	f
+init_polygs_edges	cFvol.cpp	/^void init_polygs_edges(CELL *c)$/;"	f
+init_polygs_marks	cFvol.cpp	/^void init_polygs_marks(CELL *c)$/;"	f
+init_polyh	cFvol.cpp	/^void init_polyh($/;"	f
 init_prompting_and_debugging	../src/util/uinit.c	/^EXPORT	void	init_prompting_and_debugging($/;"	f
 init_propagate	../src/front/fdecs.h	876;"	d
 init_propeller_params	../src/intfc/imkcurve.c	/^EXPORT  POINTER init_propeller_params(RECT_GRID *gr)$/;"	f
@@ -5414,6 +5533,10 @@ init_rectangle_params	../src/intfc/imkcurve.c	/^EXPORT  POINTER init_rectangle_p
 init_redistribution_frequency	../src/front/finit.c	/^LOCAL	void	init_redistribution_frequency($/;"	f
 init_redundant_node_for_deletion	../src/front/fnodesub.c	/^EXPORT void init_redundant_node_for_deletion($/;"	f
 init_rp_nodes	../src/front/fuserhooks.c	/^EXPORT	void	init_rp_nodes($/;"	f
+init_scp	cFvol.cpp	/^void init_scp(SETOFCPOLYGS *scp)$/;"	f
+init_scpics_marks	cFvol.cpp	/^void init_scpics_marks(CELL *c)$/;"	f
+init_scps_bdries_marks	cFvol.cpp	/^void init_scps_bdries_marks(CELL *c)$/;"	f
+init_scps_marks	cFvol.cpp	/^void init_scps_marks(CELL *c)$/;"	f
 init_seg_crx_lists	../src/intfc/isub.c	/^EXPORT	void init_seg_crx_lists($/;"	f
 init_seg_crx_lists_on_grid	../src/front/fgb2d.c	/^LOCAL	void init_seg_crx_lists_on_grid($/;"	f
 init_shear_motion_params	../src/front/fvelo.c	/^EXPORT void init_shear_motion_params($/;"	f
@@ -5430,7 +5553,6 @@ init_topology_of_new_interface	../src/front/fdecs.h	/^	int  (*init_topology_of_n
 init_translation_params	../src/front/fvelo.c	/^EXPORT void init_translation_params($/;"	f
 init_translation_params	../src/intfc/testintfc.c	/^LOCAL void init_translation_params($/;"	f
 init_triangle_params	../src/intfc/imkcurve.c	/^EXPORT  POINTER init_triangle_params(RECT_GRID *gr)$/;"	f
-init_tris_in_cells	cFvol.cpp	/^void G_CARTESIAN::init_tris_in_cells()$/;"	f	class:G_CARTESIAN
 init_vortex_params	../src/front/fvelo.c	/^EXPORT void init_vortex_params($/;"	f
 init_wing_params	../src/intfc/imkcurve.c	/^EXPORT  POINTER init_wing_params(RECT_GRID *gr)$/;"	f
 initial_front_redistribute	../src/front/finit.c	/^EXPORT void initial_front_redistribute($/;"	f
@@ -5442,6 +5564,8 @@ initialize_riemann_solver	cFeos.cpp	/^extern void initialize_riemann_solver($/;"
 initializepointpool	../src/intfc/triangle.c	/^LOCAL void initializepointpool(void)$/;"	f
 initializetrisegpools	../src/intfc/triangle.c	/^LOCAL void initializetrisegpools(void)$/;"	f
 inpoints	../src/intfc/triangle.c	/^LOCAL size_t inpoints;                         \/* Number of input points. *\/$/;"	v
+inpolyh	cFluid.h	/^	bool inpolyh;$/;"	m	struct:_SETOFCPOLYGS
+inscp	cFluid.h	/^	bool inscp;$/;"	m	struct:_CPOLYGON
 insert_block_crossings	../src/front/fgb3dutil.c	/^LOCAL void insert_block_crossings($/;"	f
 insert_box_crossings_in_curves	../src/front/funtan2d.c	/^LOCAL void insert_box_crossings_in_curves($/;"	f
 insert_curve_face_crossings	../src/front/fgb3comp.c	/^LOCAL void insert_curve_face_crossings($/;"	f
@@ -5462,6 +5586,7 @@ insert_point_adjacent_to_node	../src/front/fnodesub.c	/^EXPORT void insert_point
 insert_point_in_bond	../src/intfc/userhooks.c	/^EXPORT	boolean insert_point_in_bond($/;"	f
 insert_point_in_tri	../src/intfc/userhooks.c	/^EXPORT	boolean	insert_point_in_tri($/;"	f
 insert_point_in_tri_side	../src/intfc/userhooks.c	/^EXPORT	boolean	insert_point_in_tri_side($/;"	f
+insert_scp	cFvol.cpp	/^void insert_scp($/;"	f
 insert_tri_at_head_of_list	../src/intfc/int3d.c	/^EXPORT	void	insert_tri_at_head_of_list($/;"	f
 insert_tri_at_tail_of_list	../src/intfc/int3d.c	/^EXPORT	void	insert_tri_at_tail_of_list($/;"	f
 insert_tri_to_ctri_list	cFvol.cpp	/^void insert_tri_to_ctri_list($/;"	f
@@ -5546,6 +5671,7 @@ intfc_propagate	../src/front/fdecs.h	892;"	d
 intfc_redistributed	../src/front/fdecs.h	/^	boolean intfc_redistributed;	\/* Yes if redistribute was performed *\/$/;"	m	struct:_REDIST_CONTROL
 intrp_between	cFsub.cpp	/^static double intrp_between($/;"	f	file:
 invalid_shock	cFgriemann.cpp	/^LOCAL	bool invalid_shock($/;"	f
+inverse_bdry	cFvol.cpp	/^void inverse_bdry($/;"	f
 invert_bond	../src/intfc/top.c	/^EXPORT	void invert_bond($/;"	f
 invert_curve	../src/intfc/userhooks.c	/^EXPORT	void invert_curve($/;"	f
 invert_surface	../src/front/fredist3d.c	/^void	invert_surface($/;"	f
@@ -5673,6 +5799,7 @@ is_wall_surface	../src/intfc/iwallsurf.c	/^EXPORT  boolean  is_wall_surface(SURF
 is_wall_vertex	../src/front/fgb3comp.c	/^EXPORT  boolean  is_wall_vertex(TRI *t, int iv)$/;"	f
 is_x_cut_node	../src/front/foverture_patch.c	55;"	d	file:
 is_x_cut_node	../src/front/fscat2d.c	104;"	d	file:
+iscell	cFluid.h	/^	bool iscell;$/;"	m	struct:_CPOLYHEDRON
 isnan	../src/util/cdecs.h	121;"	d
 isnan	../src/util/cdecs.h	129;"	d
 isnan	../src/util/cdecs.h	133;"	d
@@ -5911,14 +6038,20 @@ maketriangle	../src/intfc/triangle.c	/^LOCAL void maketriangle(triedge *newtried
 map_phys_cur_states_to_bdry_cur	../src/front/fbdry1.c	/^EXPORT	void map_phys_cur_states_to_bdry_cur($/;"	f
 map_states_at_node	../src/front/fbdry1.c	/^LOCAL	void map_states_at_node($/;"	f
 mark	../src/intfc/triangle.c	1011;"	d	file:
+mark	cFluid.h	/^	int mark;$/;"	m	struct:_CBOUNDARY
+mark	cFluid.h	/^	int mark;$/;"	m	struct:_CEDGE
 mark	cFluid.h	/^	int mark;$/;"	m	struct:_CPOLYGON
 mark_end_of_bond	../src/intfc/comp2d.c	/^LOCAL void mark_end_of_bond(void)$/;"	f
 mark_end_of_tri	../src/intfc/comp3d.c	2107;"	d	file:
+mark_polyg_edges	cFvol.cpp	/^void mark_polyg_edges(CPOLYGON *polyg)$/;"	f
 markhull	../src/intfc/triangle.c	/^LOCAL void markhull(void)$/;"	f
 mass	../src/front/fuserint.h	/^        double  mass;			\/* Total mass *\/$/;"	m	struct:_F_HYPER_SURF
 mass_consv_diagn_driver	../src/front/fdecs.h	/^	void (*mass_consv_diagn_driver)(struct _Front*,POINTER,double);$/;"	m	struct:_Front
 mass_diffusion	cFluid.h	/^        bool mass_diffusion; $/;"	m	struct:EQN_PARAMS
 mass_flux	cFeos.cpp	/^extern double mass_flux($/;"	f
+mass_flux	cFluid.h	/^	double mass_flux;$/;"	m	struct:_CPOLYGON
+mass_new	cFluid.h	/^	double mass_old, mass_new;$/;"	m	struct:_CFTCELL
+mass_old	cFluid.h	/^	double mass_old, mass_new;$/;"	m	struct:_CFTCELL
 match	../src/front/fscat2d.c	/^	struct _OVERLAP *match;$/;"	m	struct:_OVERLAP	typeref:struct:_OVERLAP::_OVERLAP	file:
 match_overlaps	../src/front/fscat2d.c	/^LOCAL	boolean match_overlaps($/;"	f
 match_tris_at_subdomain_bdry	../src/front/fscat3d1.c	/^LOCAL boolean match_tris_at_subdomain_bdry($/;"	f
@@ -5928,6 +6061,7 @@ matchable_comps	../src/intfc/top.c	/^LOCAL	boolean	matchable_comps($/;"	f
 matching_curve	../src/front/fscat3d1.c	/^EXPORT	CURVE *matching_curve($/;"	f
 matching_node	../src/front/fscat3d1.c	/^EXPORT	NODE *matching_node($/;"	f
 matching_tris	../src/front/fscat3d2.c	/^LOCAL	boolean matching_tris($/;"	f
+matmvec	cFcftweno.cpp	/^static void matmvec($/;"	f	file:
 matmvec	cFweno.cpp	/^static void matmvec($/;"	f	file:
 matrix_T	../src/util/vmalloc.h	153;"	d
 max	../src/util/cdecs.h	264;"	d
@@ -5970,6 +6104,7 @@ maximum_triangle_area_factor	../src/front/fdecs.h	1317;"	d
 maxitems	../src/intfc/triangle.c	/^    int       items, maxitems;$/;"	m	struct:memorypool	file:
 maxx	../src/intfc/igview.c	/^	double maxx;$/;"	m	struct:DATA	file:
 maxy	../src/intfc/igview.c	/^	double maxy;$/;"	m	struct:DATA	file:
+mdir	cFluid.h	/^	int mdir[3];$/;"	m	struct:_CPAM
 mean_curvature_at_point	../src/front/fuserhooks.c	/^EXPORT	double	mean_curvature_at_point($/;"	f
 measure_front	../src/front/fsub.c	/^EXPORT	void measure_front($/;"	f
 memorypool	../src/intfc/triangle.c	/^struct memorypool {$/;"	s	file:
@@ -5994,6 +6129,7 @@ merge_null_edges	../src/front/fpatch3d.c	/^void	merge_null_edges($/;"	f
 merge_overlap_curves	../src/front/fscat3d2.c	/^LOCAL  void  merge_overlap_curves(INTERFACE *intfc)$/;"	f
 merge_overlapping_bonds	../src/front/fscat2d.c	/^LOCAL	boolean	merge_overlapping_bonds($/;"	f
 merge_point_pointers_at_subdomain_bdry	../src/front/fscat3d1.c	/^LOCAL void merge_point_pointers_at_subdomain_bdry($/;"	f
+merge_polyh_to_cell	cFvol.cpp	/^void merge_polyh_to_cell($/;"	f
 merge_propagated_curves	../src/front/frp2.c	/^LOCAL	CURVE *merge_propagated_curves($/;"	f
 merge_rbox	../src/front/fgb3d.c	/^boolean	merge_rbox($/;"	f
 merge_rproblems	../src/front/frp1.c	/^EXPORT void merge_rproblems($/;"	f
@@ -6002,10 +6138,14 @@ merge_surface_points_prev	../src/front/fpatch3d.c	/^void	merge_surface_points_pr
 merge_tris	../src/front/fpatch3d.c	/^boolean	merge_tris($/;"	f
 merge_tris_set	../src/intfc/itrisset.c	/^EXPORT	int	merge_tris_set($/;"	f
 merge_two_tris	../src/front/fscat3d1.c	/^EXPORT	void merge_two_tris($/;"	f
+merged	cFluid.h	/^	bool merged;$/;"	m	struct:_CELL
+merged	cFluid.h	/^	bool merged;$/;"	m	struct:_CPOLYHEDRON
 mergehulls	../src/intfc/triangle.c	/^LOCAL void mergehulls($/;"	f
 mesh_dim	../src/intfc/triangle.c	/^LOCAL int mesh_dim;                         \/* Dimension (ought to be 2). *\/$/;"	v
 message	../src/util/cdecs.h	/^	const char *message;$/;"	m	struct:_Error
 metric	../src/front/fscat2d.c	/^	double			metric; \/* used for sorting these structures *\/$/;"	m	struct:_REDUNDANCY	file:
+mflux	cFluid.h	/^	double mflux;$/;"	m	struct:_CFTCELL
+mflux	cFluid.h	/^	double mflux;$/;"	m	struct:_CPOLYHEDRON
 mgamma	cFluid.h	/^        double  mgamma[2];$/;"	m	struct:EOS_PARAMS
 midstate	cFgriemann.cpp	/^extern	void midstate($/;"	f
 min	../src/util/cdecs.h	268;"	d
@@ -6047,6 +6187,7 @@ mkImg	../src/intfc/igview.c	/^LOCAL void mkImg($/;"	f
 modified	../src/intfc/int.h	/^	boolean	modified;	\/* Interface Recently Modified *\/$/;"	m	struct:_INTERFACE
 modify_B_node	../src/front/fnodesub.c	/^EXPORT	int modify_B_node($/;"	f
 modify_D_extend_list	../src/front/fcrossext.c	/^LOCAL	void modify_D_extend_list($/;"	f
+modify_endps_of_edges	cFvol.cpp	/^void modify_endps_of_edges($/;"	f
 modify_exterior_curve	../src/front/fbdry1.c	/^EXPORT	int modify_exterior_curve($/;"	f
 mom	cFluid.h	/^	double **mom;$/;"	m	struct:EQN_PARAMS
 mom_inertial	../src/front/fuserint.h	417;"	d
@@ -6115,6 +6256,7 @@ nc	../src/front/fdecs.h	/^	CURVE		*nc[4];$/;"	m	struct:_NNLIST
 nc	../src/front/funtan2d.c	/^	CURVE		**nc;$/;"	m	struct:_Snlist	file:
 nc	../src/intfc/int.h	/^	struct _CURVE	**nc;$/;"	m	struct:_O_NODE	typeref:struct:_O_NODE::_CURVE
 nc_set	../src/front/funtan2d.c	/^	int		nc_set, nopp_set, pt_set, ang_set, orient_set;$/;"	m	struct:_Snlist	file:
+ncft_check_mass	cFconserv.cpp	/^void G_CARTESIAN::ncft_check_mass()$/;"	f	class:G_CARTESIAN
 ncmp	../src/util/cdecs.h	/^	int	   ncmp;	\/* # of chars to uniquely identify select *\/$/;"	m	struct:_Prompt_type
 ncomps	../src/intfc/int.h	/^	int ncomps, max_ncomps;$/;"	m	struct:_COMP_LIST
 ncrxps	cFluid.h	/^	int ncrxps;$/;"	m	struct:_CEDGE
@@ -6142,6 +6284,7 @@ nearest_similar_interface_point	../src/intfc/userhooks.c	/^EXPORT	boolean neares
 nearest_similar_interface_point2d	../src/intfc/comp2d.c	/^LIB_LOCAL boolean nearest_similar_interface_point2d($/;"	f
 nearest_similar_interface_point3d	../src/intfc/comp3d.c	/^LIB_LOCAL boolean nearest_similar_interface_point3d($/;"	f
 needBufferFromIntfc	cFcartsn.cpp	/^boolean G_CARTESIAN::needBufferFromIntfc($/;"	f	class:G_CARTESIAN
+need_exterior_pam	cFconserv.cpp	/^bool need_exterior_pam($/;"	f
 neg_comp	../src/intfc/int.h	/^	COMPONENT pos_comp, neg_comp;$/;"	m	struct:_HYPER_SURF
 neg_comp	../src/intfc/int.h	/^        COMPONENT       neg_comp;$/;"	m	struct:_BLK_CRX2
 neg_component	../src/front/fdecs.h	/^        COMPONENT neg_component;$/;"	m	struct:_LEVEL_FUNC_PACK
@@ -6220,11 +6363,15 @@ next	../src/util/output.c	/^	long    next, current, prev;$/;"	m	struct:_IOUTPUT	
 next	../src/util/output.c	/^	struct _READ_LIST *prev, *next;$/;"	m	struct:_READ_LIST	typeref:struct:_READ_LIST::	file:
 next	../src/util/output.c	/^	struct _WRITE_LIST *prev, *next;$/;"	m	struct:_WRITE_LIST	typeref:struct:_WRITE_LIST::	file:
 next	../src/util/vectormalloc.c	/^	struct _ALLOC_HEADER *prev, *next;$/;"	m	struct:_ALLOC_HEADER	typeref:struct:_ALLOC_HEADER::	file:
+next	cFluid.h	/^	_CBOUNDARY *next;$/;"	m	struct:_CBOUNDARY
 next	cFluid.h	/^	struct _CEDGE *next;$/;"	m	struct:_CEDGE	typeref:struct:_CEDGE::_CEDGE
+next	cFluid.h	/^	struct _CPAM *next;$/;"	m	struct:_CPAM	typeref:struct:_CPAM::_CPAM
 next	cFluid.h	/^	struct _CPOINT *next;$/;"	m	struct:_CPOINT	typeref:struct:_CPOINT::_CPOINT
 next	cFluid.h	/^	struct _CPOLYGON *next;$/;"	m	struct:_CPOLYGON	typeref:struct:_CPOLYGON::_CPOLYGON
 next	cFluid.h	/^	struct _CPOLYHEDRON *next;$/;"	m	struct:_CPOLYHEDRON	typeref:struct:_CPOLYHEDRON::_CPOLYHEDRON
 next	cFluid.h	/^	struct _CTRI *next;$/;"	m	struct:_CTRI	typeref:struct:_CTRI::_CTRI
+next	cFluid.h	/^	struct _NBCELL *next;$/;"	m	struct:_NBCELL	typeref:struct:_NBCELL::_NBCELL
+next	cFluid.h	/^	struct _SETOFCPOLYGS *next;$/;"	m	struct:_SETOFCPOLYGS	typeref:struct:_SETOFCPOLYGS::_SETOFCPOLYGS
 next_adjacent	../src/intfc/isect3d.c	/^LOCAL   boolean  next_adjacent($/;"	f
 next_bond	../src/intfc/intfc.c	/^EXPORT boolean next_bond($/;"	f
 next_boundary	../src/front/fbdry1.c	/^EXPORT int next_boundary($/;"	f
@@ -6366,7 +6513,7 @@ num_bstates	../src/front/fuserint.h	306;"	d
 num_c	../src/front/funtan2d.c	/^	int		num_c;$/;"	m	struct:_Snlist	file:
 num_c	../src/intfc/int.h	/^	int		num_c;$/;"	m	struct:_O_NODE
 num_cell_crx	../src/front/funtan2d.c	/^	int num_cell_crx;	\/* number of crxings in a cell: 0,2,4 *\/$/;"	m	struct:_CELL_INFO	file:
-num_cells	cFluid.h	/^	int num_cells;	\/\/cft	Dan$/;"	m	class:G_CARTESIAN
+num_cells	cFluid.h	/^	int num_cells;$/;"	m	class:G_CARTESIAN
 num_chunks	../src/intfc/table.h	/^	int		num_chunks;	\/* Number of allocated chunks *\/$/;"	m	struct:Table
 num_cir	../src/intfc/geom.h	/^	int num_cir;$/;"	m	struct:__anon64
 num_colors	../src/front/fdecs.h	/^		uint8	        num_colors;$/;"	m	struct:_HDF_plot_data::_HDF_frame_data
@@ -6496,11 +6643,14 @@ oldhs	../src/front/fcorrspnd.c	/^	HYPER_SURF **newhs, **oldhs;$/;"	m	struct:_COR
 oldhs_space	../src/front/fcorrspnd.c	/^	int newhs_space, oldhs_space;	\/* space available for newhs, oldhs *\/$/;"	m	struct:_CORRESPOND	file:
 oldintfc	../src/front/fcorrspnd.c	/^	INTERFACE *newintfc, *oldintfc;$/;"	m	struct:_CORRESPOND	file:
 oldp	cFluid.h	/^        POINT *oldp;$/;"	m	struct:FLOW_THROUGH_PARAMS
+oldts_pams	cFluid.h	/^	struct _CPAM *oldts_pams;$/;"	m	struct:_CFTCELL	typeref:struct:_CFTCELL::_CPAM
 omega_0	../src/front/fvelo.h	/^	double omega_0;$/;"	m	struct:_CIRCULAR_ROTATION_PARAMS
 omit_redistribution	../src/front/fuserint.h	592;"	d
 omit_vertex_in_plane_fit	../src/intfc/isub.c	/^EXPORT	void	omit_vertex_in_plane_fit(void)$/;"	f
 on_front_block2d	../src/intfc/comp2d.c	/^LOCAL	boolean on_front_block2d($/;"	f
 on_segment	../src/front/fgb3dutil.c	/^LOCAL boolean on_segment( const double *p1, const double *p2, const double *p)$/;"	f
+oncf	cFluid.h	/^	bool oncf;$/;"	m	struct:_CPOLYGON
+oncf	cFluid.h	/^	bool oncf;$/;"	m	struct:_SETOFCPOLYGS
 one_side_npt_tang_solver	../src/front/fdecs.h	710;"	d
 oned_turbulence_boundary_layer	cFcartsn.cpp	/^void G_CARTESIAN::oned_turbulence_boundary_layer($/;"	f	class:G_CARTESIAN
 onext	../src/intfc/triangle.c	786;"	d	file:
@@ -6647,6 +6797,9 @@ pack_index_in_dir2d	../src/front/fscatter.c	/^LOCAL 	void pack_index_in_dir2d($/
 pack_index_in_dir3d	../src/front/fscatter.c	/^LOCAL 	void pack_index_in_dir3d($/;"	f
 paint_component	../src/front/funtan3d.c	/^LOCAL int paint_component($/;"	f
 palette	../src/front/fdecs.h	/^		uint8	        palette[3*256];$/;"	m	struct:_HDF_plot_data::_HDF_frame_data
+pam	cFluid.h	/^	struct _CPAM *pam;$/;"	m	struct:_CPOLYHEDRON	typeref:struct:_CPOLYHEDRON::_CPAM
+pams	cFluid.h	/^	struct _CPAM *pams;		\/\/polyhedrons after merge$/;"	m	struct:_CELL	typeref:struct:_CELL::_CPAM
+pams	cFluid.h	/^	struct _CPAM *pams;$/;"	m	struct:_CFTCELL	typeref:struct:_CFTCELL::_CPAM
 parab	../src/front/fdecs.h	/^        boolean tan_sec, parab;$/;"	m	struct:_Front
 parab2D	cFcartsn.cpp	/^void G_CARTESIAN::parab2D(SWEEP *m_vst) $/;"	f	class:G_CARTESIAN
 parab3D	cFcartsn.cpp	/^void G_CARTESIAN::parab3D(SWEEP *m_vst)$/;"	f	class:G_CARTESIAN
@@ -6781,10 +6934,12 @@ polyfit2d_lhf	../src/intfc/isub.c	/^LOCAL void polyfit2d_lhf($/;"	f
 polyfit3d_lhf	../src/intfc/isub.c	/^LOCAL void  polyfit3d_lhf($/;"	f
 polyfit3d_walf_edge	../src/intfc/iredist_o2.c	/^void  polyfit3d_walf_edge($/;"	f
 polyfit3d_walf_vertex	../src/intfc/iredist_o2.c	/^void  polyfit3d_walf_vertex($/;"	f
-polyg	cFluid.h	/^	_CPOLYGON *polyg;$/;"	m	struct:_CTRI
+polyg	cFluid.h	/^	struct _CPOLYGON *polyg;$/;"	m	struct:_CTRI	typeref:struct:_CTRI::_CPOLYGON
 polygon	../src/util/plotdecs.h	273;"	d
 polygon_3	../src/util/plotdecs.h	324;"	d
-polyhedrons	cFluid.h	/^	CPOLYHEDRON *polyhedrons;$/;"	m	struct:_CELL
+polygs	cFluid.h	/^	CPOLYGON *polygs;$/;"	m	struct:_SETOFCPOLYGS
+polyh	cFluid.h	/^	CPOLYHEDRON *polyh;$/;"	m	struct:_CPAM
+polyhs	cFluid.h	/^	CPOLYHEDRON *polyhs;$/;"	m	struct:_CELL
 poolalloc	../src/intfc/triangle.c	/^LOCAL void *poolalloc($/;"	f
 pooldealloc	../src/intfc/triangle.c	/^LOCAL void pooldealloc($/;"	f
 pooldeinit	../src/intfc/triangle.c	/^LOCAL void pooldeinit($/;"	f
@@ -6897,7 +7052,6 @@ prev	../src/util/output.c	/^	long    next, current, prev;$/;"	m	struct:_IOUTPUT	
 prev	../src/util/output.c	/^	struct _READ_LIST *prev, *next;$/;"	m	struct:_READ_LIST	typeref:struct:_READ_LIST::_READ_LIST	file:
 prev	../src/util/output.c	/^	struct _WRITE_LIST *prev, *next;$/;"	m	struct:_WRITE_LIST	typeref:struct:_WRITE_LIST::_WRITE_LIST	file:
 prev	../src/util/vectormalloc.c	/^	struct _ALLOC_HEADER *prev, *next;$/;"	m	struct:_ALLOC_HEADER	typeref:struct:_ALLOC_HEADER::_ALLOC_HEADER	file:
-prev	cFluid.h	/^	struct _CPOINT *prev;$/;"	m	struct:_CPOINT	typeref:struct:_CPOINT::_CPOINT
 prev_adjacent	../src/intfc/isect3d.c	/^LOCAL   boolean  prev_adjacent($/;"	f
 prev_interf	../src/intfc/int.h	/^	struct _INTERFACE  *prev_interf;$/;"	m	struct:_INTERFACE	typeref:struct:_INTERFACE::_INTERFACE
 prev_interface	../src/intfc/int.h	458;"	d
@@ -6905,6 +7059,7 @@ prev_node	../src/front/fuserint.h	155;"	d
 prev_null_sided_tri	../src/intfc/isurgery.c	/^EXPORT int prev_null_sided_tri($/;"	f
 prev_output	../src/util/output.c	/^EXPORT boolean prev_output($/;"	f
 prev_t	../src/intfc/int.h	/^			*prev_t,     \/* prev, next intscting tris *\/$/;"	m	struct:_C_SURF	typeref:struct:_C_SURF::
+prev_v	cFvol.cpp	/^CPOINT *prev_v($/;"	f
 previous	../src/util/output.c	/^	long previous, last;$/;"	m	struct:_WRITE_LIST	file:
 principal_tangent	../src/front/fdecs.h	907;"	d
 printFrontInteriorStates	cFcartsn.cpp	/^void G_CARTESIAN::printFrontInteriorStates(char *out_name)$/;"	f	class:G_CARTESIAN
@@ -6942,6 +7097,9 @@ print_cdt	../src/front/funtan3d.c	/^LOCAL	void	print_cdt($/;"	f
 print_cdt_side	../src/front/funtan3d.c	/^LOCAL	void	print_cdt_side($/;"	f
 print_correspond_hyper_surf_list	../src/front/fcorrspnd.c	/^EXPORT void print_correspond_hyper_surf_list($/;"	f
 print_correspondence	../src/front/fcorrspnd.c	/^LOCAL void print_correspondence($/;"	f
+print_cpoint	cFconserv.cpp	/^void print_cpoint(CPOINT *p)$/;"	f
+print_cpolygon	cFconserv.cpp	/^void print_cpolygon(CPOLYGON *pg)$/;"	f
+print_cpolyh	cFconserv.cpp	/^void print_cpolyh(CPOLYHEDRON *polyh)$/;"	f
 print_cross	../src/intfc/cross2d.c	/^EXPORT 	void print_cross($/;"	f
 print_cross_list	../src/intfc/cross2d.c	/^EXPORT 	void print_cross_list($/;"	f
 print_crossing_elements	../src/intfc/userhooks.c	/^EXPORT	void print_crossing_elements($/;"	f
@@ -7107,6 +7265,7 @@ pts	cFluid.h	/^	CPOINT pts[8];$/;"	m	struct:_CELL
 pts_cross_line	../src/front/fgb3d.c	/^LOCAL   boolean    pts_cross_line($/;"	f
 pts_in_cross_zone	../src/front/fgb3d.c	/^LOCAL   boolean    pts_in_cross_zone($/;"	f
 pts_in_zone	../src/intfc/table.h	/^	POINT           ***pts_in_zone; \/* points in each zone *\/$/;"	m	struct:Table
+push_back_vert	cFvol.cpp	/^void push_back_vert($/;"	f
 pv	../src/intfc/comp3d.c	/^	POINT   *pv, *p1, *p2;	\/* Vertices marking boundary closest to pt *\/$/;"	m	struct:__anon38	file:
 qr_safeguarded	../src/intfc/iredist_o2.c	/^void  qr_safeguarded($/;"	f
 qt	cFluid.h	/^        double *qt;$/;"	m	struct:FIELD
@@ -7365,10 +7524,12 @@ remove_from_debug	../src/util/debug.c	/^EXPORT	void	remove_from_debug($/;"	f
 remove_from_overlap_list	../src/front/fscat2d.c	/^LOCAL	void	remove_from_overlap_list($/;"	f
 remove_from_redundancy_list	../src/front/fscat2d.c	2852;"	d	file:
 remove_from_redundancy_list	../src/front/fscat2d.c	3213;"	d	file:
+remove_last_vert	cFvol.cpp	/^void remove_last_vert($/;"	f
 remove_null_pair	../src/intfc/iblkc2.c	/^EXPORT	void remove_null_pair($/;"	f
 remove_null_pair_of_surface	../src/intfc/iblkc2.c	/^LOCAL	void remove_null_pair_of_surface($/;"	f
 remove_out_domain_tri	../src/front/fscat3d1.c	/^EXPORT void remove_out_domain_tri($/;"	f
 remove_patch_all_boundary_curves	../src/front/foverture_patch.c	/^EXPORT   void remove_patch_all_boundary_curves($/;"	f
+remove_short_edges_on_cf	cFvol.cpp	/^void remove_short_edges_on_cf(CFACE *cf)$/;"	f
 remove_single_tri_null_loop	../src/intfc/itrisset.c	/^EXPORT	int	remove_single_tri_null_loop($/;"	f
 remove_tri_from_surface	../src/intfc/int3d.c	/^EXPORT	void	remove_tri_from_surface($/;"	f
 remove_tris_and_seal	../src/front/fredist3d.c	/^EXPORT	int	remove_tris_and_seal($/;"	f
@@ -7409,6 +7570,7 @@ reset_nodes	../src/intfc/imksurf.c	/^LOCAL  void    reset_nodes(CURVE *c)$/;"	f
 reset_nodes_posn	../src/intfc/intfc.c	/^EXPORT  void  reset_nodes_posn($/;"	f
 reset_normal_on_intfc	../src/intfc/isub.c	/^EXPORT void reset_normal_on_intfc($/;"	f
 reset_read_file_variables	../src/util/output.c	/^EXPORT void reset_read_file_variables($/;"	f
+reset_scp_boundaries	cFvol.cpp	/^void reset_scp_boundaries(SETOFCPOLYGS *scp)$/;"	f
 reset_sort_status	../src/intfc/int3d.c	/^LOCAL void reset_sort_status($/;"	f
 reset_surface_points	../src/intfc/isub.c	/^EXPORT   void   reset_surface_points($/;"	f
 reset_tri_order	../src/front/fgb3d.c	/^void	reset_tri_order($/;"	f
@@ -7541,11 +7703,14 @@ sa	../src/front/fcrossext.c	/^	double	*sa,*s2;	\/* fract dist on bond to cross *
 safeqr	../src/intfc/isub.c	/^LOCAL int safeqr($/;"	f
 same_cb_pt	../src/intfc/isect3d.c	/^LOCAL	boolean same_cb_pt($/;"	f
 same_cpt	cFvol.cpp	/^bool same_cpt($/;"	f
+same_cpt_double_tol	cFvol.cpp	/^bool same_cpt_double_tol($/;"	f
 same_curves_cross	../src/intfc/cross2d.c	/^LOCAL int same_curves_cross($/;"	f
-same_edge	cFvol.cpp	/^bool same_edge($/;"	f
+same_dir_edge	cFvol.cpp	/^bool same_dir_edge($/;"	f
 same_nor_dir	cFvol.cpp	/^bool same_nor_dir($/;"	f
 same_point	../src/intfc/iprt3d.c	/^LOCAL int same_point($/;"	f
+same_polyg	cFvol.cpp	/^bool same_polyg($/;"	f
 same_sign	../src/intfc/int.h	1011;"	d
+same_undir_edge	cFvol.cpp	/^bool same_undir_edge($/;"	f
 sample	../src/front/fdecs.h	/^	SAMPLE *sample;$/;"	m	struct:_Front
 sampleVelocity	cFcartsn.cpp	/^void G_CARTESIAN::sampleVelocity()$/;"	f	class:G_CARTESIAN
 sampleVelocity2d	cFcartsn.cpp	/^void G_CARTESIAN::sampleVelocity2d()$/;"	f	class:G_CARTESIAN
@@ -7588,6 +7753,9 @@ scatter_cell_index	../src/front/fscatter.c	/^EXPORT 	void scatter_cell_index($/;
 scatter_front	../src/front/fscatter.c	/^EXPORT boolean scatter_front($/;"	f
 scatter_top_grid_float_array	../src/front/fscatter.c	/^EXPORT void scatter_top_grid_float_array($/;"	f
 scoutsegment	../src/intfc/triangle.c	/^LOCAL int scoutsegment($/;"	f
+scp_dir	cFluid.h	/^	SCP_DIR scp_dir;$/;"	m	struct:_CPOLYHEDRON
+scpics	cFluid.h	/^	SETOFCPOLYGS *scpics;	\/\/sets of connected polygons in cell$/;"	m	struct:_CELL
+scpocs	cFluid.h	/^	SETOFCPOLYGS *scpocs;	\/\/sets of connected polygons on cell faces$/;"	m	struct:_CELL
 screen	../src/util/screen.c	/^EXPORT	void screen(const char *fmt, ...)$/;"	f
 screen_print_long_string	../src/util/screen.c	/^EXPORT	void	screen_print_long_string($/;"	f
 sdecode	../src/intfc/triangle.c	950;"	d	file:
@@ -7666,6 +7834,7 @@ setRPGhost	cFcartsn.cpp	/^void G_CARTESIAN::setRPGhost($/;"	f	class:G_CARTESIAN
 setRayleiTaylorParams	cFinit.cpp	/^void G_CARTESIAN::setRayleiTaylorParams(char *inname)$/;"	f	class:G_CARTESIAN
 setRichtmyerMeshkovParams	cFinit.cpp	/^void G_CARTESIAN::setRichtmyerMeshkovParams(char *inname)$/;"	f	class:G_CARTESIAN
 setRiemProbParams	cFinit.cpp	/^void G_CARTESIAN::setRiemProbParams(char *inname)$/;"	f	class:G_CARTESIAN
+setSod3DParams	cFinit.cpp	/^void G_CARTESIAN::setSod3DParams(char *inname)$/;"	f	class:G_CARTESIAN
 setSodObliqParams	cFinit.cpp	/^void G_CARTESIAN::setSodObliqParams(char *inname)$/;"	f	class:G_CARTESIAN
 setVSTRMParams	cFinit.cpp	/^void G_CARTESIAN::setVSTRMParams(char *inname)$/;"	f	class:G_CARTESIAN
 set_01_bdry	../src/intfc/int.h	1200;"	d
@@ -7704,7 +7873,6 @@ set_bpoint_at_node	../src/intfc/setb2d.c	/^LOCAL	BPOINT*	set_bpoint_at_node($/;"
 set_btri_on_bond	../src/front/fscat3d2.c	/^LOCAL   void  set_btri_on_bond($/;"	f
 set_c_surf_flag	../src/intfc/isect3d.c	1220;"	d	file:
 set_c_surf_flag	../src/intfc/isect3d.c	501;"	d	file:
-set_cell_polygons	cFvol.cpp	/^void G_CARTESIAN::set_cell_polygons()$/;"	f	class:G_CARTESIAN
 set_closed_node	../src/front/fuserint.h	694;"	d
 set_color	../src/util/plotdecs.h	285;"	d
 set_color_bar_data	../src/util/plotdecs.h	297;"	d
@@ -7753,6 +7921,7 @@ set_default_front	../src/front/fsub.c	/^EXPORT  void set_default_front($/;"	f
 set_default_front_options	../src/front/finit.c	/^EXPORT void set_default_front_options($/;"	f
 set_default_tan_stencil	../src/front/fsub.c	/^EXPORT	void set_default_tan_stencil($/;"	f
 set_dflt_cur_redist_params	../src/front/finit.c	/^EXPORT	void	set_dflt_cur_redist_params($/;"	f
+set_dir_and_side	cFconserv.cpp	/^void set_dir_and_side($/;"	f
 set_dir_cf	cFvol.cpp	/^void set_dir_cf(CELL *cell)$/;"	f
 set_dir_edges_by_nb_cf	cFvol.cpp	/^void set_dir_edges_by_nb_cf($/;"	f
 set_directed_polyg	cFvol.cpp	/^void set_directed_polyg($/;"	f
@@ -7816,7 +7985,7 @@ set_node_doubly_linked_list	../src/front/fadv.c	/^EXPORT void set_node_doubly_li
 set_node_states_and_continue	../src/front/fnode.c	/^EXPORT int set_node_states_and_continue($/;"	f
 set_node_velocity	../src/front/fcrosscur.c	/^EXPORT	int set_node_velocity($/;"	f
 set_none_local	../src/front/fscat2d.c	/^LOCAL   int     set_none_local = NO;$/;"	v
-set_nor	cFvol.cpp	/^void set_nor($/;"	f
+set_nor	cFvol.cpp	/^bool set_nor($/;"	f
 set_normal3d_method	../src/front/fuserintfc.c	/^EXPORT	void	set_normal3d_method($/;"	f
 set_normal_from_tris	../src/intfc/isub.c	/^EXPORT  void set_normal_from_tris($/;"	f
 set_normal_function	../src/front/fuserhooks.c	/^EXPORT	void  set_normal_function($/;"	f
@@ -7828,6 +7997,7 @@ set_open_bdry_flag	../src/front/fscat3d1.c	/^void    set_open_bdry_flag(boolean 
 set_ordinary_cross_only	../src/front/fdecs.h	145;"	d
 set_patch_front	../src/front/foverture_patch.c	/^EXPORT void set_patch_front($/;"	f
 set_patch_topo_grid	../src/front/foverture_patch.c	/^EXPORT void set_patch_topo_grid($/;"	f
+set_pf_areas	cFvol.cpp	/^void set_pf_areas(CELL *c)$/;"	f
 set_phys_ocurves_to_null	../src/front/fuserhooks.c	/^EXPORT	void	set_phys_ocurves_to_null($/;"	f
 set_physical_surfaces_at_curve	../src/front/funtan3d.c	/^LOCAL	void set_physical_surfaces_at_curve($/;"	f
 set_pic	cFvol.cpp	/^void set_pic($/;"	f
@@ -7837,8 +8007,11 @@ set_point_of_bond	../src/intfc/top.c	/^EXPORT void set_point_of_bond($/;"	f
 set_pointer_queue_opts	../src/intfc/arrayutils.c	/^EXPORT	void	set_pointer_queue_opts($/;"	f
 set_pointers	../src/util/vectormalloc.c	/^LOCAL void set_pointers($/;"	f
 set_polyg_edges_on_cf	cFvol.cpp	/^void set_polyg_edges_on_cf($/;"	f
+set_polyg_nor	cFvol.cpp	/^void set_polyg_nor(CPOLYGON *polyg)$/;"	f
 set_polygons_in_cell	cFvol.cpp	/^void set_polygons_in_cell(CELL *c)$/;"	f
 set_polygons_on_cf	cFvol.cpp	/^void set_polygons_on_cf($/;"	f
+set_polyh_nb_cells	cFvol.cpp	/^void set_polyh_nb_cells(CPOLYHEDRON *polyh)$/;"	f
+set_polyh_vol	cFvol.cpp	/^void set_polyh_vol(CELL *c)$/;"	f
 set_polyhedrons_in_cell	cFvol.cpp	/^void set_polyhedrons_in_cell(CELL *c)$/;"	f
 set_posn_and_states	../src/front/fprop3d.c	/^LOCAL	int set_posn_and_states($/;"	f
 set_pp_grid	../src/intfc/iscatter.c	/^EXPORT	PP_GRID *set_pp_grid($/;"	f
@@ -7873,6 +8046,8 @@ set_reverse_endian	../src/util/output.c	/^EXPORT	void	set_reverse_endian($/;"	f
 set_rgbody_params	cFinit.cpp	/^static void set_rgbody_params($/;"	f	file:
 set_rotational_symmetry	../src/intfc/igrid.c	/^EXPORT	void set_rotational_symmetry(boolean yes_no)$/;"	f
 set_rp_statistics	../src/front/fuserhooks.c	/^EXPORT	void	set_rp_statistics($/;"	f
+set_scp_dir	cFvol.cpp	/^void set_scp_dir($/;"	f
+set_scps	cFvol.cpp	/^void set_scps(CELL *c)$/;"	f
 set_send_buffer_limits	../src/front/fscatter.c	/^LOCAL	int set_send_buffer_limits($/;"	f
 set_send_intfc	../src/front/fscat2d.c	/^LOCAL INTERFACE *set_send_intfc($/;"	f
 set_shift_for_tecplot	../src/intfc/igview.c	/^EXPORT	void	set_shift_for_tecplot($/;"	f
@@ -8128,6 +8303,7 @@ sort_bpoint	../src/intfc/setb2d.c	/^LOCAL void sort_bpoint($/;"	f
 sort_cross_curves	../src/intfc/isect3d.c	/^LOCAL   C_CURVE	**sort_cross_curves($/;"	f
 sort_in_files	../src/util/fsort.c	/^EXPORT	const char ***sort_in_files($/;"	f
 sort_list	../src/util/fsort.c	/^LOCAL	void	sort_list($/;"	f
+sort_nbcs	cFvol.cpp	/^void sort_nbcs(CPOLYHEDRON *polyh)$/;"	f
 sort_point_list	../src/intfc/comp1d.c	/^LOCAL	void sort_point_list($/;"	f
 sort_pointer_queue	../src/front/fredist3d.c	/^LOCAL void sort_pointer_queue($/;"	f
 sort_pointer_queue	../src/intfc/iredist.c	/^LOCAL void sort_pointer_queue($/;"	f
@@ -8136,6 +8312,7 @@ sort_tol	../src/intfc/comp3d.c	/^LOCAL double	sort_tol = 0.0;$/;"	v
 sort_tris_on_blocks	../src/intfc/comp3d.c	/^void	sort_tris_on_blocks(INTERFACE	*intfc)$/;"	f
 sort_tris_set	../src/intfc/itrisset.c	/^EXPORT	void	sort_tris_set($/;"	f
 sorted	../src/intfc/int.h	104;"	d
+sorted_nbcs	cFluid.h	/^	struct _NBCELL *sorted_nbcs;$/;"	m	struct:_CPOLYHEDRON	typeref:struct:_CPOLYHEDRON::_NBCELL
 south_cross_on_grid	../src/front/fgb2d.c	324;"	d	file:
 south_cross_on_grid	../src/front/fgrid.c	1181;"	d	file:
 space	../src/util/plotdecs.h	266;"	d
@@ -8191,6 +8368,7 @@ stat_sex_array	../src/util/vmalloc.h	164;"	d
 stat_tri_array	../src/util/vmalloc.h	161;"	d
 stat_vector	../src/util/vmalloc.h	159;"	d
 state	../src/front/fdecs.h	/^	Locstate	state;$/;"	m	struct:_ConstantFlowRegion
+state	cFluid.h	/^	STATE state;$/;"	m	struct:_CPOLYHEDRON
 state_along_bond	../src/front/fuserintfc.c	/^LOCAL	void state_along_bond($/;"	f
 state_along_hypersurface_element	../src/front/fuserhooks.c	/^EXPORT	void	state_along_hypersurface_element($/;"	f
 state_at_point	../src/front/fuserintfc.c	/^LOCAL	void state_at_point($/;"	f
@@ -8319,6 +8497,7 @@ tangent	../src/front/fuserhooks.c	/^EXPORT	void	tangent($/;"	f
 tangent_method	../src/front/fdecs.h	1280;"	d
 tangled_tris_bound_box	../src/intfc/itrisset.c	/^EXPORT	boolean	tangled_tris_bound_box($/;"	f
 tangnt_advance_front2d	../src/front/foverture_adv.c	/^EXPORT int tangnt_advance_front2d($/;"	f
+targetc	cFluid.h	/^	struct _CELL *targetc;$/;"	m	struct:_CPAM	typeref:struct:_CPAM::_CELL
 tau	cFluid.h	/^        double ***tau;$/;"	m	struct:FIELD
 tbl_therm	cFluid.h	/^	double	tbl_therm;$/;"	m	struct:EOS_PARAMS
 tbl_therm	cFluid.h	/^	double tbl_therm;$/;"	m	struct:EQN_PARAMS
@@ -8380,6 +8559,7 @@ test_tris_intersection	../src/intfc/itrisset.c	/^EXPORT	boolean	test_tris_inters
 test_vmalloc_integrity	../src/util/vectormalloc.c	/^LOCAL	void	test_vmalloc_integrity(void)$/;"	f
 text_height_angle	../src/util/plotdecs.h	279;"	d
 the_bond	../src/intfc/idiagnostic.c	/^EXPORT boolean the_bond(BOND *b)$/;"	f
+the_cpt	cFvol.cpp	/^bool the_cpt(CPOINT *p)$/;"	f
 the_ctri	cFvol.cpp	/^bool the_ctri(CTRI *ctri)$/;"	f
 the_point	../src/intfc/idiagnostic.c	/^EXPORT boolean the_point(POINT *pt)$/;"	f
 the_point_one	../src/intfc/idiagnostic.c	/^LOCAL boolean the_point_one(POINT *pt, double *p)$/;"	f
@@ -8407,7 +8587,6 @@ time_step_control_options	../src/front/fdecs.h	1287;"	d
 time_step_factor	../src/front/fdecs.h	/^	double	time_step_factor;$/;"	m	struct:_TSTEP_CONTROL
 time_step_status_as_string	../src/front/fprint.c	/^EXPORT	const char* time_step_status_as_string($/;"	f
 title	../src/util/cdecs.h	541;"	d
-tmp_crxp	cFluid.h	/^	CPOINT *tmp_crxp;$/;"	m	struct:_CPOLYGON
 tmp_merge_patch_fronts	../src/front/fpatch3d.c	/^void	tmp_merge_patch_fronts($/;"	f
 tmp_n	../src/front/fgb3d.c	/^LOCAL   int  tmp_n;$/;"	v
 tmp_tris	../src/front/fgb3d.c	/^LOCAL   TRI  *tmp_tris[200];$/;"	v
@@ -8590,6 +8769,7 @@ type	../src/intfc/iTaps.h	/^	int type;$/;"	m	struct:_FT_ESET_HANDLE
 type	../src/intfc/iTaps.h	/^        int type;       \/* int\/float\/EH\/etc *\/$/;"	m	struct:_FT_ETAG
 type	../src/util/cdecs.h	/^	union {int itype; const char *ctype;} type;$/;"	m	struct:_Prompt_type	typeref:union:_Prompt_type::__anon107
 u	cFluid.h	/^	double l[3], u[3];$/;"	m	struct:_CFACE
+u2f	cFcftweno.cpp	/^static void u2f($/;"	f	file:
 u2f	cFweno.cpp	/^static void u2f($/;"	f	file:
 u_pp_all_gather	../src/util/ppsub.c	/^EXPORT	void	u_pp_all_gather($/;"	f
 u_pp_bcast	../src/util/ppsub.c	/^EXPORT	void	u_pp_bcast($/;"	f
@@ -8737,8 +8917,11 @@ vmalloc_debug_on	../src/util/vmalloc.h	/^IMPORT int vmalloc_debug_on;$/;"	v
 vmax	../src/front/fvelo.h	/^	double vmax;$/;"	m	struct:_SINE_MOTION_PARAMS
 vmax	../src/intfc/testintfc.c	/^	double vmax;$/;"	m	struct:_SINE_MOTION_PARAMS	file:
 vol	cFluid.h	/^	double vol;$/;"	m	struct:_CPOLYHEDRON
-vol	cFluid.h	/^	double vol[2];$/;"	m	struct:_CELL
+vol	cFluid.h	/^	double vol[2];	\/\/volumes of two comps$/;"	m	struct:_CELL
 vol_frac	../src/intfc/table.h	/^	double		***vol_frac;	\/* Volume frac in each Grid Block *\/$/;"	m	struct:Table
+vol_new	cFluid.h	/^	double vol_old, vol_new;$/;"	m	struct:_CFTCELL
+vol_of_polyh	cFvol.cpp	/^double vol_of_polyh(CPOLYHEDRON *polyh)$/;"	f
+vol_old	cFluid.h	/^	double vol_old, vol_new;$/;"	m	struct:_CFTCELL
 volume_corner1_case06	../src/intfc/iblkc2.c	/^LOCAL double volume_corner1_case06($/;"	f
 volume_corner1_case14	../src/intfc/iblkc2.c	/^LOCAL double volume_corner1_case14($/;"	f
 volume_corner1_p2_case14	../src/intfc/iblkc2.c	/^LOCAL double volume_corner1_p2_case14($/;"	f
@@ -8791,7 +8974,9 @@ wave_type	../src/front/fdecs.h	/^	int wave_type;$/;"	m	struct:_LEVEL_FUNC_PACK
 wave_type	../src/front/fuserint.h	407;"	d
 wave_type_as_string	../src/front/fuserhooks.c	/^EXPORT	const char *wave_type_as_string($/;"	f
 wedge	../src/intfc/int.h	/^	struct  _WEDGE	*wedge;$/;"	m	struct:_NEIGHBORHOOD	typeref:struct:_NEIGHBORHOOD::_WEDGE
+weno5_get_flux	cFcftweno.cpp	/^static void weno5_get_flux($/;"	f	file:
 weno5_get_flux	cFweno.cpp	/^static void weno5_get_flux($/;"	f	file:
+weno5_scal	cFcftweno.cpp	/^static double weno5_scal(double *f)$/;"	f	file:
 weno5_scal	cFweno.cpp	/^static double weno5_scal(double *f)$/;"	f	file:
 west_cross_on_grid	../src/front/fgb2d.c	326;"	d	file:
 west_cross_on_grid	../src/front/fgrid.c	1183;"	d	file:

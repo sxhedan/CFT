@@ -473,6 +473,9 @@ void G_CARTESIAN::setInitialIntfc(
 	    break;
 	case SOD_OBLIQ:
 	    initSodObliqProb(level_func_pack,inname);
+	case SOD_3D:
+	    initSinePertIntfc(level_func_pack,inname);
+	    //initSod3DProb(level_func_pack,inname);
 	    break;
 	default:
 	    (void) printf("Problem type not implemented, code needed!\n");
@@ -519,6 +522,8 @@ void G_CARTESIAN::setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic
 	    break;
 	case SOD_OBLIQ:
 	    setSodObliqParams(inname);
+	case SOD_3D:
+	    setSod3DParams(inname);
 	    break;
 	default:
 	    printf("In setProbParams(), unknown problem type!\n");
@@ -550,6 +555,7 @@ void G_CARTESIAN::setInitialStates()
 	    initMTFusionStates();
 	    break;
 	case SOD_OBLIQ:
+	case SOD_3D:
 	case PROJECTILE:
 	    initProjectileStates();
 	    break;
@@ -606,6 +612,42 @@ void G_CARTESIAN::computeAdvection(void)
    }
 }	/* end computeAdvection */
 
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_computeAdvection(void)
+{
+   int order;
+   //PRAO: if statement added for Strang-splitting
+   if (eqn_params->num_scheme==WENO_STRANG_SPLIT)
+    {
+       nrad = 3;
+       solveStrangSplitting();
+    }
+
+   else
+   {
+	switch (eqn_params->num_scheme)
+	{
+	 case TVD_FIRST_ORDER:
+	 case WENO_FIRST_ORDER:
+	      nrad = 3;
+	      order = 1;
+	      break;
+	 case TVD_SECOND_ORDER:
+	 case WENO_SECOND_ORDER:
+	      nrad = 3;
+	      order = 2;
+	      break;
+	 case TVD_FOURTH_ORDER:
+	 case WENO_FOURTH_ORDER:
+	      nrad = 3;
+	      order = 4;
+	      break;
+	 default:
+	      order = -1;
+	 }
+	cft_solveRungeKutta(order);	//Dan
+   }
+}	/* end cft_computeAdvection */
 
 void G_CARTESIAN::solveRungeKutta(int order)
 {
@@ -683,6 +725,101 @@ void G_CARTESIAN::solveRungeKutta(int order)
 	stop_clock("solveRungeKutta");
 }	/* end solveRungeKutta */
 
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_solveRungeKutta(int order)
+{
+	static SWEEP *st_field,st_tmp;
+	static FSWEEP *st_flux;
+	static double **a,*b;
+	double delta_t;
+	int i,j;
+
+	/* Allocate memory for Runge-Kutta of order */
+	start_clock("solveRungeKutta");
+	if (st_flux == NULL)
+	{
+	    FT_VectorMemoryAlloc((POINTER*)&b,order,sizeof(double));
+	    FT_MatrixMemoryAlloc((POINTER*)&a,order,order,sizeof(double));
+
+	    FT_VectorMemoryAlloc((POINTER*)&st_field,order,sizeof(SWEEP));
+	    FT_VectorMemoryAlloc((POINTER*)&st_flux,order,sizeof(FSWEEP));
+	    for (i = 0; i < order; ++i)
+	    {
+	    	allocMeshVst(&st_tmp);
+	    	allocMeshVst(&st_field[i]);
+	    	allocMeshFlux(&st_flux[i]);
+	    }
+	    //Allocate memory for CFT.	Dan
+	    for (i = 0; i < 2; i++)
+	    {
+		for (j = 0; j < 3; j++)
+		{
+		    cft_allocMeshCflux(&cflux[i][j]);
+		}
+	    }
+
+	    //debugdan	FIXME
+	    int order_debug = 1;
+	    /* Set coefficient a, b, c for different order of RK method */
+	    //switch (order)
+	    switch (order_debug)
+	    {
+	    case 1:
+		b[0] = 1.0;
+	    	break;
+	    case 2:
+	    	a[0][0] = 1.0;
+	    	b[0] = 0.5;  b[1] = 0.5;
+	    	break;
+	    case 4:
+	    	a[0][0] = 0.5;
+	    	a[1][0] = 0.0;  a[1][1] = 0.5;
+	    	a[2][0] = 0.0;  a[2][1] = 0.0;  a[2][2] = 1.0;
+	    	b[0] = 1.0/6.0;  b[1] = 1.0/3.0;
+	    	b[2] = 1.0/3.0;  b[3] = 1.0/6.0;
+	    	break;
+	    default:
+	    	(void)printf("ERROR: %d-th order RK method not implemented\n",
+					order);
+	    	clean_up(ERROR);
+	    }
+	}
+	delta_t = m_dt;
+
+	/* Compute flux and advance field */
+
+	//Reset cflux for CFT.	Dan
+	cft_reset_cflux();
+
+	//copyToMeshVst(&st_field[0]);
+	cft_setMeshVst(&st_field[0]);	//Dan
+	//computeMeshFlux(st_field[0],&st_flux[0],delta_t);
+	cft_computeMeshFlux(st_field[0],&st_flux[0],delta_t);	//Dan
+	
+	for (i = 0; i < order-1; ++i)
+	{
+	    copyMeshVst(st_field[0],&st_field[i+1]);
+	    for (j = 0; j <= i; ++j)
+	    {
+		if (a[i][j] != 0.0)
+		{
+		    addMeshFluxToVst(&st_field[i+1],st_flux[j],a[i][j]);
+		}
+	    }
+	    computeMeshFlux(st_field[i+1],&st_flux[i+1],delta_t);
+	    //cft_computeMeshFlux(st_field[i+1],&st_flux[i+1],delta_t);	//Dan
+	}
+	for (i = 0; i < order; ++i)
+	{
+	    if (b[i] != 0.0)
+	    {
+		addMeshFluxToVst(&st_field[0],st_flux[i],b[i]);
+	    }
+	}
+	copyFromMeshVst(st_field[0]);
+	stop_clock("solveRungeKutta");
+}	/* end cft_solveRungeKutta */
+
 void G_CARTESIAN::solveStrangSplitting(void)
 {
     static SWEEP *st_field;
@@ -733,6 +870,31 @@ void G_CARTESIAN::computeMeshFlux(
     addSourceTerm(&m_vst,m_flux,delta_t);
 }   /* end computeMeshFlux */
 
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_computeMeshFlux(
+    SWEEP m_vst,
+    FSWEEP *m_flux,
+    double delta_t)
+{
+    int dir;
+
+    /*
+    if(eqn_params->tracked)
+    {
+        get_ghost_state(m_vst, 2, 0);
+        get_ghost_state(m_vst, 3, 1);
+        scatMeshGhost();
+        solve_exp_value();
+    }
+    */
+    resetFlux(m_flux);
+    for (dir = 0; dir < dim; ++dir)
+      {
+        //addFluxInDirection(dir,&m_vst,m_flux,delta_t);
+        cft_addFluxInDirection(dir,&m_vst,m_flux,delta_t);	//Dan
+      }
+    addSourceTerm(&m_vst,m_flux,delta_t);
+}   /* end cft_computeMeshFlux */
 
 void G_CARTESIAN::computeMeshFluxStrang(
 	SWEEP m_vst,
@@ -816,6 +978,34 @@ void G_CARTESIAN::resetFlux(FSWEEP *m_flux)
 	}
 }	/* resetFlux */
 
+//For CFT.	Dan
+void G_CARTESIAN::cft_reset_cflux()
+{
+	int i, j, ii, jj;
+	int size = (int)cell_center.size();
+
+	for (i = 0; i < 2; i++)
+	{
+	    for (j = 0; j < 3; j++)
+	    {
+		for (ii = 0; ii < size; ii++)
+		{
+		    cflux[i][j].dens_flux[ii] = 0.0;
+		    if(eqn_params->multi_comp_non_reactive == YES)
+		    {
+			for(jj = 0; jj < eqn_params->n_comps; jj++)
+			{
+			    cflux[i][j].pdens_flux[jj][ii] = 0.0;
+			}
+		    }
+		    cflux[i][j].engy_flux[ii] = 0.0;
+		    for (jj = 0; jj < MAXD; jj++)
+			cflux[i][j].momn_flux[jj][ii] = 0.0;
+		}
+	    }
+	}
+}	/*end cft_reset_cflux*/
+
 void G_CARTESIAN::addFluxInDirection(
 	int dir,
 	SWEEP *m_vst,
@@ -832,6 +1022,26 @@ void G_CARTESIAN::addFluxInDirection(
 	    return addFluxInDirection3d(dir,m_vst,m_flux,delta_t);
 	}
 }	/* end addFluxInDirection */
+
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_addFluxInDirection(
+	int dir,
+	SWEEP *m_vst,
+	FSWEEP *m_flux,
+	double delta_t)
+{
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("Error: Conservative front tacking is implemented only for 3D simulations.\n");
+	    clean_up(ERROR);
+	case 3:
+	    //return addFluxInDirection3d(dir,m_vst,m_flux,delta_t);
+	    return cft_addFluxInDirection3d(dir,m_vst,m_flux,delta_t);	//Dan
+	    //return cft_ng_addFluxInDirection3d(dir,m_vst,m_flux,delta_t);	//Dan
+	}
+}	/* end cft_addFluxInDirection */
 
 void G_CARTESIAN::addFluxInDirection1d(
 	int dir,
@@ -1696,6 +1906,1229 @@ void G_CARTESIAN::addFluxInDirection3d(
 	stop_clock("addFluxInDirection3d");
 }
 
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_addFluxInDirection3d(
+	int dir,
+	SWEEP *m_vst,
+	FSWEEP *m_flux,
+	double delta_t)
+{
+	int		i,j,k,n,index;
+	SCHEME_PARAMS	scheme_params;
+	EOS_PARAMS	*eos;
+	static SWEEP 	vst;
+	static FSWEEP 	vflux;
+	static FSWEEP 	cvflux;
+	static boolean 	first = YES;
+	COMPONENT 	comp;
+	int 		seg_min,seg_max;
+	int 		icoords[3];
+	STATE st;
+	int		cflux_gmax[3];
+	
+	start_clock("addFluxInDirection3d");
+	if (first)
+	{
+	    first = NO;
+	    //allocDirVstFlux(&vst,&vflux);
+	    cft_allocDirVstFluxCflux(&vst,&vflux,&cvflux);	//Dan
+	}
+
+	for (i = 0; i < 3; i++)
+	    cflux_gmax[i] = top_gmax[i] + 1;
+	
+	scheme_params.lambda = delta_t/top_h[dir];
+	scheme_params.beta = 0.0;
+	
+	switch (dir)
+	{
+	case 0:
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    {
+		seg_min = imin[0];
+		while (seg_min <= imax[0])
+		{
+		    for (; seg_min <= imax[0]; ++seg_min)
+                    {
+                        i = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[0]) break;
+		    for (i = 0; i <= top_gmax[1]; ++i)
+		    {
+		    	vst.dens[i] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][i] = 0.0;
+                            }
+                        }
+		    	vst.pres[i] = 0.0; 
+		    	vst.engy[i] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][i] = vst.momn[1][i] = vst.momn[2][i] = 0.0;
+		    }
+		    i = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[0][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[1][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[2][index];
+		    seg_max = i;
+		    n++;
+		    for (i = seg_min+1; i <= imax[0]; i++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			if (needBufferFromIntfc(comp,top_comp[index]))
+                            break;
+			else
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[0][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[1][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[2][index];
+			    n++;
+			}
+			seg_max = i;
+		    }
+		    
+		    icoords[1] = j;
+		    icoords[2] = k;
+		    icoords[0] = seg_min;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,0,0);
+		    icoords[0] = seg_max;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,0,1);
+		    
+		    //Dan	FIXME
+		    for (i = 0; i <= n+2*nrad-1; i++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[i];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][i];
+			    }
+			}
+			vst.gamma[i] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
+
+		    //debugdan	FIXME
+		    /*
+		    if (j == 4 && k == 20 && seg_min == 4)
+		    {
+			for (i = seg_min; i <= seg_max; i++)
+			{
+			    index = d_index3d(i,j,k,cflux_gmax);
+			    printf("i = %d, index = %d, vflux = %e, cvflux = %e, Ddens = %e.\n",
+				    i, index, vflux.dens_flux[i-4+nrad],
+				    cvflux.dens_flux[i-4+nrad], vst.dens[i]-vst.dens[i-1]);
+			}
+			index = d_index3d(i,j,k,cflux_gmax);
+			printf("i = %d, index = %d, cvflux = %e.\n",
+				i, index, cvflux.dens_flux[i-4+nrad]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (i = seg_min; i <= seg_max+1; i++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (i = seg_min; i <= seg_max; ++i)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[1][n+nrad];
+		    	m_flux->momn_flux[2][index] +=
+					vflux.momn_flux[2][n+nrad];
+			n++;
+		    }
+
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	case 1:
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		seg_min = imin[1];
+		while (seg_min <= imax[1])
+		{
+		    for (; seg_min <= imax[1]; ++seg_min)
+                    {
+                        j = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[1]) break;
+		    for (j = 0; j <= top_gmax[1]; ++j)
+		    {
+		    	vst.dens[j] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][j] = 0.0;
+                            }
+                        }
+		    	vst.pres[j] = 0.0; 
+		    	vst.engy[j] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][j] = vst.momn[1][j] = vst.momn[2][j] = 0.0;
+		    }
+		    j = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[1][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[2][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[0][index];
+		    seg_max = j;
+		    n++;
+		    
+		    for (j = seg_min+1; j <= imax[1]; j++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			if (needBufferFromIntfc(comp,top_comp[index]))
+			    break;
+			else
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[1][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[2][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[0][index];
+			    n++;
+			}
+			seg_max = j;
+		    }
+		    icoords[0] = i;
+		    icoords[2] = k;
+		    icoords[1] = seg_min;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,1,0);
+		    icoords[1] = seg_max;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,1,1);
+		    
+		    //Dan	FIXME
+		    for (j = 0; j <= n+2*nrad-1; j++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[j];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][j];
+			    }
+			}
+			vst.gamma[j] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
+
+		    //debugdan	FIXME
+		    /*
+		    if (i == 4 && k == 20 && seg_min == 4)
+		    {
+			for (j = seg_min; j <= seg_max; j++)
+			{
+			    index = d_index3d(i,j,k,cflux_gmax);
+			    printf("j = %d, index = %d, vflux = %e, cvflux = %e.\n",
+				    j, index, vflux.dens_flux[j-4+nrad], cvflux.dens_flux[j-4+nrad]);
+			}
+			index = d_index3d(i,j,k,cflux_gmax);
+			printf("j = %d, index = %d, cvflux = %e.\n",
+				j, index, cvflux.dens_flux[j-4+nrad]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (j = seg_min; j <= seg_max+1; j++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (j = seg_min; j <= seg_max; ++j)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[2][n+nrad];
+		    	m_flux->momn_flux[2][index] += 
+					vflux.momn_flux[1][n+nrad];
+			n++;
+		    }
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	case 2:
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		seg_min = imin[2];
+		while (seg_min <= imax[2])
+		{
+		    //set seg_min
+		    /************************************************/
+		    for (; seg_min <= imax[2]; ++seg_min)
+                    {
+                        k = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[2]) break;
+		    /************************************************/
+
+		    //set 0 states for vst
+		    /************************************************/
+		    for (k = 0; k <= top_gmax[2]; ++k)
+		    {
+		    	vst.dens[k] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][k] = 0.0;
+                            }
+                        }
+		    	vst.pres[k] = 0.0; 
+		    	vst.engy[k] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][k] = vst.momn[1][k] = vst.momn[2][k] = 0.0;
+		    }
+		    /************************************************/
+
+		    //init vst states from seg_min to seg_max
+		    //n is the index for real states (start from 0)
+		    //k is the index for vst (start from seg_min)
+		    //vst: ghost state | real state | ghost state
+		    //vst <- m_vst (input)
+		    //m_vst is different from field because of RK
+		    //in CFT, it can be replace by field because
+		    //it's using first order in time
+		    /************************************************/
+		    k = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    //states should come from polyhs instead of m_vst	TODO
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[2][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[0][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[1][index];
+		    seg_max = k;
+		    n++;
+		    
+		    for (k = seg_min+1; k <= imax[2]; k++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			if (needBufferFromIntfc(comp,top_comp[index]))
+			    break;
+			else
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[2][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[0][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[1][index];
+			    n++;
+			}
+			seg_max = k;
+		    }
+		    /************************************************/
+
+		    icoords[0] = i;
+		    icoords[1] = j;
+		    icoords[2] = seg_min;
+		    //appendGhostBuffer(&vst,m_vst,n,icoords,2,0);
+		    cft_appendGhostBuffer(&vst,m_vst,n,icoords,2,0);
+		    icoords[2] = seg_max;
+		    //appendGhostBuffer(&vst,m_vst,n,icoords,2,1);
+		    cft_appendGhostBuffer(&vst,m_vst,n,icoords,2,1);
+		    
+		    //Dan	FIXME
+		    for (k = 0; k <= n+2*nrad-1; k++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[k];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][n+nrad];
+			    }
+			}
+			vst.gamma[k] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);	//Dan
+
+		    //debugdan	FIXME
+		    /*
+		    if (i == 4 && j == 4)
+		    {
+			printf("\nseg_min = %d, seg_max = %d.\n", seg_min, seg_max);
+			for (k = 0; k <= n+2*nrad-1; k++)
+			{
+			    printf("WENO stencil %d: "
+				   "vel = %e, dens = %lf, pres = %e, engy = %e.\n",
+				    k, 
+				    vst.momn[0][k]/vst.dens[k], vst.dens[k],
+				    vst.pres[k], vst.engy[k]);
+			}
+			printf("\n");
+		    }
+		    */
+		    /*
+		    if (i == 4 && j == 4 && seg_min == 1)
+		    {
+			printf("(4, 4, 20) dens flux = %e, cvflux = [%d] %e [%d] %e.\n",
+				vflux.dens_flux[20-1+3],
+				d_index3d(4,4,20,cflux_gmax), cvflux.dens_flux[20-1+3],
+				d_index3d(4,4,21,cflux_gmax),cvflux.dens_flux[21-1+3]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (k = seg_min; k <= seg_max+1; k++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (k = seg_min; k <= seg_max; ++k)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[2][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[1][n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[2][n+nrad];
+			n++;
+		    }
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	}
+	stop_clock("addFluxInDirection3d");
+}
+
+//no ghost state
+void G_CARTESIAN::cft_ng_addFluxInDirection3d(
+	int dir,
+	SWEEP *m_vst,
+	FSWEEP *m_flux,
+	double delta_t)
+{
+	int		i,j,k,n,index;
+	SCHEME_PARAMS	scheme_params;
+	EOS_PARAMS	*eos;
+	static SWEEP 	vst;
+	static FSWEEP 	vflux;
+	static FSWEEP 	cvflux;
+	static boolean 	first = YES;
+	COMPONENT 	comp;
+	int 		seg_min,seg_max;
+	int 		icoords[3];
+	STATE st;
+	int		cflux_gmax[3];
+	
+	start_clock("addFluxInDirection3d");
+	if (first)
+	{
+	    first = NO;
+	    //allocDirVstFlux(&vst,&vflux);
+	    cft_allocDirVstFluxCflux(&vst,&vflux,&cvflux);	//Dan
+	}
+
+	for (i = 0; i < 3; i++)
+	    cflux_gmax[i] = top_gmax[i] + 1;
+	
+	scheme_params.lambda = delta_t/top_h[dir];
+	scheme_params.beta = 0.0;
+	
+	switch (dir)
+	{
+	case 0:
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    {
+		seg_min = imin[0];
+		while (seg_min <= imax[0])
+		{
+		    for (; seg_min <= imax[0]; ++seg_min)
+                    {
+                        i = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[0]) break;
+		    for (i = 0; i <= top_gmax[1]; ++i)
+		    {
+		    	vst.dens[i] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][i] = 0.0;
+                            }
+                        }
+		    	vst.pres[i] = 0.0; 
+		    	vst.engy[i] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][i] = vst.momn[1][i] = vst.momn[2][i] = 0.0;
+		    }
+		    i = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[0][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[1][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[2][index];
+		    seg_max = i;
+		    n++;
+		    for (i = seg_min+1; i <= imax[0]; i++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			/*
+			if (needBufferFromIntfc(comp,top_comp[index]))
+                            break;
+			else
+			*/
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[0][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[1][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[2][index];
+			    n++;
+			}
+			seg_max = i;
+		    }
+		    
+		    icoords[1] = j;
+		    icoords[2] = k;
+		    icoords[0] = seg_min;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,0,0);
+		    icoords[0] = seg_max;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,0,1);
+		    
+		    //Dan	FIXME
+		    for (i = 0; i <= n+2*nrad-1; i++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[i];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][i];
+			    }
+			}
+			vst.gamma[i] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
+
+		    //debugdan	FIXME
+		    /*
+		    if (j == 4 && k == 20 && seg_min == 4)
+		    {
+			for (i = seg_min; i <= seg_max; i++)
+			{
+			    index = d_index3d(i,j,k,cflux_gmax);
+			    printf("i = %d, index = %d, vflux = %e, cvflux = %e, Ddens = %e.\n",
+				    i, index, vflux.dens_flux[i-4+nrad],
+				    cvflux.dens_flux[i-4+nrad], vst.dens[i]-vst.dens[i-1]);
+			}
+			index = d_index3d(i,j,k,cflux_gmax);
+			printf("i = %d, index = %d, cvflux = %e.\n",
+				i, index, cvflux.dens_flux[i-4+nrad]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (i = seg_min; i <= seg_max+1; i++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (i = seg_min; i <= seg_max; ++i)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[1][n+nrad];
+		    	m_flux->momn_flux[2][index] +=
+					vflux.momn_flux[2][n+nrad];
+			n++;
+		    }
+
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	case 1:
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		seg_min = imin[1];
+		while (seg_min <= imax[1])
+		{
+		    for (; seg_min <= imax[1]; ++seg_min)
+                    {
+                        j = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[1]) break;
+		    for (j = 0; j <= top_gmax[1]; ++j)
+		    {
+		    	vst.dens[j] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][j] = 0.0;
+                            }
+                        }
+		    	vst.pres[j] = 0.0; 
+		    	vst.engy[j] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][j] = vst.momn[1][j] = vst.momn[2][j] = 0.0;
+		    }
+		    j = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[1][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[2][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[0][index];
+		    seg_max = j;
+		    n++;
+		    
+		    for (j = seg_min+1; j <= imax[1]; j++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			/*
+			if (needBufferFromIntfc(comp,top_comp[index]))
+			    break;
+			else
+			*/
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[1][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[2][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[0][index];
+			    n++;
+			}
+			seg_max = j;
+		    }
+		    icoords[0] = i;
+		    icoords[2] = k;
+		    icoords[1] = seg_min;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,1,0);
+		    icoords[1] = seg_max;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,1,1);
+		    
+		    //Dan	FIXME
+		    for (j = 0; j <= n+2*nrad-1; j++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[j];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][j];
+			    }
+			}
+			vst.gamma[j] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
+
+		    //debugdan	FIXME
+		    /*
+		    if (i == 4 && k == 20 && seg_min == 4)
+		    {
+			for (j = seg_min; j <= seg_max; j++)
+			{
+			    index = d_index3d(i,j,k,cflux_gmax);
+			    printf("j = %d, index = %d, vflux = %e, cvflux = %e.\n",
+				    j, index, vflux.dens_flux[j-4+nrad], cvflux.dens_flux[j-4+nrad]);
+			}
+			index = d_index3d(i,j,k,cflux_gmax);
+			printf("j = %d, index = %d, cvflux = %e.\n",
+				j, index, cvflux.dens_flux[j-4+nrad]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (j = seg_min; j <= seg_max+1; j++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (j = seg_min; j <= seg_max; ++j)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[2][n+nrad];
+		    	m_flux->momn_flux[2][index] += 
+					vflux.momn_flux[1][n+nrad];
+			n++;
+		    }
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	case 2:
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		seg_min = imin[2];
+		while (seg_min <= imax[2])
+		{
+		    for (; seg_min <= imax[2]; ++seg_min)
+                    {
+                        k = seg_min;
+                        index = d_index3d(i,j,k,top_gmax);
+                        comp = top_comp[index];
+                        if (gas_comp(comp)) break;
+                    }
+                    if (seg_min > imax[2]) break;
+		    for (k = 0; k <= top_gmax[2]; ++k)
+		    {
+		    	vst.dens[k] = 0.0; 
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                vst.pdens[ii][k] = 0.0;
+                            }
+                        }
+		    	vst.pres[k] = 0.0; 
+		    	vst.engy[k] = 0.0; 
+			vst.gamma[i] = 0.0;
+		    	vst.momn[0][k] = vst.momn[1][k] = vst.momn[2][k] = 0.0;
+		    }
+		    k = seg_min;
+		    index = d_index3d(i,j,k,top_gmax);
+		    comp = top_comp[index];
+		    n = 0;
+		    vst.dens[n+nrad] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                        }
+                    }
+                    vst.engy[n+nrad] = m_vst->engy[index];
+                    vst.pres[n+nrad] = m_vst->pres[index];
+                    vst.momn[0][n+nrad] = m_vst->momn[2][index];
+                    vst.momn[1][n+nrad] = m_vst->momn[0][index];
+                    vst.momn[2][n+nrad] = m_vst->momn[1][index];
+		    seg_max = k;
+		    n++;
+		    
+		    for (k = seg_min+1; k <= imax[2]; k++)
+		    {
+			index = d_index3d(i,j,k,top_gmax);
+			/*
+			if (needBufferFromIntfc(comp,top_comp[index]))
+			    break;
+			else
+			*/
+			{
+		    	    vst.dens[n+nrad] = m_vst->dens[index];
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst.pdens[ii][n+nrad] = m_vst->pdens[ii][index];
+                                }
+                            }
+		    	    vst.engy[n+nrad] = m_vst->engy[index];
+		    	    vst.pres[n+nrad] = m_vst->pres[index];
+		    	    vst.momn[0][n+nrad] = m_vst->momn[2][index];
+		    	    vst.momn[1][n+nrad] = m_vst->momn[0][index];
+		    	    vst.momn[2][n+nrad] = m_vst->momn[1][index];
+			    n++;
+			}
+			seg_max = k;
+		    }
+		    icoords[0] = i;
+		    icoords[1] = j;
+		    icoords[2] = seg_min;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,2,0);
+		    icoords[2] = seg_max;
+		    appendGhostBuffer(&vst,m_vst,n,icoords,2,1);
+		    
+		    //Dan	FIXME
+		    for (k = 0; k <= n+2*nrad-1; k++)
+		    {
+			st.eos = &(eqn_params->eos[comp]);
+			st.dens = vst.dens[k];
+			if(eqn_params->multi_comp_non_reactive == YES)
+			{
+			    int ii;
+			    for(ii = 0; ii < eqn_params->n_comps; ii++)
+			    {
+				st.pdens[ii] = vst.pdens[ii][n+nrad];
+			    }
+			}
+			vst.gamma[k] = EosGamma(&st);
+		    }
+		    //Dan	FIXME
+
+		    eos = &(eqn_params->eos[comp]);
+		    EosSetTVDParams(&scheme_params, eos);
+		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
+		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);	//Dan
+
+		    //debugdan	FIXME
+		    
+		    if (i == 4 && j == 4)
+		    {
+			printf("\nseg_min = %d, seg_max = %d.\n", seg_min, seg_max);
+			for (k = 0; k <= n+2*nrad-1; k++)
+			{
+			    printf("%d %d WENO stencil index = %d, global k = %d, "
+				   "z dir vel = %e, dens = %lf.\n",
+				    i, j, k, seg_min+k-3,
+				    vst.momn[0][k]/vst.dens[k], vst.dens[k]);
+			    /*
+			    if (k >= 3 && k <= 22)
+			    {
+				index = d_index3d(i,j,k-2,cflux_gmax);
+				printf("vflux = %e, cvflux = (%e %e).\n",
+				    vflux.dens_flux[k],
+				    cvflux.dens_flux[k], cvflux.dens_flux[k+1]);
+			    }
+			    */
+			}
+			/*
+			for (k = seg_min; k <= seg_max; k++)
+			{
+			    index = d_index3d(i,j,k,cflux_gmax);
+			    printf("k = %d, index = %d, vflux = %lf, cvflux = (%lf %lf).\n",
+				    k, index, vflux.dens_flux[k-1+nrad],
+				    cvflux.dens_flux[k-1+nrad], cvflux.dens_flux[k-1+nrad+1]);
+			}
+			*/
+			printf("\n");
+		    }
+		    
+		    /*
+		    if (i == 4 && j == 4 && seg_min == 1)
+		    {
+			printf("(4, 4, 20) dens flux = %e, cvflux = [%d] %e [%d] %e.\n",
+				vflux.dens_flux[20-1+3],
+				d_index3d(4,4,20,cflux_gmax), cvflux.dens_flux[20-1+3],
+				d_index3d(4,4,21,cflux_gmax),cvflux.dens_flux[21-1+3]);
+		    }
+		    */
+		    //For CFT.	Dan
+		    n = 0;
+		    for (k = seg_min; k <= seg_max+1; k++)
+		    {
+			index = d_index3d(i,j,k,cflux_gmax);
+			if (comp == GAS_COMP1)
+			{
+			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			else
+			{
+			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
+			    if (eqn_params->multi_comp_non_reactive == YES)
+			    {
+				;	//TODO
+			    }
+			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
+			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
+			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
+			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			}
+			n++;
+		    }
+
+		    n = 0;
+		    for (k = seg_min; k <= seg_max; ++k)
+		    {
+		    	index = d_index3d(i,j,k,top_gmax);
+		    	m_flux->dens_flux[index] += vflux.dens_flux[n+nrad];
+                        if(eqn_params->multi_comp_non_reactive == YES)
+                        {
+                            int ii;
+                            for(ii = 0; ii < eqn_params->n_comps; ii++)
+                            {
+                                m_flux->pdens_flux[ii][index] += vflux.pdens_flux[ii][n+nrad];
+                            }
+                        }
+		    	m_flux->engy_flux[index] += vflux.engy_flux[n+nrad];
+		    	m_flux->momn_flux[2][index] += 
+					vflux.momn_flux[0][n+nrad];
+		    	m_flux->momn_flux[0][index] += 
+					vflux.momn_flux[1][n+nrad];
+		    	m_flux->momn_flux[1][index] += 
+					vflux.momn_flux[2][n+nrad];
+			n++;
+		    }
+		    seg_min = seg_max + 1;
+		}
+	    }
+	    break;
+	}
+	stop_clock("addFluxInDirection3d");
+}
+
 void G_CARTESIAN::scatMeshFlux(FSWEEP *m_flux)
 {
 	int i,j,k,l,index;
@@ -1938,7 +3371,7 @@ void G_CARTESIAN::solve(double dt)
 	setDomain();
 
 	setComponent();
-	
+
 	if (debugging("trace"))
 	    printf("Passed setComponent()\n");
 
@@ -1970,6 +3403,48 @@ void G_CARTESIAN::solve(double dt)
 	assert(time==front->time);
 }	/* end solve */
 
+//For conservative front tracking.	Dan
+void G_CARTESIAN::cft_solve(double dt)
+{
+	m_dt = dt;
+	max_speed = 0.0;
+
+	start_clock("solve");
+	setDomain();
+
+	setComponent();
+
+	if (debugging("trace"))
+	    printf("Passed setComponent()\n");
+
+	// 1) solve for intermediate velocity
+	start_clock("computeAdvection");
+	//computeAdvection();
+	cft_computeAdvection();	//Dan
+	if (debugging("trace"))
+	    printf("max_speed after computeAdvection(): %20.14f\n",max_speed);
+	stop_clock("computeAdvection");
+
+        /* parabolic step added by PRAO */
+        if (eqn_params->parabolic_step == true)
+        {
+            computeParab();
+        }
+
+	if (debugging("sample_velocity"))
+	{
+	    sampleVelocity();
+	}
+
+	start_clock("copyMeshStates");
+	copyMeshStates();
+	stop_clock("copyMeshStates");
+
+	setAdvectionDt();
+	stop_clock("solve");
+	assert(step==front->step);
+	assert(time==front->time);
+}	/* end cft_solve */
 
 // check http://en.wikipedia.org/wiki/Bilinear_interpolation
 void G_CARTESIAN::getVelocity(double *p, double *U)
@@ -2170,7 +3645,22 @@ void G_CARTESIAN::allocMeshFlux(
         FT_MatrixMemoryAlloc((POINTER*)&flux->pdens_flux,2,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&flux->engy_flux,size,sizeof(double));
 	FT_MatrixMemoryAlloc((POINTER*)&flux->momn_flux,MAXD,size,sizeof(double));
-}	/* end allocMeshVstFlux */
+}	/* end allocMeshFlux */
+
+void G_CARTESIAN::cft_allocMeshCflux(
+	FSWEEP *flux)
+{
+	int i,size;
+
+	size = 1;
+        for (i = 0; i < dim; ++i)
+	    size *= (top_gmax[i]+2);
+
+	FT_VectorMemoryAlloc((POINTER*)&flux->dens_flux,size,sizeof(double));
+        FT_MatrixMemoryAlloc((POINTER*)&flux->pdens_flux,2,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&flux->engy_flux,size,sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&flux->momn_flux,MAXD,size,sizeof(double));
+}	/* end allocMeshCflux */
 
 void G_CARTESIAN::allocDirVstFlux(
         SWEEP *vst,
@@ -2193,6 +3683,35 @@ void G_CARTESIAN::allocDirVstFlux(
         FT_MatrixMemoryAlloc((POINTER*)&flux->pdens_flux,2,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&flux->engy_flux,size,sizeof(double));
 	FT_MatrixMemoryAlloc((POINTER*)&flux->momn_flux,MAXD,size,sizeof(double));
+}	/* end allocDirMeshVstFlux */
+
+void G_CARTESIAN::cft_allocDirVstFluxCflux(
+        SWEEP *vst,
+        FSWEEP *flux,
+	FSWEEP *cvflux)
+{
+	int i,size;
+
+	size = 1;
+        for (i = 0; i < dim; ++i)
+	    if (size < top_gmax[i]+7) 
+		size = top_gmax[i]+7;
+	FT_VectorMemoryAlloc((POINTER*)&vst->dens,size,sizeof(double));
+        FT_MatrixMemoryAlloc((POINTER*)&vst->pdens,2,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&vst->engy,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&vst->pres,size,sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&vst->momn,MAXD,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&vst->gamma,size,sizeof(double));
+
+	FT_VectorMemoryAlloc((POINTER*)&flux->dens_flux,size,sizeof(double));
+        FT_MatrixMemoryAlloc((POINTER*)&flux->pdens_flux,2,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&flux->engy_flux,size,sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&flux->momn_flux,MAXD,size,sizeof(double));
+
+	FT_VectorMemoryAlloc((POINTER*)&cvflux->dens_flux,size,sizeof(double));
+        FT_MatrixMemoryAlloc((POINTER*)&cvflux->pdens_flux,2,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&cvflux->engy_flux,size,sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&cvflux->momn_flux,MAXD,size,sizeof(double));
 }	/* end allocDirMeshVstFlux */
 
 void G_CARTESIAN::scatMeshArray()
@@ -6387,6 +7906,149 @@ void G_CARTESIAN::copyToMeshVst(
 	}
 }	/* end copyToMeshVst */
 
+void G_CARTESIAN::cft_setMeshVst(
+	SWEEP *m_vst)
+{
+	int i,j,k,l,index;
+	double *dens = field.dens;
+        double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+	double *gamma = field.gamma;
+
+	switch (dim)
+	{
+	case 1:
+	    for (i = 0; i <= top_gmax[0]; ++i)
+	    {
+		index = d_index1d(i,top_gmax);
+		m_vst->dens[index] = dens[index];
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        m_vst->pdens[ii][index] = pdens[ii][index];
+                    }
+                }
+		m_vst->engy[index] = engy[index];
+		m_vst->pres[index] = pres[index];
+//		m_vst->gamma[index] = gamma[index];
+		for (l = 0; l < dim; ++l)
+		    m_vst->momn[l][index] = momn[l][index];
+	    }
+	    break;
+	case 2:
+	    for (j = 0; j <= top_gmax[1]; ++j)
+	    for (i = 0; i <= top_gmax[0]; ++i)
+	    {
+		index = d_index2d(i,j,top_gmax);
+		m_vst->dens[index] = dens[index];
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        m_vst->pdens[ii][index] = pdens[ii][index];
+                    }
+                }
+		m_vst->engy[index] = engy[index];
+		m_vst->pres[index] = pres[index];
+//		m_vst->gamma[index] = gamma[index];
+		for (l = 0; l < dim; ++l)
+		    m_vst->momn[l][index] = momn[l][index];
+	    }
+	    break;
+	case 3:
+	    //CFT	Dan
+	    //use polyh states instead of field states
+	    COMPONENT comp;
+	    CPOLYHEDRON *polyh;
+	    bool found;
+	    cells = cells_old;
+	    for (k = 0; k <= top_gmax[2]; ++k)
+	    for (j = 0; j <= top_gmax[1]; ++j)
+	    for (i = 0; i <= top_gmax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		if (cells[index].merged == FALSE)
+		{
+		    m_vst->dens[index] = dens[index];
+		    if(eqn_params->multi_comp_non_reactive == YES)
+		    {
+			int ii;
+			for(ii = 0; ii < eqn_params->n_comps; ii++)
+			{
+			    m_vst->pdens[ii][index] = pdens[ii][index];
+			}
+		    }
+		    m_vst->engy[index] = engy[index];
+		    m_vst->pres[index] = pres[index];
+//		    m_vst->gamma[index] = gamma[index];
+		    for (l = 0; l < dim; ++l)
+			m_vst->momn[l][index] = momn[l][index];
+		}
+		else
+		{
+		    found = false;
+		    comp = top_comp[index];
+		    polyh = cells[index].polyhs;
+		    while (polyh)
+		    {
+			if (polyh->comp == comp)
+			{
+			    m_vst->dens[index] = polyh->state.dens;
+			    if(eqn_params->multi_comp_non_reactive == YES)
+			    {
+				for(int ii = 0; ii < eqn_params->n_comps; ii++)
+				{
+				    m_vst->pdens[ii][index] = polyh->state.pdens[ii];
+				}
+			    }
+			    for (l = 0; l < dim; l++)
+				m_vst->momn[l][index] = polyh->state.momn[l];
+			    m_vst->engy[index] = polyh->state.engy;
+			    m_vst->pres[index] = polyh->state.pres;
+			    found = true;
+			    break;
+			}
+			polyh = polyh->next;
+		    }
+		    if (!found)
+		    {
+			printf("Error in cft_setMeshVst().\n");
+			clean_up(ERROR);
+		    }
+		}
+	    }
+
+	    //original
+	    /*
+	    for (k = 0; k <= top_gmax[2]; ++k)
+	    for (j = 0; j <= top_gmax[1]; ++j)
+	    for (i = 0; i <= top_gmax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		m_vst->dens[index] = dens[index];
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        m_vst->pdens[ii][index] = pdens[ii][index];
+                    }
+                }
+		m_vst->engy[index] = engy[index];
+		m_vst->pres[index] = pres[index];
+//		m_vst->gamma[index] = gamma[index];
+		for (l = 0; l < dim; ++l)
+		    m_vst->momn[l][index] = momn[l][index];
+	    }
+	    */
+	}
+}	/* end cft_setMeshVst */
+
 void G_CARTESIAN::copyFromMeshVst(
 	SWEEP m_vst)
 {
@@ -7247,6 +8909,239 @@ void G_CARTESIAN::addMeshFluxToVst(
 
 
 void G_CARTESIAN::appendGhostBuffer(
+	SWEEP *vst,
+	SWEEP *m_vst,
+	int n,
+	int *icoords,
+	int idir,
+	int nb)
+{
+	int		i,j,k,index,ic[MAXD];
+	GRID_DIRECTION 	ldir[3] = {WEST,SOUTH,LOWER};
+	GRID_DIRECTION 	rdir[3] = {EAST,NORTH,UPPER};
+	HYPER_SURF 	*hs;
+	COMPONENT 	comp;
+	double 		crx_coords[MAXD];
+	STATE 		*state,ghost_st;
+	int		ind2[2][2] = {{0,1},{1,0}};
+	int		ind3[3][3] = {{0,1,2},{1,2,0},{2,0,1}};
+	int 		ic_next[MAXD];
+
+	if (debugging("append_buffer"))
+		printf("Entering appendGhostBuffer()\n");
+	for (i = 0; i < dim; ++i) ic[i] = icoords[i];
+	
+	index = d_index(ic,top_gmax,dim);
+	comp = cell_center[index].comp;
+	
+	switch(nb)
+	{
+	case 0:
+	    for (i = 1; i <= nrad; ++i)
+	    {
+		ic[idir] = icoords[idir] - i;
+		index = d_index(ic,top_gmax,dim);
+		    
+		if (!needBufferFromIntfc(comp,cell_center[index].comp))
+		{
+		    vst->dens[nrad-i] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst->pdens[ii][nrad-i] = m_vst->pdens[ii][index];
+                        }
+                    }
+		    vst->engy[nrad-i] = m_vst->engy[index];
+		    vst->pres[nrad-i] = m_vst->pres[index];
+
+		    for (j = 0; j < 3; j++)
+			vst->momn[j][nrad-i] = 0.0;
+		    if (dim == 1)
+			vst->momn[0][nrad-i] = m_vst->momn[0][index];
+		    else if (dim == 2)
+			for(j = 0; j < 2; j++)
+			    vst->momn[j][nrad-i] = 
+			    	 	m_vst->momn[ind2[idir][j]][index];
+		    else if (dim == 3)
+			for (j = 0; j < 3; j++)
+			    vst->momn[j][nrad-i] = 
+			    	 	m_vst->momn[ind3[idir][j]][index];
+		}
+		else
+		{
+		    for (k = 0; k < dim; ++k)
+			ic_next[k] = ic[k];
+		    ic_next[idir]++;
+		    if (!FT_StateStructAtGridCrossing(front,ic_next,
+			ldir[idir],comp,(POINTER*)&state,&hs,crx_coords))
+		    {
+		    	(void) printf("In appendGhostBuffer()\n");
+		    	(void) printf("ERROR: No crossing found!\n");
+		    	(void) print_int_vector("icoords=", ic_next,3,"\n");
+		    	(void) printf("direction: %s side %d\n",
+		           		grid_direction_name(rdir[idir]), nb);
+		    	clean_up(ERROR);
+		    }
+                    state->eos = &(eqn_params->eos[comp]);
+		    switch (wave_type(hs))
+		    {
+		    case NEUMANN_BOUNDARY:
+		    case MOVABLE_BODY_BOUNDARY:
+		    	setNeumannStates(vst,m_vst,hs,state,ic_next,idir,
+						nb,0,i,comp);
+		    	break;
+		    case DIRICHLET_BOUNDARY:
+		    	setDirichletStates(state,vst,m_vst,hs,ic_next,
+					idir,nb,0,i);
+		    	break;
+		    case FIRST_PHYSICS_WAVE_TYPE:
+		    	GFMGhostState(ic_next,ic,comp,&ghost_st,-1,m_vst,idir);
+		    	for (k = i; k <= nrad; ++k)
+		    	{
+		    	    vst->dens[nrad-k] = ghost_st.dens;
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst->pdens[ii][nrad-k] = ghost_st.pdens[ii];
+                                }
+                            }
+		    	    vst->engy[nrad-k] = ghost_st.engy;
+		    	    vst->pres[nrad-k] = ghost_st.pres;
+			
+			    for (j=0; j < 3; j++)
+			    	    vst->momn[j][nrad-k] = 0.0;
+			    if (dim == 1)
+				vst->momn[0][nrad-k] = ghost_st.momn[0];
+			    else if (dim == 2)
+			    	for (j=0; j < 2; j++)
+				    vst->momn[j][nrad-k] = 
+				     	    ghost_st.momn[ind2[idir][j]];
+			    else if (dim == 3)
+			    	for (j = 0; j < 3; j++)
+				    vst->momn[j][nrad-k] = 
+				     	    ghost_st.momn[ind3[idir][j]];
+		    	}
+		    	break;
+		    default:
+		    	(void) printf("In appendGhostBuffer(): ");
+		    	(void) print_wave_type("Unknown wave type ",
+					wave_type(hs),"\n",front->interf);
+		    	(void) print_int_vector("icoords=", icoords,3,"\n");
+		    	clean_up(ERROR);
+		    }
+		    break;
+		}
+	    }
+	    break;
+	case 1:
+	    for (i = 1; i <= nrad; ++i)
+	    {
+		ic[idir] = icoords[idir] + i;
+		index = d_index(ic,top_gmax,dim);
+		if (!needBufferFromIntfc(comp,cell_center[index].comp))
+		{
+		    vst->dens[n+nrad+i-1] = m_vst->dens[index];
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            vst->pdens[ii][n+nrad+i-1] = m_vst->pdens[ii][index];
+                        }
+                    }
+		    vst->engy[n+nrad+i-1] = m_vst->engy[index];
+		    vst->pres[n+nrad+i-1] = m_vst->pres[index];
+		    
+		    for (j = 0; j < 3; j++)
+			vst->momn[j][n+nrad+i-1] = 0.0;
+		    if (dim == 1)
+			vst->momn[0][n+nrad+i-1] = 
+			         	m_vst->momn[0][index];
+		    else if (dim == 2)
+			for(j = 0; j < 2; j++)
+			    	vst->momn[j][n+nrad+i-1] = 
+			         	m_vst->momn[ind2[idir][j]][index];
+		    else if (dim == 3)
+			for (j = 0; j < 3; j++)
+			    vst->momn[j][n+nrad+i-1] = 
+			         	m_vst->momn[ind3[idir][j]][index];
+		}
+		else
+		{
+		    for (k = 0; k < dim; ++k)
+			ic_next[k] = ic[k];
+		    ic_next[idir]--;
+		    if (!FT_StateStructAtGridCrossing(front,ic_next,
+			rdir[idir],comp,(POINTER*)&state,&hs,crx_coords))
+		    {
+		    	(void) printf("In appendGhostBuffer()\n");
+		    	(void) printf("ERROR: No crossing found!\n");
+		    	(void) print_int_vector("icoords=",ic_next,3,"\n");
+		    	(void) printf("direction: %s side %d\n",
+		            	grid_direction_name(rdir[idir]), nb);
+		    	clean_up(ERROR);
+		    }
+                    state->eos = &(eqn_params->eos[comp]);
+		    switch (wave_type(hs))
+		    {
+		    case NEUMANN_BOUNDARY:
+		    case MOVABLE_BODY_BOUNDARY:
+		    	setNeumannStates(vst,m_vst,hs,state,ic_next,idir,
+						nb,n,i,comp);
+		    	break;
+		    case DIRICHLET_BOUNDARY:
+		    	setDirichletStates(state,vst,m_vst,hs,ic_next,idir,nb,
+						n,i);
+		    	break;
+		    case FIRST_PHYSICS_WAVE_TYPE:
+		    	GFMGhostState(ic_next,ic,comp,&ghost_st,1,m_vst,idir);
+		    	for (k = i; k <= nrad; ++k)
+		    	{
+		    	    vst->dens[n+nrad+k-1] = ghost_st.dens;
+                            if(eqn_params->multi_comp_non_reactive == YES)
+                            {
+                                int ii;
+                                for(ii = 0; ii < eqn_params->n_comps; ii++)
+                                {
+                                    vst->pdens[ii][n+nrad+k-1] = ghost_st.pdens[ii];
+                                }
+                            }
+		    	    vst->engy[n+nrad+k-1] = ghost_st.engy;
+		    	    vst->pres[n+nrad+k-1] = ghost_st.pres;
+			
+			    for(j=0; j<3; j++)
+			    	vst->momn[j][n+nrad+k-1] = 0.0;
+			    if (dim == 1)
+				vst->momn[0][n+nrad+k-1] = ghost_st.momn[0];
+			    else if (dim == 2)
+			    	for(j = 0; j < 2; j++)
+				    vst->momn[j][n+nrad+k-1] = 
+				     	    ghost_st.momn[ind2[idir][j]];
+			    else if (dim == 3)
+			    	for(j = 0; j < 3; j++)
+				    vst->momn[j][n+nrad+k-1] = 
+				     	    ghost_st.momn[ind3[idir][j]];
+		    	}
+		    	break;
+		    default:
+		    	(void) printf("In appendGhostBuffer(): ");
+		    	(void) print_wave_type("Unknown wave type ",
+				wave_type(hs),"\n",front->interf);
+		    	(void) print_int_vector("icoords=",icoords,3,"\n");
+		    	(void) printf("nb = %d\n",nb);
+		    	clean_up(ERROR);
+		    }
+		    break;
+		}
+	    }
+	}
+}	/* end appendGhostBuffer */
+
+void G_CARTESIAN::cft_appendGhostBuffer(
 	SWEEP *vst,
 	SWEEP *m_vst,
 	int n,

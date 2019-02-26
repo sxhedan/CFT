@@ -30,6 +30,7 @@ int find_crxps1(CPOINT*,CPOINT*,CFACE*,CPOINT*,CPOINT*);
 int find_crxps2(CFACE*,int,CTRI*,CPOINT*,CPOINT*);
 bool find_crxp_3d1(CPOINT*,CPOINT*,CFACE*,CPOINT*);
 bool same_cpt(CPOINT*,CPOINT*);
+bool same_cpt_double_tol(CPOINT*,CPOINT*);
 bool same_undir_edge(CEDGE*,CEDGE*);
 void print_edge(CEDGE*);
 void print_edge_list(CEDGE*);
@@ -66,7 +67,7 @@ bool is_nb_cf(int,int);
 void set_polygons_on_cf(CELL*,int);
 void add_next_vertices_on_ce(CPOLYGON*,CFACE*);
 void add_prev_vertices_on_ce(CPOLYGON*,CFACE*);
-void complete_polyg_on_cf(CPOLYGON*,CFACE*);
+void complete_polyg_on_cf(CPOLYGON*,CFACE*,CELL*);
 void add_new_point(CPOINT*,CPOINT**);
 bool the_ctri(CTRI*);
 bool the_cpt(CPOINT*);
@@ -110,9 +111,867 @@ double dot_product(double*,double*);
 void set_polyh_vol(CELL*);
 double vol_of_polyh(CPOLYHEDRON*);
 void set_polyg_nor(CPOLYGON*);
+void find_polyh_face_oncf_with_max_area(CPOLYHEDRON*,CPOLYGON**);
+void find_nb_cell_with_face(CELL*,CPOLYGON*,int*);
+void merge_polyh_to_cell(CPOLYHEDRON*,CELL*);
+void cell_to_polyh(CELL*,CPOLYHEDRON*);
+void init_new_polyg(CPOLYGON*);
+void remove_short_edges_on_cf(CFACE*);
+void modify_endps_of_edges(CFACE*,CPOINT*,CPOINT*);
+void set_polyh_nb_cells(CPOLYHEDRON*);
+void add_nbc_by_face(CPOLYHEDRON*,CPOLYGON*);
+void sort_nbcs(CPOLYHEDRON*);
+bool face_in_polyh(CPOLYGON*,CPOLYHEDRON*);
+bool same_polyg(CPOLYGON*,CPOLYGON*);
+CPOINT *prev_v(CPOLYGON*,CPOINT*);
 
-bool debugdan = NO;
+bool DEBUGDAN = false;
 
+void G_CARTESIAN::cft_init_cut_cells(TS_LEVEL ts)
+{
+	int i, j, k, l, ll, index;
+	CELL *c;
+
+	num_cells = 1;
+	for (i = 0; i < dim; i++)
+	    num_cells *= (top_gmax[i]+1);
+	FT_VectorMemoryAlloc((POINTER*)&cells, num_cells, sizeof(CELL));
+
+	switch (ts)
+	{
+	    case OLDTS:
+		cells_old = cells;
+		break;
+	    case HALFTS:
+		cells_halft = cells;
+		break;
+	    case NEWTS:
+		cells_new = cells;
+		break;
+	    default:
+		printf("ERROR in cft_init_cut_cells: unknown ts level.\n");
+		clean_up(ERROR);
+	}
+
+	//Initialize cells in buffer zone but don't use them
+	//start with (lbuf[i] ? lbuf[i] : 1)
+
+	//FT_VectorMemoryAlloc((POINTER*)&cells_old, num_cells, sizeof(CELL));
+	//FT_VectorMemoryAlloc((POINTER*)&cells_halft, num_cells, sizeof(CELL));
+	//FT_VectorMemoryAlloc((POINTER*)&cells_new, num_cells, sizeof(CELL));
+
+	//for (k = 0; k <= top_gmax[2]; k++)
+	//for (j = 0; j <= top_gmax[1]; j++)
+	//for (i = 0; i <= top_gmax[0]; i++)
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+
+	    c = &(cells[index]);
+	    c->icrds[0] = i;
+	    c->icrds[1] = j;
+	    c->icrds[2] = k;
+	    c->ctri_polygs = NULL;
+	    c->cf_polygs = NULL;
+	    c->scpocs = NULL;
+	    c->scpics = NULL;
+	    for (l = 0; l < 3; l++)
+	    {
+		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
+		c->cellu[l] = c->celll[l] + top_grid->h[l];
+	    }
+
+	    //initialize cell faces
+	    for (l = 0; l < 6; l++)
+	    {
+		for (ll = 0; ll < 3; ll++)
+		{
+		    c->faces[l].l[ll] = c->celll[ll];
+		    c->faces[l].u[ll] = c->cellu[ll];
+		}
+	    }
+	    c->faces[0].dir = 2;
+	    c->faces[0].side = -1;
+	    c->faces[0].u[2] = c->celll[2];
+	    init_cf_pts_and_edges(&(c->faces[0]));
+	    c->faces[1].dir = 1;
+	    c->faces[1].side = -1;
+	    c->faces[1].u[1] = c->celll[1];
+	    init_cf_pts_and_edges(&(c->faces[1]));
+	    c->faces[2].dir = 0;
+	    c->faces[2].side = 1;
+	    c->faces[2].l[0] = c->cellu[0];
+	    init_cf_pts_and_edges(&(c->faces[2]));
+	    c->faces[3].dir = 1;
+	    c->faces[3].side = 1;
+	    c->faces[3].l[1] = c->cellu[1];
+	    init_cf_pts_and_edges(&(c->faces[3]));
+	    c->faces[4].dir = 0;
+	    c->faces[4].side = -1;
+	    c->faces[4].u[0] = c->celll[0];
+	    init_cf_pts_and_edges(&(c->faces[4]));
+	    c->faces[5].dir = 2;
+	    c->faces[5].side = 1;
+	    c->faces[5].l[2] = c->cellu[2];
+	    init_cf_pts_and_edges(&(c->faces[5]));
+
+	    /*
+	    c = &(cells_halft[index]);
+	    c->icrds[0] = i;
+	    c->icrds[1] = j;
+	    c->icrds[2] = k;
+	    c->ctri_polygs = NULL;
+	    c->cf_polygs = NULL;
+	    c->scpocs = NULL;
+	    c->scpics = NULL;
+	    for (l = 0; l < 3; l++)
+	    {
+		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
+		c->cellu[l] = c->celll[l] + top_grid->h[l];
+	    }
+
+	    //initialize cell faces
+	    for (l = 0; l < 6; l++)
+	    {
+		for (ll = 0; ll < 3; ll++)
+		{
+		    c->faces[l].l[ll] = c->celll[ll];
+		    c->faces[l].u[ll] = c->cellu[ll];
+		}
+	    }
+	    c->faces[0].dir = 2;
+	    c->faces[0].side = -1;
+	    c->faces[0].u[2] = c->celll[2];
+	    init_cf_pts_and_edges(&(c->faces[0]));
+	    c->faces[1].dir = 1;
+	    c->faces[1].side = -1;
+	    c->faces[1].u[1] = c->celll[1];
+	    init_cf_pts_and_edges(&(c->faces[1]));
+	    c->faces[2].dir = 0;
+	    c->faces[2].side = 1;
+	    c->faces[2].l[0] = c->cellu[0];
+	    init_cf_pts_and_edges(&(c->faces[2]));
+	    c->faces[3].dir = 1;
+	    c->faces[3].side = 1;
+	    c->faces[3].l[1] = c->cellu[1];
+	    init_cf_pts_and_edges(&(c->faces[3]));
+	    c->faces[4].dir = 0;
+	    c->faces[4].side = -1;
+	    c->faces[4].u[0] = c->celll[0];
+	    init_cf_pts_and_edges(&(c->faces[4]));
+	    c->faces[5].dir = 2;
+	    c->faces[5].side = 1;
+	    c->faces[5].l[2] = c->cellu[2];
+	    init_cf_pts_and_edges(&(c->faces[5]));
+
+	    c = &(cells_new[index]);
+	    c->icrds[0] = i;
+	    c->icrds[1] = j;
+	    c->icrds[2] = k;
+	    c->ctri_polygs = NULL;
+	    c->cf_polygs = NULL;
+	    c->scpocs = NULL;
+	    c->scpics = NULL;
+	    for (l = 0; l < 3; l++)
+	    {
+		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
+		c->cellu[l] = c->celll[l] + top_grid->h[l];
+	    }
+
+	    //initialize cell faces
+	    for (l = 0; l < 6; l++)
+	    {
+		for (ll = 0; ll < 3; ll++)
+		{
+		    c->faces[l].l[ll] = c->celll[ll];
+		    c->faces[l].u[ll] = c->cellu[ll];
+		}
+	    }
+	    c->faces[0].dir = 2;
+	    c->faces[0].side = -1;
+	    c->faces[0].u[2] = c->celll[2];
+	    init_cf_pts_and_edges(&(c->faces[0]));
+	    c->faces[1].dir = 1;
+	    c->faces[1].side = -1;
+	    c->faces[1].u[1] = c->celll[1];
+	    init_cf_pts_and_edges(&(c->faces[1]));
+	    c->faces[2].dir = 0;
+	    c->faces[2].side = 1;
+	    c->faces[2].l[0] = c->cellu[0];
+	    init_cf_pts_and_edges(&(c->faces[2]));
+	    c->faces[3].dir = 1;
+	    c->faces[3].side = 1;
+	    c->faces[3].l[1] = c->cellu[1];
+	    init_cf_pts_and_edges(&(c->faces[3]));
+	    c->faces[4].dir = 0;
+	    c->faces[4].side = -1;
+	    c->faces[4].u[0] = c->celll[0];
+	    init_cf_pts_and_edges(&(c->faces[4]));
+	    c->faces[5].dir = 2;
+	    c->faces[5].side = 1;
+	    c->faces[5].l[2] = c->cellu[2];
+	    init_cf_pts_and_edges(&(c->faces[5]));
+	    */
+	}
+
+	return;
+}
+
+void G_CARTESIAN::cft_set_cut_cells(TS_LEVEL ts)
+{
+	switch (ts)
+	{
+	    case OLDTS:
+		cells = cells_old;
+		break;
+	    case HALFTS:
+		cells = cells_halft;
+		break;
+	    case NEWTS:
+		cells = cells_new;
+		break;
+	    default:
+		printf("ERROR in cft_set_cut_cells: unknown ts level.\n");
+		clean_up(ERROR);
+	}
+
+	cft_init_tris_in_cells();
+
+	cft_set_cell_polygons();
+
+	cft_construct_cell_polyhedrons();
+
+	cft_set_polyhs_comps();
+
+	cft_set_cut_cell_vol();
+
+	return;
+}
+
+bool debugmerge = false;
+
+void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
+{
+	int i, j, k, index;
+	CELL *c, *nb_cell;
+	CPOLYHEDRON *polyh, *nb_polyh;
+	CPOLYGON *max_face;
+	NBCELL *nbc;
+
+	switch (ts)
+	{
+	    case OLDTS:
+		cells = cells_old;
+		break;
+	    case HALFTS:
+		cells = cells_halft;
+		break;
+	    case NEWTS:
+		cells = cells_new;
+		break;
+	    default:
+		printf("ERROR in cft_set_cet_cells: unknown ts level.\n");
+		clean_up(ERROR);
+	}
+
+	//set comp based on volumes of polyhedrons in cells
+	cft_set_comp();
+
+	//initialize pam
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+	    c->pams = NULL;
+	    c->merged = FALSE;
+
+	    //polyh->merged is set in initialization
+	}
+
+	//first merge
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    //debugdan	FIXME
+	    /*
+	    if (i == 7 && j == 4 && k ==20)
+		debugmerge = true;
+	    else
+		debugmerge = false;
+	    */
+	    //debugdan	FIXME
+
+	    if (c->cut == FALSE)
+	    {
+		polyh = c->polyhs;
+		merge_polyh_to_cell(polyh,c);
+		continue;
+	    }
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		//new algorithm
+		if (polyh->comp == c->comp)
+		{
+		    merge_polyh_to_cell(polyh,c);
+		    c->merged = TRUE;
+		}
+		else
+		{
+		    set_polyh_nb_cells(polyh);
+		    nbc = polyh->sorted_nbcs;
+		    while (nbc)
+		    {
+			index = d_index3d(nbc->inbc[0],nbc->inbc[1],nbc->inbc[2],top_gmax);
+			nb_cell = &(cells[index]);
+			if (nb_cell->comp == polyh->comp)
+			{
+			    merge_polyh_to_cell(polyh,nb_cell);
+			    nb_cell->merged = TRUE;
+			    break;
+			}
+			nbc = nbc->next;
+		    }
+		}
+		polyh = polyh->next;
+
+
+		//old algorithm
+		/*
+		CELL *nbc;
+		int nb_icrds[3];
+		double cvol = top_h[0]*top_h[1]*top_h[2];
+		//check vol, if vol < (1/2 * cell volume), polyh needs to be merged
+		if (polyh->vol < 0.5*cvol)
+		{
+		    //find face with max area
+		    find_polyh_face_oncf_with_max_area(polyh,&max_face);
+		    //find its neighbor cell
+		    find_nb_cell_with_face(c,max_face,nb_icrds);
+		    index = d_index3d(nb_icrds[0],nb_icrds[1],nb_icrds[2],top_gmax);
+		    nbc = &(cells[index]);
+		    //merge
+		    merge_polyh_to_cell(polyh,nbc);
+		    for (int ii = 0; ii < 3; ii++)
+			nbc->pams->mdir[ii] = nb_icrds[ii] - c->icrds[ii];
+		    nbc->merged = TRUE;
+		}
+		else
+		{
+		    merge_polyh_to_cell(polyh,c);
+		    c->merged = TRUE;
+		}
+		polyh = polyh->next;
+		*/
+	    }
+	}
+
+	//second merge
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    //is it necessary to check c->cut???	TODO
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		if (polyh->merged == true)
+		{
+		    polyh = polyh->next;
+		    continue;
+		}
+
+		
+		nbc = polyh->sorted_nbcs;
+		while (nbc)
+		{
+		    index = d_index3d(nbc->inbc[0],nbc->inbc[1],nbc->inbc[2],top_gmax);
+		    nb_cell = &(cells[index]);
+		    nb_polyh = nb_cell->polyhs;
+		    while (nb_polyh)
+		    {
+			if (nb_polyh->comp == polyh->comp)
+			{
+			    if (face_in_polyh(nbc->face,nb_polyh))
+			    {
+				if (nb_polyh->merged == true)
+				{
+				    merge_polyh_to_cell(polyh,nb_polyh->pam->targetc);
+				    break;
+				}
+			    }
+			}
+			nb_polyh = nb_polyh->next;
+		    }
+		    nbc = nbc->next;
+		}
+		
+
+		//debugdan	FIXME
+		/*
+		printf("%d %d %d needs second merge.\n", i, j, k);
+		printf("polyh comp = %d, vol = %e.\n", polyh->comp, polyh->vol);
+		printf("cell comp = %d.\n", c->comp);
+		printf("Neighbors:\n");
+		for (int kk = k-1; kk <= k+1; kk++)
+		for (int jj = j-1; jj <= j+1; jj++)
+		for (int ii = i-1; ii <= i+1; ii++)
+		{
+		    if (ii == i && jj == j && kk == k)
+			continue;
+		    index = d_index3d(ii,jj,kk,top_gmax);
+		    CELL *cc = &(cells[index]);
+		    printf("%d %d %d cell comp = %d, vol[0] = %e, vol[1] = %e.\n",
+			    ii, jj, kk, cc->comp, cc->vol[0], cc->vol[1]);
+		}
+		exit(0);
+		*/
+
+		polyh = polyh->next;
+	    }
+	}
+
+	//check if there's any polyh unmerged	FIXME
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		if (polyh->merged == false)
+		{
+		    printf("%d %d %d polyh is unmerged.\n", i, j, k);
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	//debugdan	FIXME
+	//printf("END OF cft_merge_polyhs().\n");
+	//exit(0);
+	//debugdan	FIXME
+
+	return;
+}
+
+bool face_in_polyh(
+	CPOLYGON	*face,
+	CPOLYHEDRON	*polyh)
+{
+	CPOLYGON *polyg = polyh->faces;
+
+	while (polyg)
+	{
+	    //test?	TODO
+	    if (same_polyg(face,polyg))
+		return true;
+	    polyg = polyg->next;
+	}
+
+	return false;
+}
+
+bool same_polyg(
+	CPOLYGON	*polyg0,
+	CPOLYGON	*polyg1)
+{
+	CPOINT *p00, *p01, *p10, *p11;
+	int dir;
+	bool found;
+
+	p00 = polyg0->vertices;
+	p01 = p00->next;
+	if (!p00 || !p01)
+	{
+	    printf("ERROR in same_polyg().\n");
+	    clean_up(ERROR);
+	}
+
+	p10 = polyg1->vertices;
+	found = false;
+	while (p10)
+	{
+	    if (same_cpt(p00,p10))
+	    {
+		found = true;
+		break;
+	    }
+	    else
+		p10 = p10->next;
+	}
+	if (!found)
+	    return false;
+
+	p11 = polyg1->vertices;
+	found = false;
+	while (p11)
+	{
+	    if (same_cpt(p01,p11))
+	    {
+		found = true;
+		break;
+	    }
+	    else
+		p11 = p11->next;
+	}
+	if (!found)
+	    return false;
+
+	if ((p11 == p10->next) ||
+	    (p11 == polyg1->vertices && p10->next == NULL))
+	{
+	    dir = 1;
+	}
+	if ((p10 == p11->next) ||
+	    (p10 == polyg1->vertices && p11->next == NULL))
+	{
+	    dir = -1;
+	}
+	else
+	{
+	    return false;
+	}
+
+	while (p11 != p10)
+	{
+	    if (!same_cpt(p01,p11))
+		return false;
+
+	    //next p01
+	    if (p01->next)
+		p01 = p01->next;
+	    else
+		p01 = polyg0->vertices;
+
+	    //next p11
+	    if (dir == 1)
+	    {
+		if (p11->next)
+		    p11 = p11->next;
+		else
+		    p11 = polyg1->vertices;
+	    }
+	    else if (dir == -1)
+	    {
+		p11 = prev_v(polyg1,p11);
+	    }
+	}
+
+	return true;
+}
+
+CPOINT *prev_v(
+	CPOLYGON	*polyg,
+	CPOINT		*p)
+{
+	CPOINT *prevp = polyg->vertices;
+
+	while (prevp->next)
+	{
+	    if (prevp->next == p)
+		return prevp;
+	    else
+		prevp = prevp->next;
+	}
+
+	return prevp;
+}
+
+//sort polyh's faces on cell faces based on areas
+//and set corresponding neighbor cells.
+void set_polyh_nb_cells(CPOLYHEDRON *polyh)
+{
+	double max_area = 0;
+	CPOLYGON *face;
+
+	face = polyh->faces;
+	while (face)
+	{
+	    if (face->oncf)
+	    {
+		add_nbc_by_face(polyh,face);
+	    }
+	    face = face->next;
+	}
+
+	//debugdan	FIXME
+	/*
+	int count = 0;
+	NBCELL *nbc = polyh->sorted_nbcs;
+	while (nbc)
+	{
+	    count++;
+	    nbc = nbc->next;
+	}
+	if (count > 2)
+	{
+	    printf("Before sort_nbcs: ");
+	    nbc = polyh->sorted_nbcs;
+	    while (nbc)
+	    {
+		printf("%e ", nbc->face->area);
+		nbc = nbc->next;
+	    }
+	    printf("\n");
+	}
+	*/
+	//debugdan	FIXME
+
+	sort_nbcs(polyh);
+
+	//debugdan	FIXME
+	/*
+	if (count > 2)
+	{
+	    printf("After sort_nbcs: ");
+	    nbc = polyh->sorted_nbcs;
+	    while (nbc)
+	    {
+		printf("%e ", nbc->face->area);
+		nbc = nbc->next;
+	    }
+	    printf("\n");
+	}
+	*/
+	//debugdan	FIXME
+
+	return;
+}
+
+void sort_nbcs(CPOLYHEDRON *polyh)
+{
+	NBCELL *tmp, *endsort, *cur, *prev, *max, *maxprev;
+	bool first = true;
+
+	FT_ScalarMemoryAlloc((POINTER*)&(tmp),sizeof(NBCELL));
+	tmp->next = polyh->sorted_nbcs;
+	endsort = tmp;
+
+	while (endsort->next)
+	{
+	    cur = endsort->next;
+	    max = endsort->next;
+	    prev = endsort;
+	    maxprev = endsort;
+	    while (cur)
+	    {
+		if (cur->face->area > max->face->area)
+		{
+		    max = cur;
+		    maxprev = prev;
+		}
+		prev = cur;
+		cur = cur->next;
+	    }
+	    if (first)
+	    {
+		polyh->sorted_nbcs = max;
+		first = false;
+	    }
+	    if (max == endsort->next)
+	    {
+		endsort = endsort->next;
+	    }
+	    else
+	    {
+		maxprev->next = max->next;
+		max->next = endsort->next;
+		endsort->next = max;
+		endsort = endsort->next;
+	    }
+	}
+
+	free(tmp);
+
+	return;
+}
+
+void add_nbc_by_face(
+	CPOLYHEDRON	*polyh,
+	CPOLYGON	*face)
+{
+	NBCELL *nbc;
+
+	FT_ScalarMemoryAlloc((POINTER*)&(nbc),sizeof(NBCELL));
+	nbc->face = face;
+	nbc->next = polyh->sorted_nbcs;
+	polyh->sorted_nbcs = nbc;
+	find_nb_cell_with_face(polyh->cell,face,nbc->inbc);
+
+	return;
+}
+
+void G_CARTESIAN::cft_set_comp()
+{
+	int i, j, k, index;
+	double cvol = top_h[0]*top_h[1]*top_h[2];
+	CELL *c;
+	CPOLYHEDRON *polyh;
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+	    c->vol[0] = 0.0;
+	    c->vol[1] = 0.0;
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		if (polyh->comp == GAS_COMP1)
+		    c->vol[0] += polyh->vol;
+		else if (polyh->comp == GAS_COMP2)
+		    c->vol[1] += polyh->vol;
+		polyh = polyh->next;
+	    }
+
+	    if (c->vol[0] >= 0.5*cvol)
+		c->comp = GAS_COMP1;
+	    else
+		c->comp = GAS_COMP2;
+	}
+
+	return;
+}
+
+void cell_to_polyh(
+	CELL		*c,
+	CPOLYHEDRON	*polyh)
+{
+	polyh->faces = NULL;
+
+	if (c->comp == GAS_COMP1)
+	{
+	    polyh->scp_dir == OUTW;
+	}
+	else if (c->comp == GAS_COMP2)
+	{
+	    polyh->scp_dir == INW;
+	}
+
+	polyh->iscell = TRUE;
+	polyh->cell = c;
+
+	return;
+}
+
+void merge_polyh_to_cell(
+	CPOLYHEDRON	*polyh,
+	CELL		*c)
+{
+	CPAM *pam;
+
+	FT_ScalarMemoryAlloc((POINTER*)&(pam),sizeof(CPAM));
+	pam->polyh = polyh;
+	pam->targetc = c;
+	pam->next = NULL;
+	for (int ii = 0; ii < 3; ii++)
+	    pam->mdir[ii] = c->icrds[ii] - polyh->cell->icrds[ii];
+
+	pam->next = c->pams;
+	c->pams = pam;
+	polyh->merged = true;
+	polyh->pam = pam;
+	//c->merged = TRUE;
+
+	return;
+}
+
+void find_nb_cell_with_face(
+	CELL		*c,
+	CPOLYGON	*face,
+	int		*nb_icrds)
+{
+	int i;
+	CPOINT *p;
+	double tol = 1e-12;
+
+	for (i = 0; i < 3; i++)
+	    nb_icrds[i] = c->icrds[i];
+
+	for (i = 0; i < 3; i++)
+	{
+	    p = face->vertices;
+	    while (p)
+	    {
+		if (fabs(p->crds[i] - c->celll[i]) > tol)
+		{
+		    break;
+		}
+		p = p->next;
+	    }
+
+	    if (p == NULL)
+	    {
+		nb_icrds[i]--;
+		return;
+	    }
+
+	    p = face->vertices;
+	    while (p)
+	    {
+		if (fabs(p->crds[i] - c->cellu[i]) > tol)
+		{
+		    break;
+		}
+		p = p->next;
+	    }
+
+	    if (p == NULL)
+	    {
+		nb_icrds[i]++;
+		return;
+	    }
+	}
+
+	printf("ERROR in find_nb_cell_with_face(): can't find nb cell.\n");
+	clean_up(ERROR);
+}
+
+void find_polyh_face_oncf_with_max_area(
+	CPOLYHEDRON	*polyh,
+	CPOLYGON	**max_face)
+{
+	double max_area = 0;
+	CPOLYGON *face;
+
+	face = polyh->faces;
+	while (face)
+	{
+	    if (face->oncf)
+	    {
+		if (face->area > max_area)
+		{
+		    max_area = face->area;
+		    *max_face = face;
+		}
+	    }
+	    face = face->next;
+	}
+
+	return;
+}
+
+/*
 void G_CARTESIAN::cvol()
 {
 	printf("Enter cvol().\n");
@@ -124,11 +983,9 @@ void G_CARTESIAN::cvol()
 	}
 
 	printf("Init cells.\n");
-	/*Initialize cell structures.*/
-	init_grid_cells();
+	cft_init_grid_cells();
 
 	printf("Init ctris.\n");
-        /*Initialize triangles related to cells.*/
 	init_tris_in_cells();
 
 	printf("Init polygons.\n");
@@ -140,14 +997,13 @@ void G_CARTESIAN::cvol()
 	printf("Calculate volume for polyhedrons.\n");
 	cut_cell_vol();
 
-	free(cells);
-
 	printf("Leave cvol().\n");
 
 	return;
 }
-
-void G_CARTESIAN::init_grid_cells()
+*/
+/*
+void G_CARTESIAN::cft_init_grid_cells()
 {
 	int i, j, k, l, ll, index;
 	CELL *c;
@@ -184,8 +1040,8 @@ void G_CARTESIAN::init_grid_cells()
 	    c->scpics = NULL;
 	    for (l = 0; l < 3; l++)
 	    {
-		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l]+tol;
-		c->cellu[l] = c->celll[l] + top_grid->h[l]+tol;
+		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
+		c->cellu[l] = c->celll[l] + top_grid->h[l];
 	    }
 
 	    //initialize cell faces
@@ -225,6 +1081,7 @@ void G_CARTESIAN::init_grid_cells()
 
 	return;
 }
+*/
 
 void init_cf_pts_and_edges(CFACE *cf)
 {
@@ -262,7 +1119,7 @@ void init_cf_pts_and_edges(CFACE *cf)
 	return;
 }
 
-void G_CARTESIAN::init_tris_in_cells()
+void G_CARTESIAN::cft_init_tris_in_cells()
 {
 	INTERFACE	*intfc = front->interf;
 	SURFACE		**s;
@@ -313,7 +1170,7 @@ void G_CARTESIAN::init_tris_in_cells()
 	return;
 }
 
-void G_CARTESIAN::set_cell_polygons()
+void G_CARTESIAN::cft_set_cell_polygons()
 {
 	int i, j, k, index;
 	CELL *c;
@@ -351,8 +1208,9 @@ void tri_to_ctri(
 	set_nor(&(ctri->pts[0]),&(ctri->pts[1]),&(ctri->pts[2]),ctri->nor);
 
 	FT_ScalarMemoryAlloc((POINTER*)&(ctri->polyg),sizeof(CPOLYGON));
-	ctri->polyg->vertices = NULL;
-	ctri->polyg->undir_edges = NULL;
+	init_new_polyg(ctri->polyg);
+	//ctri->polyg->vertices = NULL;
+	//ctri->polyg->undir_edges = NULL;
 
 	return;
 }
@@ -442,27 +1300,9 @@ void set_polygons_in_cell(CELL *c)
 	int sides[3], ss;
 	CTRI *ctri;
 	CFACE *cf;
-	CPOLYGON *cpg;
-
-	//debugdan	FIXME
-	/*
-	if (c->icrds[0] == 12 && c->icrds[1] == 10 && c->icrds[2] == 37)
-	    debugdan = YES;
-	else
-	    debugdan = NO;
-	*/
-	//debugdan	FIXME
 
 	for (ctri = c->ctris; ctri; ctri = ctri->next)
 	{
-	    //debugdan	FIXME
-	    /*
-	    if (the_ctri(ctri))
-	    {
-		printf("DEBUGDAN.\n");
-	    }
-	    */
-	    //debugdan	FIXME
 	    for (i = 0; i < 6; i++)
 	    {
 		cf = &(c->faces[i]);
@@ -493,48 +1333,44 @@ void set_polygons_in_cell(CELL *c)
 		}
 	    }
 	}
+
+	//debugdan	FIXME
+	/*
+	if (c->icrds[0] == 9 && c->icrds[1] == 4 && c->icrds[2] == 20)
+	{
+	    DEBUGDAN = true;
+	}
+	else
+	{
+	    DEBUGDAN = false;
+	}
+	*/
+	//debugdan	FIXME
+
 	for (ctri = c->ctris; ctri; ctri = ctri->next)
 	{
-	    //debugdan	FIXME
-	    /*
-	    if (the_ctri(ctri))
-	    {
-		printf("DEBUGDAN.\n");
-	    }
-	    */
-	    //debugdan	FIXME
 	    construct_polygon_on_tri(ctri,c);
-	    if (ctri->polyg->vertices)
+	    if (ctri->polyg)
 	    {
 		add_new_polyg(ctri->polyg,&c->ctri_polygs);
-		/*
-		if (debugdan)
-		{
-		    print_ctri(ctri);
-		    print_polygon(ctri->polyg);
-		}
-		*/
 	    }
 	}
 
-	/*
-	if (debug)
+	//debugdan	FIXME
+	if (DEBUGDAN)
 	{
-	    CPOLYGON *ctri_polygs = c->ctri_polygs;
-	    ctri_polygs = c->ctri_polygs;
-	    while (ctri_polygs)
+	    printf("\nDEBUGDAN:\n");
+	    CPOLYGON *debug_polyg = c->ctri_polygs;
+	    while (debug_polyg)
 	    {
-		print_polygon(ctri_polygs);
-		ctri_polygs = ctri_polygs->next;
+		print_polygon(debug_polyg);
+		debug_polyg = debug_polyg->next;
 	    }
 	}
-	*/
+	//debugdan	FIXME
 
 	if (c->ctri_polygs)
 	    construct_polygons_on_cfs(c);
-
-	//if (c->ctri_polygs)
-	    //add_edges_of_polygs;
 
 	return;
 }
@@ -1365,6 +2201,20 @@ bool find_crxp_3d1(
 	return YES;
 }
 
+bool same_cpt_double_tol(
+	CPOINT	*p1,
+	CPOINT	*p2)
+{
+	int i;
+	double tol = 2e-12;
+
+	for (i = 0; i < 3; i++)
+	    if (fabs(p1->crds[i] - p2->crds[i]) > tol)
+		return NO;
+
+	return YES;
+}
+
 bool same_cpt(
 	CPOINT	*p1,
 	CPOINT	*p2)
@@ -1395,7 +2245,7 @@ bool same_undir_edge(
 void print_point(CPOINT *p)
 {
 	//printf("(%lf, %lf, %lf)", p->crds[0], p->crds[1], p->crds[2]);
-	printf("(%.12g, %.12g, %.12g)", p->crds[0], p->crds[1], p->crds[2]);
+	printf("{%.12g, %.12g, %.12g}", p->crds[0], p->crds[1], p->crds[2]);
 }
 
 void print_edge(CEDGE *edge)
@@ -1457,6 +2307,7 @@ void construct_polygon_on_tri(
 	if (ctri->polyg->undir_edges == NULL)
 	{
 	    free(ctri->polyg);
+	    ctri->polyg = NULL;
 	    return;
 	}
 
@@ -1486,15 +2337,15 @@ void add_polyg_vertex(
 
 void print_polygon(CPOLYGON *pg)
 {
-    CPOINT *p;
-    printf("Polygon:\n");
-    p = pg->vertices;
-    while(p)
-    {
-	print_point(p);
-	printf("\n");
-	p = p->next;
-    }
+	CPOINT *p;
+	printf("Polygon:\n");
+	p = pg->vertices;
+	while(p)
+	{
+	    print_point(p);
+	    printf("\n");
+	    p = p->next;
+	}
 }
 
 void complete_polyg_undir_edges(
@@ -1611,6 +2462,9 @@ void add_new_edge(
 	    printf("ERROR in add_new_edge().\n");
 	    clean_up(ERROR);
 	}
+
+	if (same_cpt(p0,p1))
+	    return;
 */
 	FT_ScalarMemoryAlloc((POINTER*)&(newedge),sizeof(CEDGE));
 	copy_cpt_to_cpt(p0,&(newedge->endp[0]));
@@ -1662,13 +2516,15 @@ void add_new_polyg(
 	if (p == NULL)
 	    return;
 	FT_ScalarMemoryAlloc((POINTER*)&(newpolyg),sizeof(CPOLYGON));
-	newpolyg->vertices = NULL;
+	init_new_polyg(newpolyg);
+	//newpolyg->vertices = NULL;
 	while (p)
 	{
 	    add_polyg_vertex(p,newpolyg);
 	    p = p->next;
 	}
 	reverse_polyg(newpolyg);
+	newpolyg->oncf = polyg->oncf;
 
 	newpolyg->next = *polyglist;
 	*polyglist = newpolyg;
@@ -1723,14 +2579,57 @@ void set_directed_polyg(
 	copy_cpt_to_cpt(&(edge0->endp[1]),&p1);
 	if (!find_next_endp(p1,&(polyg->undir_edges),&p2))
 	{
+	    printf("Potential error in set_directed_polyg().\n");
 	    free(edge0);
 	    return;
+	    /*
+	    if (!find_next_endp(p0,&(polyg->undir_edges),&p2))
+	    {
+		printf("Potential error in set_directed_polyg().\n");
+		free(edge0);
+		return;
+	    }
+	    if (!set_nor(&p2,&p0,&p1,pnor))
+	    {
+		printf("ERROR in set_directed_polyg(): points are on the same line.\n");
+		clean_up(ERROR);
+	    }
+	    if (same_nor_dir(pnor,nor))
+	    {
+		add_polyg_vertex(&p1,polyg);
+		add_polyg_vertex(&p0,polyg);
+		add_polyg_vertex(&p2,polyg);
+	    }
+	    else
+	    {
+		add_polyg_vertex(&p2,polyg);
+		add_polyg_vertex(&p0,polyg);
+		add_polyg_vertex(&p1,polyg);
+	    }
+	    return;
+	    */
 	}
+
+	//debugdan	FIXME
+	if (DEBUGDAN)
+	{
+	    printf("set_directed_polyg():\n");
+	    printf("p0, p1, p2:\n");
+	    print_point(&p0);
+	    printf("\n");
+	    print_point(&p1);
+	    printf("\n");
+	    print_point(&p2);
+	    printf("\n");
+	}
+	//debugdan	FIXME
+
 	if (!set_nor(&p0,&p1,&p2,pnor))
 	{
 	    printf("ERROR in set_directed_polyg(): points are on the same line.\n");
 	    clean_up(ERROR);
 	}
+
 	if (same_nor_dir(pnor,nor))
 	{
 	    add_polyg_vertex(&p2,polyg);
@@ -1756,6 +2655,16 @@ void set_directed_polyg(
 	    if (!find_next_endp(p0,&(polyg->undir_edges),&p1))
 		clean_up(ERROR);
 	}
+
+	//debugdan	FIXME
+	if (DEBUGDAN)
+	{
+	    printf("set_directed_polyg():\n");
+	    print_polygon(polyg);
+	    printf("pnor: %lf %lf, %lf.\n", pnor[0], pnor[1], pnor[2]);
+	    printf("nor: %lf %lf, %lf.\n", nor[0], nor[1], nor[2]);
+	}
+	//debugdan	FIXME
 
 	free(edge0);
 	return;
@@ -1839,18 +2748,23 @@ bool same_nor_dir(
 	double	*nor1,
 	double	*nor2)
 {
+	int i;
 	double n1, n2;
 	double tol = 1e-12;
 
-	n1 = absmax(absmax(nor1[0],nor1[1]),nor1[2]);
-	n2 = absmax(absmax(nor2[0],nor2[1]),nor2[2]);
-	if (n1*n2 > 0)
+	//n1 = absmax(absmax(nor1[0],nor1[1]),nor1[2]);
+	//n2 = absmax(absmax(nor2[0],nor2[1]),nor2[2]);
+	if (fabs(nor1[0]) > fabs(nor1[1]) && fabs(nor1[0]) > fabs(nor1[2]))
+	    i = 0;
+	else if (fabs(nor1[1]) > fabs(nor1[0]) && fabs(nor1[1]) > fabs(nor1[2]))
+	    i = 1;
+	else
+	    i = 2;
+
+	if (nor1[i]*nor2[i] > 0)
 	    return YES;
 	else
 	    return NO;
-
-	printf("ERROR in same_nor_dir(): incorrect nor.\n");
-	clean_up(ERROR);
 }
 
 void construct_polygons_on_cfs(CELL *cell)
@@ -1878,6 +2792,29 @@ void set_polygons_on_cf(
 	CFACE *cf;
 
 	cf = &(cell->faces[icf]);
+
+	remove_short_edges_on_cf(cf);
+
+	//debugdan	FIXME
+	if (DEBUGDAN)
+	{
+	    printf("\nDEBUGDAN - set_polygons_on_cf, i = %d.\n", icf);
+	    printf("edges_on_ce:\n");
+	    edge = cf->edges_on_ce;
+	    while (edge)
+	    {
+		print_edge(edge);
+		edge = edge->next;
+	    }
+	    printf("edges_in_cf:\n");
+	    edge = cf->edges_in_cf;
+	    while (edge)
+	    {
+		print_edge(edge);
+		edge = edge->next;
+	    }
+	}
+	//debugdan	FIXME
 	edge = cf->edges_on_ce;
 	if (!edge)
 	{
@@ -1887,15 +2824,111 @@ void set_polygons_on_cf(
 	while (edge)
 	{
 	    FT_ScalarMemoryAlloc((POINTER*)&(polyg),sizeof(CPOLYGON));
-	    polyg->vertices = NULL;
+	    init_new_polyg(polyg);
 	    add_polyg_vertex(&(edge->endp[1]),polyg);
 	    add_polyg_vertex(&(edge->endp[0]),polyg);
-	    complete_polyg_on_cf(polyg,cf);
+	    complete_polyg_on_cf(polyg,cf,cell);
 	    polyg->next = cell->cf_polygs;
 	    cell->cf_polygs = polyg;
-	    if (!cf->edges_on_ce)
-		break;
 	    edge = cf->edges_on_ce;
+	}
+
+	return;
+}
+
+void remove_short_edges_on_cf(CFACE *cf)
+{
+	int i;
+	CEDGE *edge, *prev_edge;
+	CPOINT midp, p0, p1;
+
+	edge = cf->edges_on_ce;
+	prev_edge = NULL;
+	while (edge)
+	{
+	    p0 = edge->endp[0];
+	    p1 = edge->endp[1];
+	    if (same_cpt(&p0,&p1))
+	    {
+		//debugdan	FIXME
+		/*
+		printf("Removed edge (%e, %e, %e) (%e, %e, %e).\n",
+			edge->endp[0].crds[0], edge->endp[0].crds[1], edge->endp[0].crds[1],
+			edge->endp[1].crds[0], edge->endp[1].crds[1], edge->endp[1].crds[1]);
+		*/
+		//debugdan	FIXME
+		for (i = 0; i < 3; i++)
+		    midp.crds[i] = (p0.crds[i]+p1.crds[i])/2;
+		if (prev_edge == NULL)
+		    cf->edges_on_ce = edge->next;
+		else
+		    prev_edge->next = edge->next;
+		free(edge);
+
+		modify_endps_of_edges(cf,&p0,&midp);
+		modify_endps_of_edges(cf,&p1,&midp);
+	    }
+	    prev_edge = edge;
+	    edge = edge->next;
+	}
+
+	edge = cf->edges_in_cf;
+	prev_edge = NULL;
+	while (edge)
+	{
+	    p0 = edge->endp[0];
+	    p1 = edge->endp[1];
+	    if (same_cpt(&p0,&p1))
+	    {
+		//debugdan	FIXME
+		/*
+		printf("Removed edge (%e, %e, %e) (%e, %e, %e).\n",
+			edge->endp[0].crds[0], edge->endp[0].crds[1], edge->endp[0].crds[1],
+			edge->endp[1].crds[0], edge->endp[1].crds[1], edge->endp[1].crds[1]);
+		*/
+		//debugdan	FIXME
+		for (i = 0; i < 3; i++)
+		    midp.crds[i] = (p0.crds[i]+p1.crds[i])/2;
+		if (prev_edge == NULL)
+		    cf->edges_in_cf = edge->next;
+		else
+		    prev_edge->next = edge->next;
+		free(edge);
+
+		modify_endps_of_edges(cf,&p0,&midp);
+		modify_endps_of_edges(cf,&p1,&midp);
+	    }
+	    prev_edge = edge;
+	    edge = edge->next;
+	}
+
+	return;
+}
+
+void modify_endps_of_edges(
+	CFACE	*cf,
+	CPOINT	*p,
+	CPOINT	*newp)
+{
+	CEDGE *edge;
+
+	edge = cf->edges_on_ce;
+	while (edge)
+	{
+	    if (same_cpt(&(edge->endp[0]),p))
+		copy_cpt_to_cpt(newp,&(edge->endp[0]));
+	    if (same_cpt(&(edge->endp[1]),p))
+		copy_cpt_to_cpt(newp,&(edge->endp[1]));
+	    edge = edge->next;
+	}
+	edge = cf->edges_in_cf;
+	while (edge)
+	{
+	    if (same_cpt(&(edge->endp[0]),p))
+		copy_cpt_to_cpt(newp,&(edge->endp[0]));
+	    if (same_cpt(&(edge->endp[1]),p))
+		copy_cpt_to_cpt(newp,&(edge->endp[1]));
+	    edge = edge->next;
 	}
 
 	return;
@@ -1998,6 +3031,7 @@ bool recursively_find_next_vert(
 	while (nextp)
 	{
 	    if (same_cpt(nextp,initp))
+	    //if (same_cpt_double_tol(nextp,initp))
 	    {
 		return YES;
 	    }
@@ -2158,7 +3192,8 @@ void remove_duplicated_edges(
 
 void complete_polyg_on_cf(
 	CPOLYGON	*polyg,
-	CFACE		*cf)
+	CFACE		*cf,
+	CELL		*c)
 {
 	CPOINT *initp, *secondp, *nextp;
 	CPOINT *nextplist;
@@ -2202,16 +3237,40 @@ void complete_polyg_on_cf(
 
 	if (!found)
 	{
+	    printf("ERROR in complete_polyg_on_cf(): function failed.\n");
 	    //debugdan	FIXME
+	    printf("ctri_polygs:\n");
+	    CPOLYGON *polyg = c->ctri_polygs;
+	    double nor[3];
+	    CPOINT *p0, *p1, *p2;
+	    while (polyg)
+	    {
+		print_polygon(polyg);
+		p0 = polyg->vertices;
+		p1 = p0->next;
+		p2 = p1->next;
+		set_nor(p0,p1,p2,nor);
+		printf("nor: %e %e %e.\n", nor[0], nor[1], nor[2]);
+		polyg = polyg->next;
+	    }
+	    printf("ctri nor:\n");
+	    CTRI *ctri = c->ctris;
+	    while (ctri)
+	    {
+		printf("%e %e %e.\n", ctri->nor[0], ctri->nor[1], ctri->nor[2]);
+		ctri = ctri->next;
+	    }
 	    nextp = nextplist;
 	    while (nextp)
 	    {
 		if (recursively_find_next_vert(nextp,initp,polyg,cf))
+		{
+		    found = YES;
 		    break;
+		}
 		nextp = nextp->next;
 	    }
 	    //debugdan	FIXME
-	    printf("ERROR in complete_polyg_on_cf(): function failed.\n");
 	    clean_up(ERROR);
 	}
 
@@ -2531,10 +3590,22 @@ void set_polyg_edges_on_cf(
 	CFACE *cf = &(cell->faces[index]);
 	bool eicf;	//edge in cell face
 
+	//debugdan	FIXME
+	if (DEBUGDAN)
+	{
+	    printf("\nDEBUGDAN - set_polyg_edges_on_cf, i = %d.\n", index);
+	    printf("undirected_edges:\n");
+	}
+	//debugdan	FIXME
+
 	//set directed edges from undirected edges
 	edge = cf->undirected_edges;
 	while (edge)
 	{
+	    //debugdan	FIXME
+	    if (DEBUGDAN)
+		print_edge(edge);
+	    //debugdan	FIXME
 	    edir = edge_dir(edge,cell);
 	    for (i = 0; i < 3; i++)
 	    {
@@ -2994,10 +4065,11 @@ bool debug_same_cpt(
 	return YES;
 }
 
-void G_CARTESIAN::construct_cell_polyhedrons()
+void G_CARTESIAN::cft_construct_cell_polyhedrons()
 {
 	int i, j, k, index;
 	CELL *c;
+	CPOLYHEDRON *polyh;
 
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
@@ -3007,7 +4079,17 @@ void G_CARTESIAN::construct_cell_polyhedrons()
 	    c = &(cells[index]);
 
 	    if (c->ctri_polygs == NULL)
+	    {
+		FT_ScalarMemoryAlloc((POINTER*)&polyh,sizeof(CPOLYHEDRON));
+		init_polyh(polyh,c);
+		cell_to_polyh(c,polyh);
+		c->polyhs = polyh;
 		continue;
+	    }
+	    /*
+	    if (c->ctri_polygs == NULL)
+		continue;
+	    */
 
 	    //set sets of connected polygons
 	    set_scps(c);
@@ -3339,7 +4421,11 @@ void init_polyh(
 	polyh->faces = NULL;
 	polyh->boundaries = NULL;
 	polyh->cell = c;
+	polyh->sorted_nbcs = NULL;
+	polyh->pam = NULL;
 	polyh->next = NULL;
+	polyh->iscell = false;
+	polyh->merged = false;
 
 	return;
 }
@@ -3676,26 +4762,7 @@ bool find_polyg_with_edge(
 	*polyg = NULL;
 	return NO;
 }
-/*
-void copy_polyg_to_polyg(
-	CPOLYGON	*polyg0,
-	CPOLYGON	*polyg1)
-{
-	CPOINT *p;
 
-	p = polyg0->vertices;
-	if (p == NULL)
-	    return;
-	while (p)
-	{
-	    add_polyg_vertex(p,polyg1);
-	    p = p->next;
-	}
-	reverse_polyg(polyg1);
-
-	return;
-}
-*/
 void mark_polyg_edges(CPOLYGON *polyg)
 {
 	CEDGE *edge;
@@ -3727,7 +4794,8 @@ void init_polygs_marks(CELL *c)
 	while (polyg)
 	{
 	    polyg->mark = 0;
-	    polyg->inscp = NO;
+	    polyg->inscp = FALSE;
+	    polyg->oncf = FALSE;
 	    polyg = polyg->next;
 	}
 
@@ -3735,7 +4803,8 @@ void init_polygs_marks(CELL *c)
 	while (polyg)
 	{
 	    polyg->mark = 0;
-	    polyg->inscp = NO;
+	    polyg->inscp = FALSE;
+	    polyg->oncf = TRUE;
 	    polyg = polyg->next;
 	}
 
@@ -3790,6 +4859,7 @@ void add_new_polygon(
 	CPOLYGON *newpolyg;
 
 	FT_ScalarMemoryAlloc((POINTER*)&(newpolyg),sizeof(CPOLYGON));
+	init_new_polyg(newpolyg);
 	copy_polyg_to_polyg(polyg,newpolyg);
 
 	newpolyg->next = *polyglist;
@@ -3831,6 +4901,7 @@ void copy_polyg_to_polyg(
 	    edge = edge->next;
 	}
 
+	newpolyg->oncf = polyg->oncf;
 
 	return;
 }
@@ -3929,11 +5000,14 @@ void find_polyg_with_edge(
 }
 */
 
-void G_CARTESIAN::cut_cell_vol()
+void G_CARTESIAN::cft_set_cut_cell_vol()
 {
 	int i, j, k, index;
+	double cvol;
 	CELL *c;
 	CPOLYHEDRON *polyh;
+
+	cvol = top_h[0]*top_h[1]*top_h[2];
 
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
@@ -3942,8 +5016,15 @@ void G_CARTESIAN::cut_cell_vol()
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
 
+	    /*
 	    if (c->polyhs == NULL)
 		continue;
+	    */
+	    if (c->polyhs->iscell == TRUE)
+	    {
+		c->polyhs->vol = cvol;
+		continue;
+	    }
 
 	    //set areas of polyhedrons' faces
 	    set_pf_areas(c);
@@ -3967,7 +5048,6 @@ void set_pf_areas(CELL *c)
 	    while (polyg)
 	    {
 		polyg->area = area_of_polygon(polyg);
-		//debugdan	check area calculation	TODO
 		polyg = polyg->next;
 	    }
 	    polyh = polyh->next;
@@ -4088,6 +5168,74 @@ void set_polyg_nor(CPOLYGON *polyg)
 	}
 
 	set_nor(p0,p1,p2,polyg->nor);
+
+	return;
+}
+
+//set cell->cut, polyh->comp
+void G_CARTESIAN::cft_set_polyhs_comps()
+{
+	int i, j, k, index;
+	COMPONENT comp;
+	CELL *c;
+	CPOLYHEDRON *polyh;
+
+	setDomain();
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+	    comp = top_comp[index];
+	    polyh = c->polyhs;
+
+	    if (polyh == NULL)
+	    {
+		printf("ERROR in cft_set_polyhs_comps(): polyh doesn't exist.\n");
+		clean_up(ERROR);
+	    }
+
+	    if (polyh->iscell)
+	    {
+		polyh->comp = comp;
+		c->cut = FALSE;
+		c->comp = comp;
+		//set polyh for empty cell
+		//set comp
+		continue;
+	    }
+	    
+	    c->cut = TRUE;
+	    while (polyh)
+	    {
+		if (polyh->scp_dir == INW)
+		{
+		    polyh->comp = GAS_COMP2;
+		}
+		else if (polyh->scp_dir = OUTW)
+		{
+		    polyh->comp = GAS_COMP1;
+		}
+		else
+		{
+		    printf("ERROR in cft_set_polyhs_comps(): unset scp_dir.\n");
+		    clean_up(ERROR);
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	return;
+}
+
+void init_new_polyg(CPOLYGON *polyg)
+{
+	polyg->vertices = NULL;
+	polyg->edges = NULL;
+	polyg->undir_edges = NULL;
+	polyg->next = NULL;
 
 	return;
 }

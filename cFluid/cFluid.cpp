@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 	/*  Function Declarations */
 static void gas_driver(Front*,G_CARTESIAN&);
+static void cft_driver(Front*,G_CARTESIAN&);
 static int g_cartesian_vel(POINTER,Front*,POINT*,HYPER_SURF_ELEMENT*,
                         HYPER_SURF*,double*);
 
@@ -185,10 +186,206 @@ int main(int argc, char **argv)
 
 	/* Propagate the front */
 
-	gas_driver(&front, g_cartesian);
+	//gas_driver(&front, g_cartesian);
+	cft_driver(&front, g_cartesian);
 
 	//PetscFinalize();
 	clean_up(0);
+}
+
+static  void cft_driver(
+        Front *front,
+	G_CARTESIAN &g_cartesian)
+{
+	printf("\nCalling cft_driver.\n");
+	printf("Conservative front tracking is now for RM only.\n");
+	printf("Delta h in 3 directions should be equivalent to each other.\n");
+
+	if (g_cartesian.dim != 3)
+	{
+	    printf("Conservative front tracking is implemented for 3D simulations only.\n");
+	    clean_up(ERROR);
+	}
+
+        double CFL;
+	double dt;
+
+	Curve_redistribution_function(front) = full_redistribute;
+
+	FT_ReadTimeControl(in_name,front);
+	CFL = Time_step_factor(front);
+
+	if (!RestartRun)
+	{
+	    FT_ResetTime(front);
+
+	    //debugdan	FIXME
+	    //g_cartesian.printInteriorVtk(out_name);
+	    //vtk_interface_plot("debug-intfc/intfc0",front->interf,FALSE,0,0);
+	    //debugdan	FIXME
+
+	    //CFT
+	    dt = 0.5*front->dt;
+	    front->dt = dt;
+
+	    //set old t cells
+	    g_cartesian.cft_init_cut_cells(OLDTS);
+	    g_cartesian.cft_set_cut_cells(OLDTS);
+	    g_cartesian.cft_merge_polyhs(OLDTS);
+
+	    //initialization
+	    g_cartesian.cft_set_init_polyh_states();
+
+	    //first propagation
+	    FrontPreAdvance(front);
+	    FT_Propagate(front);
+	    g_cartesian.cft_init_cut_cells(HALFTS);
+	    g_cartesian.cft_set_cut_cells(HALFTS);
+	    g_cartesian.cft_merge_polyhs(HALFTS);
+
+	    //second propagation
+	    FrontPreAdvance(front);
+	    FT_Propagate(front);
+	    g_cartesian.cft_init_cut_cells(NEWTS);
+	    g_cartesian.cft_set_cut_cells(NEWTS);
+	    g_cartesian.cft_merge_polyhs(NEWTS);
+
+	    //solve
+	    g_cartesian.cft_solve(2*dt);
+	    g_cartesian.cft_set_face_flux();
+	    //g_cartesian.cft_update_states();
+	    g_cartesian.cft_update_states_new();
+	    //CFT
+
+	    //g_cartesian.printInteriorVtk(out_name);
+	    //vtk_interface_plot("debug-intfc/intfc1",front->interf,FALSE,0,0);
+
+	    FT_SetTimeStep(front);
+	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
+	    FT_SetOutputCounter(front);
+        }
+        else
+	{
+	    printf("Restart has not been setup for conservative front tracking.\n");
+	    clean_up(ERROR);
+	    /*
+	    g_cartesian.time = front->time;
+	    g_cartesian.step = front->step;
+	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
+	    FT_SetOutputCounter(front);
+	    */
+	}
+
+	FT_TimeControlFilter(front);
+	printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
+		g_cartesian.time, g_cartesian.step, dt);
+
+        while (true)
+        {
+	    if (front->step == 0)
+            {
+                g_cartesian.initMovieVariables();
+                FT_AddMovieFrame(front,out_name,binary);
+		g_cartesian.printInteriorVtk(out_name);
+            }
+
+	    //reset cells
+	    //new cells to old cells
+	    g_cartesian.cft_newts_cut_cells();
+
+	    dt = 0.5*dt;
+	    front->dt = dt;
+
+
+	    //first propagation
+	    FrontPreAdvance(front);
+	    FT_Propagate(front);
+	    g_cartesian.cft_init_cut_cells(HALFTS);
+	    g_cartesian.cft_set_cut_cells(HALFTS);
+	    g_cartesian.cft_merge_polyhs(HALFTS);
+
+	    //second propagation
+	    FrontPreAdvance(front);
+	    FT_Propagate(front);
+	    g_cartesian.cft_init_cut_cells(NEWTS);
+	    g_cartesian.cft_set_cut_cells(NEWTS);
+	    g_cartesian.cft_merge_polyhs(NEWTS);
+
+	    //solve
+	    g_cartesian.cft_solve(2*dt);
+	    g_cartesian.cft_set_face_flux();
+	    //g_cartesian.cft_update_states();
+	    g_cartesian.cft_update_states_new();
+
+	    dt = 2*dt;
+	    front->dt = dt;
+	    //CFT
+
+	    /*
+	    FrontPreAdvance(front);
+	    FT_Propagate(front);
+
+	    g_cartesian.solve(dt);
+	    */
+
+	    FT_AddTimeStepToCounter(front);
+	    ++g_cartesian.step;
+	    g_cartesian.time += dt;
+
+	    //debugdan	FIXME
+	    g_cartesian.cft_check_mass();
+	    //debugdan	FIXME
+				
+	    FT_SetTimeStep(front);
+            dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
+	
+            /* Output section */
+            if (FT_IsSaveTime(front))
+	    {
+            	FT_Save(front,out_name);
+		g_cartesian.printFrontInteriorStates(out_name);
+	    }
+            //if (FT_IsMovieFrameTime(front))
+	    {
+	        g_cartesian.initMovieVariables();
+            	FT_AddMovieFrame(front,out_name,binary);
+		if (g_cartesian.dim == 1)
+		    g_cartesian.printOneDimStates(out_name);
+		else
+		    g_cartesian.printInteriorVtk(out_name);
+	    }
+
+            if (FT_TimeLimitReached(front))
+	    {
+		if (!FT_IsSaveTime(front))
+		{
+            	    FT_Save(front,out_name);
+		    g_cartesian.printFrontInteriorStates(out_name);
+		}
+		if (!FT_IsMovieFrameTime(front))
+		{
+                    g_cartesian.initMovieVariables();
+                    FT_AddMovieFrame(front,out_name,binary);
+		}
+		(void) printf("\ntime = %20.14f   step = %5d   ",
+                                front->time,front->step);
+                (void) printf("next dt = %20.14f\n",front->dt);
+                break;
+	    }
+	    FT_TimeControlFilter(front);
+	    dt = front->dt;
+	    (void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
+                        front->time,front->step,front->dt);
+
+            fflush(stdout);
+
+	    //debugdan	FIXME
+	    if (front->step > 100)
+		exit(0);
+	    //debugdan	FIXME
+        }
+
+	printf("End of cft_driver.\n");
 }
 
 static  void gas_driver(
@@ -245,10 +442,12 @@ static  void gas_driver(
 //	}
 
 	//Dan
+	/*
 	if (true && !RestartRun && g_cartesian.dim == 3)
 	{
 	    g_cartesian.cvol();
 	}
+	*/
 	//Dan
 
 	if (debugging("trace")) printf("Before time loop\n");
@@ -282,6 +481,10 @@ static  void gas_driver(
 	    g_cartesian.time += dt;
 	    assert(g_cartesian.time==front->time);
 	    assert(g_cartesian.step==front->step);
+
+	    //debugdan	FIXME
+	    g_cartesian.ncft_check_mass();
+	    //debugdan	FIXME
 				
             //Next time step determined by maximum speed of previous
             //step, assuming the propagation is hyperbolic and
@@ -296,7 +499,7 @@ static  void gas_driver(
 					CFL*g_cartesian.max_dt);
 	    }
             dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
-	
+
             /* Output section */
 
             if (FT_IsSaveTime(front))
@@ -304,7 +507,7 @@ static  void gas_driver(
             	FT_Save(front,out_name);
 		g_cartesian.printFrontInteriorStates(out_name);
 	    }
-            if (FT_IsMovieFrameTime(front))
+            //if (FT_IsMovieFrameTime(front))
 	    {
 //		if (g_cartesian.dim != 1)
 //		    g_cartesian.print_intfc_extrema(out_name);
@@ -346,13 +549,19 @@ static  void gas_driver(
 	    (void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
                         front->time,front->step,front->dt);
 
+	    //debugdan	FIXME
+	    if (front->step > 100)
+		exit(0);
+	    //debugdan	FIXME
 	    //Dan
+	    /*
 	    if (front->step > 0 && true && !RestartRun && g_cartesian.dim == 3)
 	    {
 		g_cartesian.cvol();
 //		if (front->step > 0)
 //		    exit(0);	//FIXME
 	    }
+	    */
 	    //Dan
 
             fflush(stdout);

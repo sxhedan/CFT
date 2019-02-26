@@ -21,7 +21,7 @@
 
 enum PIC
 {
-	INC = 1,
+	INC,
 	ONCF,
 	OUTC
 };
@@ -31,6 +31,13 @@ enum SCP_DIR
 	UNSET = -1,
 	INW = 1,
 	OUTW
+};
+
+enum TS_LEVEL
+{
+	OLDTS = 1,
+	HALFTS,
+	NEWTS
 };
 
 enum PROB_TYPE {
@@ -51,7 +58,8 @@ enum PROB_TYPE {
 	ONED_BLAST,
 	ONED_SSINE,
 	TWO_FLUID_VST_RM,
-	SOD_OBLIQ
+	SOD_OBLIQ,
+	SOD_3D
 };
 
 enum _EOS_TYPE {
@@ -329,11 +337,6 @@ struct FSWEEP
 	double *gamma;	//Dan
 };
 
-struct _CTRI;
-struct _CFACE;
-struct _CPOLYGON;
-struct _CELL;
-
 struct _CPOINT
 {
 	double crds[3];
@@ -363,7 +366,7 @@ struct _CTRI
 	CEDGE edges[3];
 	double nor[3];
 
-	_CPOLYGON *polyg;
+	struct _CPOLYGON *polyg;
 
 	int num_of_crx;
 
@@ -379,17 +382,16 @@ struct _CPOLYGON
 	CEDGE *edges;
 	CEDGE *undir_edges;
 
-	CPOINT *tmp_crxp;
-//	COMPONENT comp;
-
 	double area;
 	double nor[3];
 	int mark;
 	bool inscp;
+	bool oncf;
 
-//	struct _CPOLYGON *prev;
+	double dens_flux;
+	double mass_flux;
+
 	struct _CPOLYGON *next;
-//	struct _CPOLYGON *neighbors;
 };
 typedef struct _CPOLYGON CPOLYGON;
 
@@ -414,21 +416,36 @@ struct _SETOFCPOLYGS
 	bool incell;
 	bool inpolyh;
 
-	_SETOFCPOLYGS *next;
+	struct _SETOFCPOLYGS *next;
 };
 typedef struct _SETOFCPOLYGS SETOFCPOLYGS;
 
+struct _NBCELL
+{
+	struct _CPOLYGON *face;
+	int inbc[3];
+	struct _NBCELL *next;
+};
+typedef struct _NBCELL NBCELL;
+
 struct _CPOLYHEDRON
 {
+	STATE state;
 	CPOLYGON *faces;
 
 	CBOUNDARY *boundaries;
 
-	_CELL *cell;
+	bool iscell;
+	bool merged;
+	struct _CELL *cell;
+	struct _NBCELL *sorted_nbcs;
+	struct _CPAM *pam;
 
-//	COMPONENT comp;
+	COMPONENT comp;
 	double vol;
 	SCP_DIR scp_dir;
+
+	double mflux;
 
 //	struct _CPOLYHEDRON *prev;
 	struct _CPOLYHEDRON *next;
@@ -446,17 +463,24 @@ struct _CFACE
 	CEDGE *undirected_edges;
 	CEDGE *edges_in_cf;
 	CEDGE *edges_on_ce;
-
-//	SETOFCPOLYGS *cpoc;	//TODO
 };
 typedef struct _CFACE CFACE;
 
+struct _CPAM
+{
+	CPOLYHEDRON *polyh;
+	struct _CELL *targetc;
+	int mdir[3];
+	struct _CPAM *next;
+};
+typedef struct _CPAM CPAM;
+
 struct _CELL
 {
-	int icrds[3];
 	CPOINT pts[8];
 	CEDGE edges[12];
 	CFACE faces[6];
+	int icrds[3];
 	double celll[3], cellu[3];
 
 	int num_of_ctris;
@@ -470,10 +494,34 @@ struct _CELL
 	SETOFCPOLYGS *scpics;	//sets of connected polygons in cell
 
 	CPOLYHEDRON *polyhs;
+	struct _CPAM *pams;		//polyhedrons after merge
+	bool merged;
 
-	double vol[2];
+	struct _CFTCELL *cftcell;
+
+	double vol[2];	//volumes of two comps
+	COMPONENT comp;
 };
 typedef struct _CELL CELL;
+
+struct _CFTCELL
+{
+	//new time step
+	struct _CPAM *pams;
+
+	int indices[125];
+	int icount;
+	double vol_old, vol_new;
+	double mass_old, mass_new;
+	double mflux;
+
+	//half time step
+	struct _CPAM *halfts_pams;
+
+	//old time step
+	struct _CPAM *oldts_pams;
+};
+typedef struct _CFTCELL CFTCELL;
 
 class G_CARTESIAN{
 	Front *front;
@@ -512,15 +560,6 @@ public:
 	void checkIntfc(char*);
 	void record_intfc_extrema();
 	void print_intfc_extrema(char*);
-	void cvol();	//Dan
-	void find_tri_cub_crx(TRI*,CELL*);	//Dan
-	void init_cell(CELL*);	//Dan
-	void init_cells();	//Dan
-	void init_grid_cells();	//Dan
-	void init_tris_in_cells();	//Dan
-	void set_cell_polygons();	//Dan
-	void construct_cell_polyhedrons();	//Dan
-	void cut_cell_vol();	//Dan
 	double height_at_fraction(double,double,double,int,COMPONENT);
 	void accumulate_fractions_in_layer(double,double*,COMPONENT);
 	double find_particular_fluid_cell_volume(double*,double*,COMPONENT);
@@ -535,6 +574,70 @@ public:
 	// main step function
 	void solve(double dt);
 
+	//conservative front tracking
+	void cft_init_cut_cells(TS_LEVEL);
+	void cft_set_cut_cells(TS_LEVEL);
+	void cft_merge_polyhs(TS_LEVEL);
+	//void cft_init_grid_cells();
+	void cft_init_tris_in_cells();
+	void cft_set_cell_polygons();
+	void cft_construct_cell_polyhedrons();
+	void cft_set_polyhs_comps();
+	void cft_set_cut_cell_vol();
+	void cft_set_init_polyh_states();
+	void cft_set_face_flux();
+	void cft_update_states();
+	void cft_update_states_new();
+	void cft_update_polyhs_states();
+	void cft_update_cells_states();
+	void cft_init_cftcell(CELL*);
+	void cft_set_indices_cftcell(CELL*);
+	void cft_set_maps_for_cftcell(CFTCELL*);
+	void cft_set_vols_for_cftcell(CFTCELL*);
+	void cft_set_mass_at_oldt_cftcell(CFTCELL*);
+	void cft_set_flux_at_halft_cftcell(CFTCELL*);
+	void cft_add_pam(CPOLYHEDRON*,CPAM**);
+	bool cft_effective_index(int,CELL*);
+	void cft_add_cftcell_index(CFTCELL*,int);
+	void cft_solve(double);
+	void cft_computeAdvection();
+	void cft_solveRungeKutta(int);
+	void cft_reset_cflux();
+	void cft_computeMeshFlux(SWEEP,FSWEEP*,double);
+	void cft_addFluxInDirection(int,SWEEP*,FSWEEP*,double);
+	void cft_addFluxInDirection3d(int,SWEEP*,FSWEEP*,double);
+	void cft_ng_addFluxInDirection3d(int,SWEEP*,FSWEEP*,double);
+	void cft_WENO_flux(POINTER,SWEEP*,FSWEEP*,FSWEEP*,int);
+	void cft_allocDirVstFluxCflux(SWEEP*,FSWEEP*,FSWEEP*);
+	void cft_allocMeshCflux(FSWEEP*);
+	void cft_newts_cut_cells();
+	//void cft_reset_halft_and_new_cells();
+	void cft_reset_cell(CELL*);
+	void cft_clean_edges(CELL*);
+	void cft_clean_faces(CELL*);
+	void cft_free_ctri_list(CTRI**);
+	void cft_free_polyg_list(CPOLYGON**);
+	void cft_free_p_list(CPOINT**);
+	void cft_free_edge_list(CEDGE**);
+	void cft_free_scp_list(SETOFCPOLYGS**);
+	void cft_free_bdry_list(CBOUNDARY**);
+	void cft_free_polyh_list(CPOLYHEDRON**);
+	void cft_free_pam_list(CPAM**);
+	void cft_free_ctri(CTRI**);
+	void cft_free_polyg(CPOLYGON**);
+	void cft_free_edge(CEDGE**);
+	void cft_free_scp(SETOFCPOLYGS**);
+	void cft_free_bdry(CBOUNDARY**);
+	void cft_free_polyh(CPOLYHEDRON**);
+	void cft_free_pam(CPAM**);
+	void cft_free_cells(TS_LEVEL);
+	void cft_update_cell_states(CELL*);
+	void cft_appendGhostBuffer(SWEEP*,SWEEP*,int,int*,int,int);
+	void cft_setMeshVst(SWEEP*);
+	void cft_check_mass();
+	void ncft_check_mass();
+	void cft_set_comp();
+
 	// constructor
 	~G_CARTESIAN();
 
@@ -545,8 +648,12 @@ private:
 	COMPONENT *top_comp;
 	EQN_PARAMS *eqn_params;
 	FIELD field;
-	int num_cells;	//cft	Dan
-	CELL *cells;	//cft	Dan
+
+	//CFT	Dan
+	int num_cells;
+	CELL *cells;
+	CELL *cells_old, *cells_halft, *cells_new;
+	FSWEEP cflux[2][3];
 
 	int top_gmax[MAXD];
 	int lbuf[MAXD],ubuf[MAXD];
@@ -656,6 +763,7 @@ private:
 	void initMTFusionIntfc(LEVEL_FUNC_PACK*,char*);
 	void initRiemannProb(LEVEL_FUNC_PACK*,char*);
 	void initSodObliqProb(LEVEL_FUNC_PACK*,char*);
+	void initSod3DProb(LEVEL_FUNC_PACK*,char*);
 	void initRayleiTaylorStates();
 	void initRichtmyerMeshkovStates();
 	void initVSTRMStates();
@@ -667,6 +775,7 @@ private:
 	void initBlastWaveStates();
 	void initShockSineWaveStates();
 	void setSodObliqParams(char*);
+	void setSod3DParams(char*);
 	void setRayleiTaylorParams(char*);
 	void setRichtmyerMeshkovParams(char*);
 	void setVSTRMParams(char*);

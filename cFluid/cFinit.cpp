@@ -3,6 +3,7 @@
 static double intfcPertHeight(FOURIER_POLY*,double*);
 static void getRTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
+static void getTESTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getBubbleState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getAmbientState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getBlastState(STATE*,EQN_PARAMS*,double*,COMPONENT);
@@ -54,6 +55,36 @@ void G_CARTESIAN::initSodObliqProb(
         level_func_pack->wave_type = FIRST_PHYSICS_WAVE_TYPE;
         fclose(infile);
 }       /* end initSodObliqProb */
+
+void G_CARTESIAN::initSod3DProb(
+        LEVEL_FUNC_PACK *level_func_pack,
+        char *inname)
+{
+        static LEGENDRE_POLY *level_func_params;
+        EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+        FILE *infile = fopen(inname,"r");
+        int i;
+        char string[100];
+        static double L[3], U[3];
+
+        FT_ScalarMemoryAlloc((POINTER*)&level_func_params,
+                                        sizeof(LEGENDRE_POLY));
+
+        ft_assign(L, front->rect_grid->L, 3*DOUBLE);
+        ft_assign(U, front->rect_grid->U, 3*DOUBLE);
+
+        level_func_params->L = L;
+        level_func_params->U = U;
+
+        level_func_pack->neg_component = GAS_COMP1;
+        level_func_pack->pos_component = GAS_COMP2;
+
+        eqn_params->level_func_params = (POINTER)level_func_params;
+        level_func_pack->func_params = (POINTER)level_func_params;
+        //level_func_pack->func = level_linear2d_func;	//FIXME
+        level_func_pack->wave_type = FIRST_PHYSICS_WAVE_TYPE;
+        fclose(infile);
+}       /* end initSod3DProb */
 
 void G_CARTESIAN::setSodObliqParams(char *inname)
 {
@@ -184,6 +215,136 @@ void G_CARTESIAN::setSodObliqParams(char *inname)
 
         fclose(infile);
 }       /* end setSodObliqParams */
+
+void G_CARTESIAN::setSod3DParams(char *inname)
+{
+        int i;
+        FILE *infile = fopen(inname,"r");
+        EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+        double          pinf,einf,gamma,et,mgamma[2],M[2],R;
+        char s[100], str[256];
+
+        CursorAfterString(infile,"Type yes to have MULTI_COMP_NON_REACTIVE:");
+        fscanf(infile,"%s",s);
+        (void) printf("%s\n",s);
+        if (s[0] == 'y' || s[0] == 'Y')
+            eqn_params->multi_comp_non_reactive = YES;
+        else
+            eqn_params->multi_comp_non_reactive = NO;
+
+        CursorAfterString(infile,"Enter the number of components:");
+        fscanf(infile,"%d",&eqn_params->n_comps);
+        (void) printf("%d\n",eqn_params->n_comps);
+        (eqn_params->eos[GAS_COMP1]).n_comps = eqn_params->n_comps;
+        (eqn_params->eos[GAS_COMP2]).n_comps = eqn_params->n_comps;
+
+        (eqn_params->eos[GAS_COMP1]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 2:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP1]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP1]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP1]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP1]).eos_type != ERROR_EOSTYPE);
+
+        if ((eqn_params->eos[GAS_COMP1]).eos_type == MULTI_COMP_POLYTROPIC)
+        {
+            sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:", GAS_COMP1);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+            (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+            (eqn_params->eos[GAS_COMP1]).mgamma[0] = mgamma[0];
+            (eqn_params->eos[GAS_COMP1]).M[0] = M[0];
+            (eqn_params->eos[GAS_COMP1]).mgamma[1] = mgamma[1];
+            (eqn_params->eos[GAS_COMP1]).M[1] = M[1];
+            (eqn_params->eos[GAS_COMP1]).R = R;
+        }
+        else if ((eqn_params->eos[GAS_COMP1]).eos_type == POLYTROPIC ||
+                 (eqn_params->eos[GAS_COMP1]).eos_type == STIFFENED_POLYTROPIC)
+        {
+	    sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:",
+	    		 GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+	    (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+	    (eqn_params->eos[GAS_COMP1]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP1]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP1]).einf = einf;
+	    (eqn_params->eos[GAS_COMP1]).et = et;
+	}
+        else
+        {
+            printf("Error EOS type!\n");
+            clean_up(ERROR);
+        }
+
+        (eqn_params->eos[GAS_COMP2]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 3:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP2]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP2]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP2]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP2]).eos_type != ERROR_EOSTYPE);
+
+        if ((eqn_params->eos[GAS_COMP2]).eos_type == MULTI_COMP_POLYTROPIC)
+        {
+            sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",GAS_COMP2);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+            (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+            (eqn_params->eos[GAS_COMP2]).mgamma[0] = mgamma[0];
+            (eqn_params->eos[GAS_COMP2]).M[0] = M[0];
+            (eqn_params->eos[GAS_COMP2]).mgamma[1] = mgamma[1];
+            (eqn_params->eos[GAS_COMP2]).M[1] = M[1];
+            (eqn_params->eos[GAS_COMP2]).R = R;
+        }
+        else if ((eqn_params->eos[GAS_COMP2]).eos_type == POLYTROPIC ||
+                 (eqn_params->eos[GAS_COMP2]).eos_type == STIFFENED_POLYTROPIC)
+        {
+            sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:",
+                         GAS_COMP2);
+            CursorAfterString(infile,str);
+            fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+            (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+            (eqn_params->eos[GAS_COMP2]).gamma = gamma;
+            (eqn_params->eos[GAS_COMP2]).pinf = pinf;
+            (eqn_params->eos[GAS_COMP2]).einf = einf;
+            (eqn_params->eos[GAS_COMP2]).et = et;
+	}
+        else
+        {
+            printf("Error EOS type!\n");
+            clean_up(ERROR);
+        }
+
+        CursorAfterString(infile,"Enter rho, P, vx, vy of pos dir fluid:");
+        fscanf(infile,"%lf %lf %lf %lf",&eqn_params->rho2,&eqn_params->p2,
+                                        &eqn_params->v2[0],&eqn_params->v2[1]);
+        (void) printf("%f %f %f %f\n",eqn_params->rho2,eqn_params->p2,
+                                        eqn_params->v2[0],eqn_params->v2[1]);
+        CursorAfterString(infile,"Enter rho, P, vx, vy of neg dir fluid:");
+        fscanf(infile,"%lf %lf %lf %lf",&eqn_params->rho1,&eqn_params->p1,
+                                        &eqn_params->v1[0],&eqn_params->v1[1]);
+        (void) printf("%f %f %f %f\n",eqn_params->rho1,eqn_params->p1,
+                                        eqn_params->v1[0],eqn_params->v1[1]);
+
+        CursorAfterString(infile,"Type yes to track the interface:");
+        fscanf(infile,"%s",s);
+        (void) printf("%s\n",s);
+        if (s[0] == 'y' || s[0] == 'Y')
+            eqn_params->tracked = YES;
+        else
+            eqn_params->tracked = NO;
+
+        fclose(infile);
+}       /* end setSod3DParams */
 
 void G_CARTESIAN::initSinePertIntfc(
 	LEVEL_FUNC_PACK *level_func_pack,
@@ -1246,6 +1407,8 @@ void G_CARTESIAN::initRichtmyerMeshkovStates()
 		comp = top_comp[index];
 		getRectangleCenter(index,coords);
 	    	getRMState(&state,eqn_params,coords,comp);
+		//set test state
+	    	//getTESTState(&state,eqn_params,coords,comp);
 		dens[index] = state.dens;
                 if(eqn_params->multi_comp_non_reactive == YES)
                 {
@@ -1429,6 +1592,123 @@ static void getRTState(
 	}
 }	/* end getRTState */
 
+static void getTESTState(
+	STATE *state,
+	EQN_PARAMS *eqn_params,
+	double *coords,
+	COMPONENT comp)
+{
+	FOURIER_POLY *wave_params;
+	EOS_PARAMS	*eos;
+	double rho1 = eqn_params->rho1;
+	double rho2 = eqn_params->rho2;
+	double p0 = eqn_params->p0;
+	double shock_position = eqn_params->shock_position;
+	double Mach_number = eqn_params->Mach_number;
+	double shock_speed;
+	double csp = eqn_params->contact_vel;
+	int shock_dir = eqn_params->shock_dir;
+	int i,dim;
+ 
+	if (debugging("rm_state"))
+	    printf("Entering getRMState(), coords = %f %f\n",
+				coords[0],coords[1]);
+	wave_params = (FOURIER_POLY*)eqn_params->level_func_params;
+	dim = wave_params->dim;
+
+	/* Constant density */
+	for (i = 0; i < dim; ++i)
+	    state->vel[i] = state->momn[i] = 0.0;
+	state->dim = dim;
+	eos = &(eqn_params->eos[comp]);
+	state->eos = eos;
+
+//	printf("In getRMState(), coords = (%lf, %lf, %lf), comp = %d.\n",
+//		coords[0], coords[1], coords[2], comp);
+	
+	switch (comp)
+	{
+	case GAS_COMP1:
+	    state->dens = rho1;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = state->dens;
+                    state->pdens[1] = 0.0;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case GAS_COMP2:
+	    state->dens = rho2;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = 0.0;
+                    state->pdens[1] = state->dens;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case EXT_COMP:
+	    state->dens = 0.0;
+	    state->pres = 0.0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                state->pdens[0] = 0.0;
+                state->pdens[1] = 0.0;
+            }
+	    state->engy = 0.0;
+	    return;	//Dan	FIXME
+//	    break;
+	default:
+	    printf("ERROR: Unknown component %d in getRMState()!\n",comp);
+	    clean_up(ERROR);
+	}
+
+	//initial diffusion layer
+	/*
+	double idl = eqn_params->thickness_idl;
+	double z0 = wave_params->z0;
+	double z_intfc_pert = level_wave_func(wave_params,coords);
+	if (eqn_params->multi_comp_non_reactive == YES)
+	{
+	    state->pdens[0] = 0.5*rho1 + 0.5*(0.0-rho1)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
+	    state->pdens[1] = 0.5*rho2 + 0.5*(rho2-0.0)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
+	}
+	*/
+	//state->dens = 0.5*(rho1+rho2) + 0.5*(rho1-rho2)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
+
+	if (debugging("rm_state"))
+	{
+	    printf("Before calling behind_state()\n");
+	    printf("state = %f %f %f\n",state->dens,state->pres,
+					state->vel[0]);
+	}
+	/*
+	if ((shock_dir ==  1 && coords[dim-1] < shock_position) ||
+	    (shock_dir == -1 && coords[dim-1] > shock_position))
+	{
+	    behind_state(SHOCK_MACH_NUMBER,Mach_number,
+			&shock_speed,shock_dir,state,state);	
+	    state->engy = EosEnergy(state);
+	    if (debugging("rm_state"))
+	    {
+	    	printf("After calling behind_state()\n");
+	    	printf("state = %f %f %f\n",state->dens,state->pres,
+			state->vel[0]);
+	    }
+	}
+	*/
+	//state->vel[dim-1] -= csp;
+	state->vel[dim-1] = csp;
+	state->momn[dim-1] = state->vel[dim-1]*state->dens;
+	state->engy = EosEnergy(state);
+
+}	/* end getTESTState */
+
 static void getRMState(
 	STATE *state,
 	EQN_PARAMS *eqn_params,
@@ -1506,6 +1786,7 @@ static void getRMState(
 	}
 
 	//initial diffusion layer
+	/*
 	double idl = eqn_params->thickness_idl;
 	double z0 = wave_params->z0;
 	double z_intfc_pert = level_wave_func(wave_params,coords);
@@ -1514,6 +1795,7 @@ static void getRMState(
 	    state->pdens[0] = 0.5*rho1 + 0.5*(0.0-rho1)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 	    state->pdens[1] = 0.5*rho2 + 0.5*(rho2-0.0)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 	}
+	*/
 	//state->dens = 0.5*(rho1+rho2) + 0.5*(rho1-rho2)*erf((coords[dim-1]-z_intfc_pert)/idl*4);
 
 	if (debugging("rm_state"))

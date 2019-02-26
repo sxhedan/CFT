@@ -265,7 +265,7 @@ else
                     }
 
                     flag_buffer_tris(i, j, intfc);
-                    printf("#cut_ref  buf_intfc\n");
+                    //printf("#cut_ref  buf_intfc\n");	//commented by Dan
                     flag_buffer_tris(i, j, buf_intfc);
 
                 }
