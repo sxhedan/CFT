@@ -359,6 +359,7 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	CPOLYHEDRON *polyh, *nb_polyh;
 	CPOLYGON *max_face;
 	NBCELL *nbc;
+	bool merged, unmerged;
 
 	switch (ts)
 	{
@@ -393,6 +394,7 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	}
 
 	//first merge
+	unmerged = false;
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
@@ -419,7 +421,6 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	    polyh = c->polyhs;
 	    while (polyh)
 	    {
-		//new algorithm
 		if (polyh->comp == c->comp)
 		{
 		    merge_polyh_to_cell(polyh,c);
@@ -427,6 +428,7 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 		}
 		else
 		{
+		    merged = false;
 		    set_polyh_nb_cells(polyh);
 		    nbc = polyh->sorted_nbcs;
 		    while (nbc)
@@ -437,53 +439,85 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 			{
 			    merge_polyh_to_cell(polyh,nb_cell);
 			    nb_cell->merged = TRUE;
+			    merged = true;
 			    break;
 			}
 			nbc = nbc->next;
 		    }
+		    if (!merged)
+			unmerged = true;
 		}
 		polyh = polyh->next;
-
-
-		//old algorithm
-		/*
-		CELL *nbc;
-		int nb_icrds[3];
-		double cvol = top_h[0]*top_h[1]*top_h[2];
-		//check vol, if vol < (1/2 * cell volume), polyh needs to be merged
-		if (polyh->vol < 0.5*cvol)
-		{
-		    //find face with max area
-		    find_polyh_face_oncf_with_max_area(polyh,&max_face);
-		    //find its neighbor cell
-		    find_nb_cell_with_face(c,max_face,nb_icrds);
-		    index = d_index3d(nb_icrds[0],nb_icrds[1],nb_icrds[2],top_gmax);
-		    nbc = &(cells[index]);
-		    //merge
-		    merge_polyh_to_cell(polyh,nbc);
-		    for (int ii = 0; ii < 3; ii++)
-			nbc->pams->mdir[ii] = nb_icrds[ii] - c->icrds[ii];
-		    nbc->merged = TRUE;
-		}
-		else
-		{
-		    merge_polyh_to_cell(polyh,c);
-		    c->merged = TRUE;
-		}
-		polyh = polyh->next;
-		*/
 	    }
 	}
 
 	//second merge
+	int MAX_MERGE = 3;
+	int count = 0;
+	while (unmerged)
+	{
+	    unmerged = false;
+
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		c = &(cells[index]);
+
+		polyh = c->polyhs;
+		while (polyh)
+		{
+		    if (polyh->merged == true)
+		    {
+			polyh = polyh->next;
+			continue;
+		    }
+		    
+		    merged = false;
+		    nbc = polyh->sorted_nbcs;
+		    while (nbc)
+		    {
+			index = d_index3d(nbc->inbc[0],nbc->inbc[1],nbc->inbc[2],top_gmax);
+			nb_cell = &(cells[index]);
+			nb_polyh = nb_cell->polyhs;
+			while (nb_polyh)
+			{
+			    if (nb_polyh->comp == polyh->comp)
+			    {
+				if (face_in_polyh(nbc->face,nb_polyh))
+				{
+				    if (nb_polyh->merged == true)
+				    {
+					merge_polyh_to_cell(polyh,nb_polyh->pam->targetc);
+					merged = true;
+					break;
+				    }
+				}
+			    }
+			    nb_polyh = nb_polyh->next;
+			}
+			nbc = nbc->next;
+		    }
+		    if (!merged)
+			unmerged = true;
+
+		    polyh = polyh->next;
+		}
+	    }
+
+	    count++;
+	    if (count > MAX_MERGE)
+		break;
+	}
+
+	/*
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
-
-	    //is it necessary to check c->cut???	TODO
 
 	    polyh = c->polyhs;
 	    while (polyh)
@@ -518,31 +552,11 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 		    }
 		    nbc = nbc->next;
 		}
-		
-
-		//debugdan	FIXME
-		/*
-		printf("%d %d %d needs second merge.\n", i, j, k);
-		printf("polyh comp = %d, vol = %e.\n", polyh->comp, polyh->vol);
-		printf("cell comp = %d.\n", c->comp);
-		printf("Neighbors:\n");
-		for (int kk = k-1; kk <= k+1; kk++)
-		for (int jj = j-1; jj <= j+1; jj++)
-		for (int ii = i-1; ii <= i+1; ii++)
-		{
-		    if (ii == i && jj == j && kk == k)
-			continue;
-		    index = d_index3d(ii,jj,kk,top_gmax);
-		    CELL *cc = &(cells[index]);
-		    printf("%d %d %d cell comp = %d, vol[0] = %e, vol[1] = %e.\n",
-			    ii, jj, kk, cc->comp, cc->vol[0], cc->vol[1]);
-		}
-		exit(0);
-		*/
 
 		polyh = polyh->next;
 	    }
 	}
+	*/
 
 	//check if there's any polyh unmerged	FIXME
 	for (k = imin[2]; k <= imax[2]; k++)

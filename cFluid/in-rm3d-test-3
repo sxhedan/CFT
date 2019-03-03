@@ -10,7 +10,7 @@ Lower boundary in 2-th dimension: DIRICHLET_BOUNDARY
 Upper boundary in 2-th dimension: REFLECTION_BOUNDARY
 
 Max time: 15
-Max step: 50
+Max step: 100
 Print interval: 2
 Movie frame interval: 0.05
 CFL factor: 0.45
@@ -31,10 +31,13 @@ Point propagator order can be (1,2,4)
 Enter order of point propagator: 2
 
 Enter mean position of fluid interface: 2.01
-Enter number of sine modes: 1
+Enter number of sine modes: 2
 Enter frequency of mode 1: 1 0
-Enter amplitude of mode 1: 0.1
+Enter amplitude of mode 1: 0.05
 Enter phase of mode 1: 270
+Enter frequency of mode 2: 0 1
+Enter amplitude of mode 2: 0.05
+Enter phase of mode 2: 270
 
 Type yes to have MULTI_COMP_NON_REACTIVE: yes
 Enter the number of components: 2

@@ -378,11 +378,6 @@ static  void cft_driver(
                         front->time,front->step,front->dt);
 
             fflush(stdout);
-
-	    //debugdan	FIXME
-	    if (front->step > 100)
-		exit(0);
-	    //debugdan	FIXME
         }
 
 	printf("End of cft_driver.\n");
@@ -549,10 +544,6 @@ static  void gas_driver(
 	    (void) printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
                         front->time,front->step,front->dt);
 
-	    //debugdan	FIXME
-	    if (front->step > 100)
-		exit(0);
-	    //debugdan	FIXME
 	    //Dan
 	    /*
 	    if (front->step > 0 && true && !RestartRun && g_cartesian.dim == 3)
