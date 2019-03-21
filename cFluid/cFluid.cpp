@@ -345,7 +345,7 @@ static  void cft_driver(
             	FT_Save(front,out_name);
 		g_cartesian.printFrontInteriorStates(out_name);
 	    }
-            //if (FT_IsMovieFrameTime(front))
+            if (FT_IsMovieFrameTime(front))
 	    {
 	        g_cartesian.initMovieVariables();
             	FT_AddMovieFrame(front,out_name,binary);

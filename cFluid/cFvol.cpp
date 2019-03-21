@@ -9,6 +9,7 @@ void tri_to_ctri(TRI*,CTRI*);
 void copy_pt_to_cpt(POINT*,CPOINT*);
 void copy_cpt_to_cpt(CPOINT*,CPOINT*);
 void insert_tri_to_ctri_list(TRI*,CELL*);
+void pret_tris(CELL*);
 void set_polygons_in_cell(CELL*);
 void init_cf_pts_and_edges(CFACE *cf);
 bool set_nor(CPOINT*,CPOINT*,CPOINT*,double*);
@@ -1199,7 +1200,62 @@ void G_CARTESIAN::cft_set_cell_polygons()
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
 
-	    set_polygons_in_cell(c);;
+	    pret_tris(c);
+	    set_polygons_in_cell(c);
+	}
+
+	return;
+}
+
+void pret_tris(CELL *c)
+{
+	int i, j, k;
+	int pret[3];
+	CTRI *ctri1, *ctri2;
+	CPOINT *p1, *p2, p3;
+	double tol = 1e-8;
+
+	for (ctri1 = c->ctris; ctri1; ctri1 = ctri1->next)
+	{
+	    for (i = 0; i < 3; i++)
+	    {
+		p1 = &(ctri1->pts[i]);
+		p3 = ctri1->pts[i];
+		for (j = 0; j < 3; j++)
+		{
+		    pret[j] = 0;
+		    if (fabs(p1->crds[j] - c->celll[j]) < tol)
+		    {
+			p1->crds[j] = c->celll[j];
+			pret[j] = -1;
+		    }
+		    else if (fabs(p1->crds[j] - c->cellu[j]) < tol)
+		    {
+			p1->crds[j] = c->cellu[j];
+			pret[j] = 1;
+		    }
+		}
+
+		for (ctri2 = c->ctris; ctri2; ctri2 = ctri2->next)
+		{
+		    if (ctri2 == ctri1)
+			continue;
+		    for (j = 0; j < 3; j++)
+		    {
+			p2 = &(ctri2->pts[j]);
+			if (same_cpt(p2, &p3))
+			{
+			    for (k = 0; k < 3; k++)
+			    {
+				if (pret[k] == -1)
+				    p2->crds[k] = c->celll[k];
+				else if (pret[k] == 1)
+				    p2->crds[k] = c->cellu[k];
+			    }
+			}
+		    }
+		}
+	    }
 	}
 
 	return;

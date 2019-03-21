@@ -460,6 +460,24 @@ void G_CARTESIAN::cft_set_face_flux()
 	COMPONENT comp;
 	bool debugcft = false;
 
+	//debugdan	FIXME
+	double *dens = field.dens;
+	double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+	//vel at (4, 4, 21)
+	/*
+	i = 4;
+	j = 4;
+	k = 21;
+	index = d_index3d(i,j,k,top_gmax);
+	printf("In cft_set_face_flux().\n");
+	printf("vel at (%d, %d, %d): (%e, %e, %e).\n", 
+		i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+	*/
+	//debugdan	FIXME
+
 	cells = cells_halft;
 	for (i = 0; i < 3; i++)
 	    cflux_gmax[i] = top_gmax[i]+1;
@@ -475,7 +493,7 @@ void G_CARTESIAN::cft_set_face_flux()
 
 	    //debugdan	FIXME
 	    /*
-	    if (i == 4 && j == 4)
+	    if (i == 4 && j == 4 && (k == 21 || k == 22))
 		debugcft = true;
 	    else
 		debugcft = false;
@@ -521,9 +539,6 @@ void G_CARTESIAN::cft_set_face_flux()
 		    printf("Polyh:\n");
 		if (polyh->iscell)
 		{
-		    //do we need to reset flux?	TODO
-		    //set flux for polyh
-		    //polyh->mflux = 0;
 		    for (dir = 0; dir < 3; dir++)
 		    {
 			for (side = 0; side < 2; side++)
@@ -545,11 +560,13 @@ void G_CARTESIAN::cft_set_face_flux()
 			    polyh->mflux += sign*cflux[ic][dir].dens_flux[indexx];
 			    //debugdan	FIXME
 			    if (debugcft)
+			    {
 				printf("%d %d %d: dir = %d, side = %d, "
 					"dens_flux[%d] = %e, mflux = %e.\n",
 					i, j, k, dir, side, indexx, 
 					cflux[ic][dir].dens_flux[indexx], 
 					polyh->mflux);
+			    }
 			}
 		    }
 		    polyh->mflux *= polyh->vol;
@@ -558,7 +575,7 @@ void G_CARTESIAN::cft_set_face_flux()
 		{
 		    if (debugcft)
 		    {
-			printf("polyh is not a cell.\n");
+			printf("polyh is not a cell. vol = %e\n", polyh->vol);
 		    }
 		    face = polyh->faces;
 		    while (face)
@@ -599,10 +616,10 @@ void G_CARTESIAN::cft_set_face_flux()
 			    //debugdan	FIXME
 			    if (debugcft)
 			    {
-				printf("%d %d %d: comp = %d, cflux[%d][%d] = %e, mflux = %e.\n",
+				printf("%d %d %d: comp = %d, cflux[%d][%d] = %e, side = %d, mflux = %e.\n",
 					i, j, k, polyh->comp, ic, dir, 
 					cflux[ic][dir].dens_flux[indexx],
-					polyh->mflux);
+					side, polyh->mflux);
 			    }
 			    /*
 			    if (i == 4 && j == 4 && k == 21 && polyh->comp ==2)
@@ -635,7 +652,7 @@ void set_dir_and_side(
 	int i;
 	double min_crds[3], max_crds[3];
 	CPOINT *p;
-	double tol = 1e-12;
+	double tol = 1e-10;
 
 	p = face->vertices;
 	for (i = 0; i < 3; i++)
@@ -663,6 +680,11 @@ void set_dir_and_side(
 		*dir = i;
 		break;
 	    }
+	}
+	if (i == 3)
+	{
+	    printf("ERROR in set_dir_and_side().\n");
+	    clean_up(ERROR);
 	}
 
 	if (fabs(min_crds[i]-c->celll[i]) < tol)
@@ -745,6 +767,8 @@ void G_CARTESIAN::cft_update_states_new()
 	//update cells' states
 	cft_update_cells_states();
 
+	copyMeshStates();	//for buffer zone
+
 	//printf("End of cft_update_states_new().\n");
 	//exit(0);
 }
@@ -761,6 +785,7 @@ void G_CARTESIAN::cft_update_cells_states()
 	STATE state;
 	CELL *c;
 	CPOLYHEDRON *polyh;
+	bool debugcucs = false;
 
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
@@ -771,6 +796,21 @@ void G_CARTESIAN::cft_update_cells_states()
 
 	    if (c->merged == false)
 		continue;
+
+	    //debugdan	FIXME
+	    /*
+	    if (i == 4 && j == 4 && k == 21)
+		debugcucs = true;
+	    else
+		debugcucs = false;
+	    if (debugcucs)
+	    {
+		printf("In cft_update_cells_states(), before update:\n");
+		printf("vel at (%d, %d, %d): (%e, %e, %e).\n",
+			i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+	    }
+	    */
+	    //debugdan	FIXME
 
 	    state.dens = 0.0;
 	    for (int ii = 0; ii < 2; ii++)
@@ -804,6 +844,14 @@ void G_CARTESIAN::cft_update_cells_states()
 	    for (int ii = 0; ii < 3; ii++)
 		momn[ii][index] = state.momn[ii];
 
+	    //debugdan	FIXME
+	    if (debugcucs)
+	    {
+		printf("In cft_update_cells_states(), after update:\n");
+		printf("vel at (%d, %d, %d): (%e, %e, %e).\n",
+			i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+	    }
+	    //debugdan	FIXME
 	}
 
 	return;

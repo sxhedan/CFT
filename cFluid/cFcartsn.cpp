@@ -645,6 +645,7 @@ void G_CARTESIAN::cft_computeAdvection(void)
 	 default:
 	      order = -1;
 	 }
+	order = 1;	//for CFT. FIXME???
 	cft_solveRungeKutta(order);	//Dan
    }
 }	/* end cft_computeAdvection */
@@ -2052,6 +2053,8 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    /*
 		    if (j == 4 && k == 20 && seg_min == 4)
 		    {
+			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
+			
 			for (i = seg_min; i <= seg_max; i++)
 			{
 			    index = d_index3d(i,j,k,cflux_gmax);
@@ -2062,8 +2065,22 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			index = d_index3d(i,j,k,cflux_gmax);
 			printf("i = %d, index = %d, cvflux = %e.\n",
 				i, index, cvflux.dens_flux[i-4+nrad]);
+			for (i = seg_min; i < seg_max+1; i++)
+			{
+			    printf("momn flux %d = (%e, %e, %e).\n", 
+				    i, cvflux.momn_flux[0][i-4+nrad], cvflux.momn_flux[1][i-4+nrad], cvflux.momn_flux[2][i-4+nrad]);
+			}
+			
+			for (i = 0; i <= n+2*nrad-1; i++)
+			{
+			    printf("stencil %d: %e, (%e, %e, %e).\n", 
+				    i, vst.dens[i], 
+				    vst.momn[0][i], vst.momn[1][i], vst.momn[2][i]);
+			}
 		    }
 		    */
+		    //debugdan	FIXME
+
 		    //For CFT.	Dan
 		    n = 0;
 		    for (i = seg_min; i <= seg_max+1; i++)
@@ -2244,6 +2261,21 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 				j, index, cvflux.dens_flux[j-4+nrad]);
 		    }
 		    */
+		    //debugdan	FIXME
+		    /*
+		    if (i == 4 && k == 20 && seg_min == 4)
+		    {
+			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
+			for (j = 0; j <= n+2*nrad-1; j++)
+			{
+			    printf("stencil %d: %e, (%e, %e, %e).\n", 
+				    j, vst.dens[j], 
+				    vst.momn[2][j], vst.momn[0][j], vst.momn[1][j]);
+			}
+		    }
+		    */
+		    //debugdan	FIXME
+
 		    //For CFT.	Dan
 		    n = 0;
 		    for (j = seg_min; j <= seg_max+1; j++)
@@ -2455,6 +2487,21 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 				d_index3d(4,4,21,cflux_gmax),cvflux.dens_flux[21-1+3]);
 		    }
 		    */
+		    //debugdan	FIXME
+		    /*
+		    if (i == 4 && j == 4 && seg_min == 1)
+		    {
+			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
+			for (k = 0; k <= n+2*nrad-1; k++)
+			{
+			    printf("stencil %d: %e, (%e, %e, %e).\n", 
+				    k, vst.dens[k], 
+				    vst.momn[1][k], vst.momn[2][k], vst.momn[0][k]);
+			}
+		    }
+		    */
+		    //debugdan	FIXME
+
 		    //For CFT.	Dan
 		    n = 0;
 		    for (k = seg_min; k <= seg_max+1; k++)
