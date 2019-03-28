@@ -293,11 +293,16 @@ static  void cft_driver(
 	    //new cells to old cells
 	    g_cartesian.cft_newts_cut_cells();
 
+	    //debugdan	FIXME
+	    //g_cartesian.cft_check_mass_oldts();
+	    //debugdan	FIXME
+
 	    dt = 0.5*dt;
 	    front->dt = dt;
 
 
 	    //first propagation
+	    //printf("First propagate.\n");
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
 	    g_cartesian.cft_init_cut_cells(HALFTS);
@@ -305,6 +310,7 @@ static  void cft_driver(
 	    g_cartesian.cft_merge_polyhs(HALFTS);
 
 	    //second propagation
+	    //printf("Second propagate.\n");
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
 	    g_cartesian.cft_init_cut_cells(NEWTS);
@@ -314,7 +320,6 @@ static  void cft_driver(
 	    //solve
 	    g_cartesian.cft_solve(2*dt);
 	    g_cartesian.cft_set_face_flux();
-	    //g_cartesian.cft_update_states();
 	    g_cartesian.cft_update_states_new();
 
 	    dt = 2*dt;

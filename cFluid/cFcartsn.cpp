@@ -448,6 +448,7 @@ void G_CARTESIAN::setInitialIntfc(
 	{
 	case TWO_FLUID_RT:
 	case TWO_FLUID_RM:
+	case CFT_TEST:
 	    initSinePertIntfc(level_func_pack,inname);
 	    break;
 	case TWO_FLUID_VST_RM:
@@ -495,6 +496,7 @@ void G_CARTESIAN::setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic
 	    setRayleiTaylorParams(inname);
 	    break;
 	case TWO_FLUID_RM:
+	case CFT_TEST:
 	    setRichtmyerMeshkovParams(inname);
 	    break;
 	case TWO_FLUID_VST_RM:
@@ -567,6 +569,9 @@ void G_CARTESIAN::setInitialStates()
 	    break;
 	case ONED_SSINE:
 	    initShockSineWaveStates();
+	    break;
+	case CFT_TEST:
+	    initCFTTestStates();
 	    break;
 	default:
 	    (void) printf("In setInitialStates(), case not implemented!\n");
@@ -759,11 +764,9 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 		}
 	    }
 
-	    //debugdan	FIXME
-	    int order_debug = 1;
 	    /* Set coefficient a, b, c for different order of RK method */
 	    //switch (order)
-	    switch (order_debug)
+	    switch (order)
 	    {
 	    case 1:
 		b[0] = 1.0;
@@ -792,8 +795,8 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 	//Reset cflux for CFT.	Dan
 	cft_reset_cflux();
 
-	//copyToMeshVst(&st_field[0]);
-	cft_setMeshVst(&st_field[0]);	//Dan
+	copyToMeshVst(&st_field[0]);
+	//cft_setMeshVst(&st_field[0]);	//Dan
 	//computeMeshFlux(st_field[0],&st_flux[0],delta_t);
 	cft_computeMeshFlux(st_field[0],&st_flux[0],delta_t);	//Dan
 	
@@ -819,6 +822,7 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 	}
 	copyFromMeshVst(st_field[0]);
 	stop_clock("solveRungeKutta");
+
 }	/* end cft_solveRungeKutta */
 
 void G_CARTESIAN::solveStrangSplitting(void)
@@ -2051,31 +2055,30 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 
 		    //debugdan	FIXME
 		    /*
-		    if (j == 4 && k == 20 && seg_min == 4)
+		    if (j == 4 && k == 13)
 		    {
-			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
-			
-			for (i = seg_min; i <= seg_max; i++)
-			{
-			    index = d_index3d(i,j,k,cflux_gmax);
-			    printf("i = %d, index = %d, vflux = %e, cvflux = %e, Ddens = %e.\n",
-				    i, index, vflux.dens_flux[i-4+nrad],
-				    cvflux.dens_flux[i-4+nrad], vst.dens[i]-vst.dens[i-1]);
-			}
-			index = d_index3d(i,j,k,cflux_gmax);
-			printf("i = %d, index = %d, cvflux = %e.\n",
-				i, index, cvflux.dens_flux[i-4+nrad]);
-			for (i = seg_min; i < seg_max+1; i++)
-			{
-			    printf("momn flux %d = (%e, %e, %e).\n", 
-				    i, cvflux.momn_flux[0][i-4+nrad], cvflux.momn_flux[1][i-4+nrad], cvflux.momn_flux[2][i-4+nrad]);
-			}
+			printf("In cft_addFluxInDirection3d(), dir = %d, j = %d, k = %d:\n", 
+				dir, j, k);
 			
 			for (i = 0; i <= n+2*nrad-1; i++)
 			{
-			    printf("stencil %d: %e, (%e, %e, %e).\n", 
-				    i, vst.dens[i], 
-				    vst.momn[0][i], vst.momn[1][i], vst.momn[2][i]);
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("dens stencil %d (%d): %.18e.\n", 
+				    i, index, vst.dens[i]); 
+			}
+			for (i = 0; i <= n+2*nrad-1; i++)
+			{
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("pres stencil %d (%d): %.18e.\n", 
+				    i, index, vst.pres[i]);
+			}
+			for (i = 0; i <= n+2*nrad-1; i++)
+			{
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("momn %d (%d): (%.18e, %.18e, %.18e).\n", 
+				    i, index, 
+				    vst.momn[0][i]/vst.dens[i], vst.momn[1][i]/vst.dens[i], 
+				    vst.momn[2][i]/vst.dens[i]);
 			}
 		    }
 		    */
@@ -2133,6 +2136,18 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[1][n+nrad];
 		    	m_flux->momn_flux[2][index] +=
 					vflux.momn_flux[2][n+nrad];
+			//debugdan	FIXME
+			/*
+			if (i == 4 && j == 4 && k == 13)
+			{
+			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
+				    i, j, k, dir,
+				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
+				    vflux.momn_flux[0][n+nrad], vflux.momn_flux[1][n+nrad],
+				    vflux.momn_flux[2][n+nrad]);
+			}
+			*/
+			//debugdan	FIXME
 			n++;
 		    }
 
@@ -2250,27 +2265,45 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    /*
 		    if (i == 4 && k == 20 && seg_min == 4)
 		    {
-			for (j = seg_min; j <= seg_max; j++)
-			{
-			    index = d_index3d(i,j,k,cflux_gmax);
-			    printf("j = %d, index = %d, vflux = %e, cvflux = %e.\n",
-				    j, index, vflux.dens_flux[j-4+nrad], cvflux.dens_flux[j-4+nrad]);
-			}
-			index = d_index3d(i,j,k,cflux_gmax);
-			printf("j = %d, index = %d, cvflux = %e.\n",
-				j, index, cvflux.dens_flux[j-4+nrad]);
-		    }
-		    */
-		    //debugdan	FIXME
-		    /*
-		    if (i == 4 && k == 20 && seg_min == 4)
-		    {
 			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
 			for (j = 0; j <= n+2*nrad-1; j++)
 			{
 			    printf("stencil %d: %e, (%e, %e, %e).\n", 
 				    j, vst.dens[j], 
 				    vst.momn[2][j], vst.momn[0][j], vst.momn[1][j]);
+			}
+			for (j = seg_min; j <= seg_max+1; j++)
+			{
+			    printf("momn flux %d = (%e, %e, %e).\n", 
+				    j, cvflux.momn_flux[2][j-4+nrad], cvflux.momn_flux[0][j-4+nrad], cvflux.momn_flux[1][j-4+nrad]);
+			}
+		    }
+		    */
+		    /*
+		    if (i == 4 && k == 13)
+		    {
+			printf("In cft_addFluxInDirection3d(), dir = %d, i = %d, k = %d:\n", 
+				dir, i, k);
+			
+			for (j = 0; j <= n+2*nrad-1; j++)
+			{
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("dens stencil %d (%d): %.18e.\n", 
+				    j, index, vst.dens[j]); 
+			}
+			for (j = 0; j <= n+2*nrad-1; j++)
+			{
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("pres stencil %d (%d): %.18e.\n", 
+				    j, index, vst.pres[j]);
+			}
+			for (j = 0; j <= n+2*nrad-1; j++)
+			{
+			    index = d_index3d(i,j,k,top_gmax);
+			    printf("momn %d (%d): (%.18e, %.18e, %.18e).\n", 
+				    j, index, 
+				    vst.momn[0][j]/vst.dens[j], vst.momn[1][j]/vst.dens[j], 
+				    vst.momn[2][j]/vst.dens[j]);
 			}
 		    }
 		    */
@@ -2328,6 +2361,18 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[2][n+nrad];
 		    	m_flux->momn_flux[2][index] += 
 					vflux.momn_flux[1][n+nrad];
+			//debugdan	FIXME
+			/*
+			if (i == 4 && j == 4 && k == 13)
+			{
+			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
+				    i, j, k, dir,
+				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
+				    vflux.momn_flux[2][n+nrad], vflux.momn_flux[0][n+nrad],
+				    vflux.momn_flux[1][n+nrad]);
+			}
+			*/
+			//debugdan	FIXME
 			n++;
 		    }
 		    seg_min = seg_max + 1;
@@ -2498,6 +2543,11 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 				    k, vst.dens[k], 
 				    vst.momn[1][k], vst.momn[2][k], vst.momn[0][k]);
 			}
+			for (k = seg_min; k <= seg_max+1; k++)
+			{
+			    printf("momn flux %d = (%e, %e, %e).\n", 
+				    k, cvflux.momn_flux[1][k-4+nrad], cvflux.momn_flux[2][k-4+nrad], cvflux.momn_flux[0][k-4+nrad]);
+			}
 		    }
 		    */
 		    //debugdan	FIXME
@@ -2554,6 +2604,18 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[1][n+nrad];
 		    	m_flux->momn_flux[1][index] += 
 					vflux.momn_flux[2][n+nrad];
+			//debugdan	FIXME
+			/*
+			if (i == 4 && j == 4 && k == 13)
+			{
+			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
+				    i, j, k, dir,
+				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
+				    vflux.momn_flux[1][n+nrad], vflux.momn_flux[2][n+nrad],
+				    vflux.momn_flux[0][n+nrad]);
+			}
+			*/
+			//debugdan	FIXME
 			n++;
 		    }
 		    seg_min = seg_max + 1;
@@ -8933,6 +8995,18 @@ void G_CARTESIAN::addMeshFluxToVst(
 		temp = std::max((std::max(u,fabs(u-c))),(fabs(u+c)));
                 if (max_speed < temp)
                     max_speed = temp;
+		//debugdan	FIXME
+		/*
+		if (i == 4 && j == 12 && k == 13)
+		{
+		    printf("%d %d %d %d: flux %e, %e, (%e, %e, %e).\n",
+			    i, j, k, index, 
+			    m_flux.dens_flux[index], m_flux.engy_flux[index], 
+			    m_flux.momn_flux[0][index], m_flux.momn_flux[1][index], 
+			    m_flux.momn_flux[2][index]);
+		}
+		*/
+		//debugdan	FIXME
 	    }
             // scaling partial density
             if(eqn_params->multi_comp_non_reactive == YES)

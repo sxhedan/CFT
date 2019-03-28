@@ -59,7 +59,8 @@ enum PROB_TYPE {
 	ONED_SSINE,
 	TWO_FLUID_VST_RM,
 	SOD_OBLIQ,
-	SOD_3D
+	SOD_3D,
+	CFT_TEST
 };
 
 enum _EOS_TYPE {
@@ -585,6 +586,8 @@ public:
 	void cft_set_polyhs_comps();
 	void cft_set_cut_cell_vol();
 	void cft_set_init_polyh_states();
+	void cft_initRMPolyhStates();
+	void cft_initCFTTestPolyhStates();
 	void cft_set_face_flux();
 	void cft_update_states();
 	void cft_update_states_new();
@@ -593,6 +596,8 @@ public:
 	void cft_init_cftcell(CELL*);
 	void cft_set_indices_cftcell(CELL*);
 	void cft_set_maps_for_cftcell(CFTCELL*);
+	void cft_set_links_for_cftcells();
+	void cft_set_links_test();
 	void cft_set_vols_for_cftcell(CFTCELL*);
 	void cft_set_mass_at_oldt_cftcell(CFTCELL*);
 	void cft_set_flux_at_halft_cftcell(CFTCELL*);
@@ -635,6 +640,7 @@ public:
 	void cft_appendGhostBuffer(SWEEP*,SWEEP*,int,int*,int,int);
 	void cft_setMeshVst(SWEEP*);
 	void cft_check_mass();
+	void cft_check_mass_oldts();
 	void ncft_check_mass();
 	void cft_set_comp();
 
@@ -767,6 +773,7 @@ private:
 	void initRayleiTaylorStates();
 	void initRichtmyerMeshkovStates();
 	void initVSTRMStates();
+	void initCFTTestStates();
 	void initBubbleStates();
 	void initImplosionStates();
 	void initMTFusionStates();

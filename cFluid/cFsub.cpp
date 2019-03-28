@@ -909,6 +909,20 @@ static  void contact_point_propagate(
 	FT_FreeThese(2,stl2,str2);
 	FT_FreeThese(2,ansl,ansr);
 
+	//debugdan	FIXME
+	/*
+	if (Coords(oldp)[0] > 0.2 && Coords(oldp)[0] < 0.25 &&
+	    Coords(oldp)[1] > 0.15 && Coords(oldp)[1] < 0.2)
+	{
+	    printf("point (%lf, %lf, %lf) -> (%lf, %lf, %lf). dt = %e.\n",
+		    Coords(oldp)[0], Coords(oldp)[1], Coords(oldp)[2],
+		    Coords(oldp)[0] + dt*velp[0],
+		    Coords(oldp)[1] + dt*velp[1],
+		    Coords(oldp)[2] + dt*velp[2], dt);
+	}
+	*/
+	//debugdan	FIXME
+
         for (i = 0; i < dim; ++i)
         {
             Coords(newp)[i] = Coords(oldp)[i] + dt*velp[i];

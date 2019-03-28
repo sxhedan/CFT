@@ -4,15 +4,36 @@ void getPolyhCent(CPOLYHEDRON*,double*);
 void getRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 void getTESTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 void behind_state(int,double,double*,int,STATE*,STATE*);
+void behind_state_test(int,double,double*,int,STATE*,STATE*);
 void set_dir_and_side(int*,int*,CPOLYGON*,CELL*);
 bool need_exterior_pam(CPAM*,int*,int*,int*);
 void print_cpoint(CPOINT*);
 void print_cpolygon(CPOLYGON*);
 void print_cpolyh(CPOLYHEDRON*);
 bool corr_polyh_in_cell(CPOLYHEDRON*,CELL*,int*);
+void set_p_min_max(CPOLYHEDRON*,double*,double*);
 
 //currently for TWO_FLUID_RM only
 void G_CARTESIAN::cft_set_init_polyh_states()
+{
+	switch (eqn_params->prob_type)
+	{
+	    case TWO_FLUID_RM:
+		cft_initRMPolyhStates();
+		break;
+	    case CFT_TEST:
+		cft_initCFTTestPolyhStates();
+		break;
+	    default:
+		printf("The initialization for CFT is currently implemented for RM only.\n");
+		clean_up(ERROR);
+	}
+
+	//scatter
+	//copyMeshStates();
+}
+
+void G_CARTESIAN::cft_initCFTTestPolyhStates()
 {
 	int i, j, k, index;
 	double coords[3];
@@ -20,12 +41,82 @@ void G_CARTESIAN::cft_set_init_polyh_states()
 	CPOLYHEDRON *polyh;
 	bool update;
 
-	if (eqn_params->prob_type != TWO_FLUID_RM)
+	cells = cells_old;	//FIXME
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
 	{
-	    printf("ERROR: the initialization for CFT has not been implemented yet"
-		   "for problems other than TWO_FLUID_RM.\n");
-	    clean_up(ERROR);
+	    update = false;
+	    index = d_index3d(i,j,k,top_gmax);
+	    polyh = cells[index].polyhs;
+	    while (polyh)
+	    {
+		getPolyhCent(polyh,coords);
+		//set component
+		//this part should be removed	TODO
+		/*
+		if (polyh->scp_dir == INW)
+		{
+		    polyh->comp = GAS_COMP2;
+		}
+		else if (polyh->scp_dir == OUTW)
+		{
+		    polyh->comp = GAS_COMP1;
+		}
+		else
+		{
+		    printf("ERROR in cft_set_init_polyh_states(): unset scp_dir.\n");
+		    clean_up(ERROR);
+		}
+		*/
+		//set state
+		//getRMState(&(polyh->state),eqn_params,coords,polyh->comp);
+		//set test state	FIXME
+		getTESTState(&(polyh->state),eqn_params,coords,polyh->comp);
+		update = true;
+		polyh = polyh->next;
+	    }
+
+	    //update cell states also
+	    if (update)
+	    {
+		//not necessary maybe?
+		//cft_update_cell_states(&cells[index]);
+	    }
 	}
+
+	//debugdan	FIXME
+	/*
+	double *dens = field.dens;
+	double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    if (j == 4 && k ==23)
+	    {
+		printf("%d %d %d: init pres = %e.\n",
+			i, j, k, pres[index]);
+	    }
+	}
+	*/
+	//debugdan	FIXME
+
+	return;
+}
+
+void G_CARTESIAN::cft_initRMPolyhStates()
+{
+	int i, j, k, index;
+	double coords[3];
+	STATE state;
+	CPOLYHEDRON *polyh;
+	bool update;
 
 	cells = cells_old;	//FIXME
 
@@ -68,7 +159,7 @@ void G_CARTESIAN::cft_set_init_polyh_states()
 	    //update cell states also
 	    if (update)
 	    {
-		cft_update_cell_states(&cells[index]);
+		//cft_update_cell_states(&cells[index]);
 	    }
 	}
 
@@ -83,31 +174,70 @@ void G_CARTESIAN::cft_update_cell_states(CELL *c)
 	double *engy = field.engy;
 	double *pres = field.pres;
 	double **momn = field.momn;
-	double mass, cvol;
+	double mass, cvol, tvol;
 	double vel[3];
 	CPOLYHEDRON *polyh;
 	STATE state;
 	COMPONENT comp;
+	bool debugcucs = false;
+
+	//debugdan	FIXME
+	/*
+	if (c->icrds[0] == 4 && c->icrds[1] == 13 && c->icrds[2] == 13)
+	    debugcucs = true;
+	else
+	    debugcucs = false;
+	if (debugcucs)
+	{
+	    printf("%d %d %d: debug in cft_update_cell_states().\n",
+		    c->icrds[0], c->icrds[1], c->icrds[2]);
+	}
+	*/
+	//debugdan	FIXME
 
 	//states need to be kept (vel, pres)
 	index = d_index3d(c->icrds[0],c->icrds[1],c->icrds[2],top_gmax);
 	cvol = top_h[0] * top_h[1] * top_h[2];
 	for (int i = 0; i < 3; i++)
-	    vel[i] = momn[i][index]/(dens[index]*cvol);
+	    vel[i] = momn[i][index]/dens[index];
 
 	//dens
-	mass = 0;
+	//debugdan	FIXME
+	if (debugcucs)
+	{
+	    printf("dens before update = %.18e.\n", dens[index]);
+	}
+	//debugdan	FIXME
+	mass = 0.0;
+	tvol = 0.0;
 	polyh = c->polyhs;
 	while (polyh)
 	{
+	    tvol += polyh->vol;
 	    mass += polyh->state.dens * polyh->vol;
+	    //debugdan	FIXME
+	    if (debugcucs)
+	    {
+		printf("Add vol %.18e, dens = %.18e.\n",
+			polyh->vol, polyh->state.dens);
+	    }
+	    //debugdan	FIXME
 	    polyh = polyh->next;
 	}
-	dens[index] = mass/cvol;
+	dens[index] = mass/tvol;
+	
+	//debugdan	FIXME
+	if (debugcucs)
+	{
+	    printf("dens after update = %.18e.\n", dens[index]);
+	    printf("tvol = %.18e.\n", tvol);
+	    printf("Difference in vol: %e.\n", tvol-cvol);
+	}
+	//debugdan	FIXME
 
 	//momn
 	for (i = 0; i < 3; i++)
-	    momn[i][index] = vel[i] * mass;
+	    momn[i][index] = vel[i] * dens[index];
 
 	//engy
 	comp = top_comp[index];
@@ -119,7 +249,17 @@ void G_CARTESIAN::cft_update_cell_states(CELL *c)
 	state.eos = &(eqn_params->eos[comp]);
 	engy[index] = EosEnergy(&state);
 
-	//pdens?	TODO
+	//pdens	FIXME
+	if (comp == GAS_COMP1)
+	{
+	    pdens[0][index] = dens[index];
+	    pdens[1][index] = 0;
+	}
+	else
+	{
+	    pdens[1][index] = dens[index];
+	    pdens[0][index] = 0;
+	}
 
 	return;
 }
@@ -260,11 +400,11 @@ void getTESTState(
 	    printf("state = %f %f %f\n",state->dens,state->pres,
 					state->vel[0]);
 	}
-	/*
+	
 	if ((shock_dir ==  1 && coords[dim-1] < shock_position) ||
 	    (shock_dir == -1 && coords[dim-1] > shock_position))
 	{
-	    behind_state(SHOCK_MACH_NUMBER,Mach_number,
+	    behind_state_test(SHOCK_MACH_NUMBER,Mach_number,
 			&shock_speed,shock_dir,state,state);	
 	    state->engy = EosEnergy(state);
 	    if (debugging("rm_state"))
@@ -274,9 +414,8 @@ void getTESTState(
 			state->vel[0]);
 	    }
 	}
-	*/
-	//state->vel[dim-1] -= csp;
-	state->vel[dim-1] = csp;
+	
+	state->vel[dim-1] -= csp;
 	state->momn[dim-1] = state->vel[dim-1]*state->dens;
 	state->engy = EosEnergy(state);
 
@@ -377,7 +516,7 @@ void getRMState(
 	    (shock_dir == -1 && coords[dim-1] > shock_position))
 	{
 	    behind_state(SHOCK_MACH_NUMBER,Mach_number,
-			&shock_speed,shock_dir,state,state);	
+	    		&shock_speed,shock_dir,state,state);
 	    state->engy = EosEnergy(state);
 	    if (debugging("rm_state"))
 	    {
@@ -392,6 +531,60 @@ void getRMState(
 
 	return;
 }	/* end getRMState */
+
+void behind_state_test(
+	int		which_parameter,
+	double		parameter,
+	double		*shock_speed,
+	int		shock_dir,
+	STATE		*ahead_state,
+	STATE		*behind_state)
+{
+	double		r0, p0, u0;		/* ahead state */
+	double		r1, p1, u1;		/* behind state */
+	double		U;			/* shock speed */
+	double		M0n;			/* shock mack number,
+						   relative to ahead flow */
+	double		M0nsq;			/* steady normal ahead Mach
+						   number squared */
+	int		dim;
+
+	dim = ahead_state->dim;
+	r0  = ahead_state->dens;
+	p0  = ahead_state->pres;
+	u0  = ahead_state->vel[dim-1]*shock_dir;
+
+	switch(which_parameter)
+	{
+	case SHOCK_MACH_NUMBER:
+	    M0n = parameter;
+	    *shock_speed = U = u0 + M0n*EosSoundSpeed(ahead_state);
+	    M0nsq = sqr(M0n);
+	    p1 = EosMaxBehindShockPres(M0nsq,ahead_state);
+	    u1 =  u0 + (p0 - p1) / (r0*(u0 - U)); 
+	    r1 = r0*((u0 - U)/(u1 - U));
+	    if (debugging("rm_state"))
+	    {
+		printf("M0n = %f  shock_speed = %f\n",M0n,*shock_speed);
+		printf("p1 = %f  u1 = %f  r1 = %f\n",p1,u1,r1);
+	    }
+	    break;
+	default:
+	    screen("ERROR in behind_state(), "
+	           "unknown parameter %d\n",which_parameter);
+	    clean_up(ERROR);
+	}	
+	behind_state->dens = r1;
+	//Dan	FIXME
+	if (behind_state->pdens[0] < 1e-12)
+	    behind_state->pdens[1] = r1;
+	else
+	    behind_state->pdens[0] = r1;
+	//Dan	FIXME
+	behind_state->pres = p1;
+	behind_state->vel[dim-1] = u1*shock_dir;
+	behind_state->momn[dim-1] = r1*u1*shock_dir;
+}		/*end behind_state_test */
 
 void behind_state(
 	int		which_parameter,
@@ -458,7 +651,7 @@ void G_CARTESIAN::cft_set_face_flux()
 	CPOLYHEDRON *polyh;
 	CPOLYGON *face;
 	COMPONENT comp;
-	bool debugcft = false;
+	bool debugcsff = false;
 
 	//debugdan	FIXME
 	double *dens = field.dens;
@@ -466,8 +659,8 @@ void G_CARTESIAN::cft_set_face_flux()
 	double *engy = field.engy;
 	double *pres = field.pres;
 	double **momn = field.momn;
-	//vel at (4, 4, 21)
 	/*
+	//vel at (4, 4, 21)
 	i = 4;
 	j = 4;
 	k = 21;
@@ -493,14 +686,21 @@ void G_CARTESIAN::cft_set_face_flux()
 
 	    //debugdan	FIXME
 	    /*
-	    if (i == 4 && j == 4 && (k == 21 || k == 22))
-		debugcft = true;
+	    if (i == 4 && j == 4 && (k == 31 || k == 32) &&
+		(front->step >= 127 && front->step <= 130))
+		debugcsff = true;
 	    else
-		debugcft = false;
+		debugcsff = false;
+	    if (debugcsff)
+	    {
+		printf("%d %d %d: debug in cft_set_face_flux().\n", i, j, k);
+	    }
 	    */
+	    //debugdan	FIXME
+	    
 
-	    if (c->merged == FALSE)
-		continue;
+	    //if (c->merged == FALSE)
+		//continue;
 
 	    //check if this comp is the same as comp[index] or not
 	    /*
@@ -535,10 +735,14 @@ void G_CARTESIAN::cft_set_face_flux()
 		}
 
 		//debugdan	FIXME
-		if (debugcft)
+		if (debugcsff)
 		    printf("Polyh:\n");
 		if (polyh->iscell)
 		{
+		    if (debugcsff)
+		    {
+			printf("polyh is a cell. vol = %e\n", polyh->vol);
+		    }
 		    for (dir = 0; dir < 3; dir++)
 		    {
 			for (side = 0; side < 2; side++)
@@ -557,25 +761,32 @@ void G_CARTESIAN::cft_set_face_flux()
 			    else
 				sign = 1;
 			    indexx = d_index3d(ii,jj,kk,cflux_gmax);
-			    polyh->mflux += sign*cflux[ic][dir].dens_flux[indexx];
+			    polyh->mflux += sign*polyh->vol*cflux[ic][dir].dens_flux[indexx];
 			    //debugdan	FIXME
-			    if (debugcft)
+			    if (debugcsff)
 			    {
+				printf("%d %d %d: comp = %d, cflux[%d][%d] = %e, side = %d, mflux = %e.\n",
+					i, j, k, polyh->comp, ic, dir, 
+					cflux[ic][dir].dens_flux[indexx],
+					side, polyh->mflux);
+				/*
 				printf("%d %d %d: dir = %d, side = %d, "
 					"dens_flux[%d] = %e, mflux = %e.\n",
 					i, j, k, dir, side, indexx, 
 					cflux[ic][dir].dens_flux[indexx], 
 					polyh->mflux);
+				*/
 			    }
 			}
 		    }
-		    polyh->mflux *= polyh->vol;
+		    //polyh->mflux *= polyh->vol;
 		}
 		else
 		{
-		    if (debugcft)
+		    if (debugcsff)
 		    {
-			printf("polyh is not a cell. vol = %e\n", polyh->vol);
+			printf("polyh is not a cell. comp = %d, vol = %e\n",
+				polyh->comp, polyh->vol);
 		    }
 		    face = polyh->faces;
 		    while (face)
@@ -614,12 +825,11 @@ void G_CARTESIAN::cft_set_face_flux()
 			    polyh->mflux += face->mass_flux;
 
 			    //debugdan	FIXME
-			    if (debugcft)
+			    if (debugcsff)
 			    {
-				printf("%d %d %d: comp = %d, cflux[%d][%d] = %e, side = %d, mflux = %e.\n",
-					i, j, k, polyh->comp, ic, dir, 
-					cflux[ic][dir].dens_flux[indexx],
-					side, polyh->mflux);
+				printf("%d %d %d %d %d: face area = %e, origin flux = %e.\n",
+					i, j, k, dir, side, face->area,
+					cflux[ic][dir].dens_flux[indexx]);
 			    }
 			    /*
 			    if (i == 4 && j == 4 && k == 21 && polyh->comp ==2)
@@ -629,10 +839,17 @@ void G_CARTESIAN::cft_set_face_flux()
 					cflux[ic][dir].dens_flux[indexx]);
 			    }
 			    */
-			    
+			    //debugdan	FIXME
 			}
 			face = face->next;
 		    }
+		    //debugdan	FIXME
+		    if (debugcsff)
+		    {
+			printf("%d %d %d: mflux = %e.\n", 
+				i, j, k, polyh->mflux);
+		    }
+		    //debugdan	FIXME
 		}
 
 		//pam = pam->next;
@@ -746,10 +963,55 @@ void G_CARTESIAN::cft_update_states_new()
 	    c->cftcell->pams = c->pams;
 
 	    //set indices based on the direction of velocity
-	    cft_set_indices_cftcell(c);
+	    //cft_set_indices_cftcell(c);
+	}
 
-	    //set maps
-	    cft_set_maps_for_cftcell(c->cftcell);
+	// set links from new time step to old time step and half time step
+	cft_set_links_for_cftcells();
+	//cft_set_links_test();
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_new[index]);
+
+	    //debugdan	FIXME
+	    /*
+	    if (i == 4 && j == 4 && (k == 31 || k == 32) &&
+		(front->step >= 127 && front->step <= 130))
+	    {
+		if (c->cftcell->pams->polyh->comp == GAS_COMP1)
+		    continue;
+
+		printf("debug in cft_update_states_new().\n");
+		printf("%d %d %d: comp = %d.\n",
+			i, j, k, c->cftcell->pams->polyh->comp);
+
+		printf("Polyhs in old time step:\n");
+		pam = c->cftcell->oldts_pams;
+		while (pam)
+		{
+		    polyh = pam->polyh;
+		    printf("%d %d %d: vol = %e.\n",
+			    polyh->cell->icrds[0], polyh->cell->icrds[1], 
+			    polyh->cell->icrds[2], polyh->vol);
+		    pam = pam->next;
+		}
+		printf("Polyhs in new time step:\n");
+		pam = c->cftcell->pams;
+		while (pam)
+		{
+		    polyh = pam->polyh;
+		    printf("%d %d %d: vol = %e.\n",
+			    polyh->cell->icrds[0], polyh->cell->icrds[1], 
+			    polyh->cell->icrds[2], polyh->vol);
+		    pam = pam->next;
+		}
+	    }
+	    */
+	    //debugdan	FIXME
 
 	    //set vol_new and vol_old
 	    cft_set_vols_for_cftcell(c->cftcell);
@@ -773,6 +1035,386 @@ void G_CARTESIAN::cft_update_states_new()
 	//exit(0);
 }
 
+void G_CARTESIAN::cft_set_links_test()
+{
+	printf("Calling cft_set_links_test().\n");
+	printf("This function is for test only.\n");
+
+	int i, j, k, index, indexx;
+	CELL *c, *cn, *ct;
+	CPOLYHEDRON *polyh, *polyhn;
+	bool set = false;
+
+	//old time step
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_old[index]);
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		set = false;
+		cn = &(cells_new[index]);
+		polyhn = cn->polyhs;
+		while (polyhn)
+		{
+		    if (polyhn->comp == polyh->comp)
+		    {
+			ct = polyhn->pam->targetc;
+			cft_add_pam(polyh,&(ct->cftcell->oldts_pams));
+			set = true;
+		    }
+		    polyhn = polyhn->next;
+		}
+		if (!set)
+		{
+		    indexx = d_index3d(i,j,(k+1),top_gmax);
+		    cn = &(cells_new[indexx]);
+		    polyhn = cn->polyhs;
+		    while (polyhn)
+		    {
+			if (polyhn->comp == polyh->comp)
+			{
+			    ct = polyhn->pam->targetc;
+			    cft_add_pam(polyh,&(ct->cftcell->oldts_pams));
+			    set = true;
+			}
+			polyhn = polyhn->next;
+		    }
+		}
+		if (!set)
+		{
+		    printf("ERROR: cannot set link in cft_set_links_test().\n");
+		    clean_up(ERROR);
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	//half time step
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_halft[index]);
+
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		set = false;
+		cn = &(cells_new[index]);
+		polyhn = cn->polyhs;
+		while (polyhn)
+		{
+		    if (polyhn->comp == polyh->comp)
+		    {
+			ct = polyhn->pam->targetc;
+			cft_add_pam(polyh,&(ct->cftcell->halfts_pams));
+			set = true;
+		    }
+		    polyhn = polyhn->next;
+		}
+		if (!set)
+		{
+		    indexx = d_index3d(i,j,(k+1),top_gmax);
+		    cn = &(cells_new[indexx]);
+		    polyhn = cn->polyhs;
+		    while (polyhn)
+		    {
+			if (polyhn->comp == polyh->comp)
+			{
+			    ct = polyhn->pam->targetc;
+			    cft_add_pam(polyh,&(ct->cftcell->halfts_pams));
+			    set = true;
+			}
+			polyhn = polyhn->next;
+		    }
+		}
+		if (!set)
+		{
+		    printf("ERROR: cannot set link in cft_set_links_test().\n");
+		    clean_up(ERROR);
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	return;
+}
+
+void G_CARTESIAN::cft_set_links_for_cftcells()
+{
+	int i, j, k, l, index, ii, jj, kk, indexx;
+	double vel[3], pmax[3], pmin[3];
+	double *dens = field.dens;
+	double **momn = field.momn;
+	double deltat;
+	CELL *c, *cnewts, *targetc;
+	CPOLYHEDRON *polyh, *polyh_nts;
+	bool setlink = false;
+
+	//old time step
+	deltat = 2*front->dt;
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_old[index]);
+
+	    for (l = 0; l < 3; l++)
+		vel[l] = momn[l][index]/dens[index];
+
+	    polyh = c->polyhs;
+	    if (polyh->iscell)
+	    {
+		cnewts = &(cells_new[index]);
+		cft_add_pam(polyh,&(cnewts->cftcell->oldts_pams));
+		continue;
+	    }
+	    while (polyh)
+	    {
+		setlink = false;
+
+		cnewts = &(cells_new[index]);
+		polyh_nts = cnewts->polyhs;
+		while (polyh_nts)
+		{
+		    if (polyh_nts->comp == polyh->comp)
+		    {
+			targetc = polyh_nts->pam->targetc;
+			cft_add_pam(polyh,&(targetc->cftcell->oldts_pams));
+			setlink = true;
+			break;
+		    }
+		    polyh_nts = polyh_nts->next;
+		}
+		if (setlink)
+		{
+		    polyh = polyh->next;
+		    continue;
+		}
+
+		ii = i;
+		jj = j;
+		kk = k;
+		set_p_min_max(polyh,pmin,pmax);
+		for (l = 0; l < 3; l++)
+		{
+		    if (pmin[l] + vel[l]*deltat > c->cellu[l])
+		    {
+			if (l == 0)
+			    ii++;
+			else if (l == 1)
+			    jj++;
+			else
+			    kk++;
+			if (ii > imax[0] || jj > imax[1] || kk > imax[2])
+			    continue;
+			indexx = d_index3d(ii,jj,kk,top_gmax);
+			cnewts = &(cells_new[indexx]);
+			polyh_nts = cnewts->polyhs;
+			while (polyh_nts)
+			{
+			    if (polyh_nts->comp == polyh->comp)
+			    {
+				targetc = polyh_nts->pam->targetc;
+				cft_add_pam(polyh,&(targetc->cftcell->oldts_pams));
+				setlink = true;
+				break;
+			    }
+			    polyh_nts = polyh_nts->next;
+			}
+		    }
+		    else if (pmax[l] + vel[l]*deltat < c->celll[l])
+		    {
+			if (l == 0)
+			    ii--;
+			else if (l == 1)
+			    jj--;
+			else
+			    kk--;
+			if (ii < imin[0] || jj < imin[1] || kk < imin[2])
+			    continue;
+			indexx = d_index3d(ii,jj,kk,top_gmax);
+			cnewts = &(cells_new[indexx]);
+			polyh_nts = cnewts->polyhs;
+			while (polyh_nts)
+			{
+			    if (polyh_nts->comp == polyh->comp)
+			    {
+				targetc = polyh_nts->pam->targetc;
+				cft_add_pam(polyh,&(targetc->cftcell->oldts_pams));
+				setlink = true;
+				break;
+			    }
+			    polyh_nts = polyh_nts->next;
+			}
+		    }
+		}
+		if (!setlink)
+		{
+		    printf("Unexpected case in cft_set_links_for_cftcells().\n");
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	//half time step
+	deltat = front->dt;
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_halft[index]);
+
+	    for (l = 0; l < 3; l++)
+		vel[l] = momn[l][index]/dens[index];
+
+	    polyh = c->polyhs;
+	    if (polyh->iscell)
+	    {
+		cnewts = &(cells_new[index]);
+		cft_add_pam(polyh,&(cnewts->cftcell->halfts_pams));
+		continue;
+	    }
+	    while (polyh)
+	    {
+		setlink = false;
+
+		cnewts = &(cells_new[index]);
+		polyh_nts = cnewts->polyhs;
+		while (polyh_nts)
+		{
+		    if (polyh_nts->comp == polyh->comp)
+		    {
+			targetc = polyh_nts->pam->targetc;
+			cft_add_pam(polyh,&(targetc->cftcell->halfts_pams));
+			setlink = true;
+			break;
+		    }
+		    polyh_nts = polyh_nts->next;
+		}
+		if (setlink)
+		{
+		    polyh = polyh->next;
+		    continue;
+		}
+
+		ii = i;
+		jj = j;
+		kk = k;
+		set_p_min_max(polyh,pmin,pmax);
+		for (l = 0; l < 3; l++)
+		{
+		    if (pmin[l] + vel[l]*deltat > c->cellu[l])
+		    {
+			if (l == 0)
+			    ii++;
+			else if (l == 1)
+			    jj++;
+			else
+			    kk++;
+			if (ii > imax[0] || jj > imax[1] || kk > imax[2])
+			    continue;
+			indexx = d_index3d(ii,jj,kk,top_gmax);
+			cnewts = &(cells_new[indexx]);
+			polyh_nts = cnewts->polyhs;
+			while (polyh_nts)
+			{
+			    if (polyh_nts->comp == polyh->comp)
+			    {
+				targetc = polyh_nts->pam->targetc;
+				cft_add_pam(polyh,&(targetc->cftcell->halfts_pams));
+				setlink = true;
+				break;
+			    }
+			    polyh_nts = polyh_nts->next;
+			}
+		    }
+		    else if (pmax[l] + vel[l]*deltat < c->celll[l])
+		    {
+			if (l == 0)
+			    ii--;
+			else if (l == 1)
+			    jj--;
+			else
+			    kk--;
+			if (ii < imin[0] || jj < imin[1] || kk < imin[2])
+			    continue;
+			indexx = d_index3d(ii,jj,kk,top_gmax);
+			cnewts = &(cells_new[indexx]);
+			polyh_nts = cnewts->polyhs;
+			while (polyh_nts)
+			{
+			    if (polyh_nts->comp == polyh->comp)
+			    {
+				targetc = polyh_nts->pam->targetc;
+				cft_add_pam(polyh,&(targetc->cftcell->halfts_pams));
+				setlink = true;
+				break;
+			    }
+			    polyh_nts = polyh_nts->next;
+			}
+		    }
+		}
+		if (!setlink)
+		{
+		    printf("Unexpected case in cft_set_links_for_cftcells().\n");
+		}
+		polyh = polyh->next;
+	    }
+	}
+
+	return;
+}
+
+void set_p_min_max(
+	CPOLYHEDRON	*polyh,
+	double		*pmin,
+	double		*pmax)
+{
+	int i;
+	CPOLYGON *face;
+	CPOINT *p;
+	bool init = true;
+
+	face = polyh->faces;
+	while (face)
+	{
+	    p = face->vertices;
+	    while (p)
+	    {
+		if (init)
+		{
+		    for (i = 0; i < 3; i++)
+		    {
+			pmin[i] = p->crds[i];
+			pmax[i] = p->crds[i];
+		    }
+		    init = false;
+		}
+		else
+		{
+		    for (i = 0; i < 3; i++)
+		    {
+			pmin[i] = (pmin[i] < p->crds[i] ? pmin[i] : p->crds[i]);
+			pmax[i] = (pmax[i] > p->crds[i] ? pmax[i] : p->crds[i]);
+		    }
+		}
+		p = p->next;
+	    }
+	    face = face->next;
+	}
+
+	return;
+}
+
 void G_CARTESIAN::cft_update_cells_states()
 {
 	int i, j, k, index, ii;
@@ -782,10 +1424,29 @@ void G_CARTESIAN::cft_update_cells_states()
 	double *pres = field.pres;
 	double **momn = field.momn;
 	double vol_cell = top_h[0]*top_h[1]*top_h[2];
+	double tvol;
 	STATE state;
 	CELL *c;
 	CPOLYHEDRON *polyh;
 	bool debugcucs = false;
+
+	//debugdan	FIXME
+	/*
+	printf("In cft_update_cells_states(), before update:\n");
+	i = 4;
+	j = 4;
+	//k = 20;
+	for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    printf("(%d, %d, %d): dens = %e, vel = (%e, %e, %e).\n",
+		    i, j, k, dens[index], 
+		    momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+	}
+	*/
+	//debugdan	FIXME
 
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
@@ -799,27 +1460,36 @@ void G_CARTESIAN::cft_update_cells_states()
 
 	    //debugdan	FIXME
 	    /*
-	    if (i == 4 && j == 4 && k == 21)
+	    if (i == 8 && j == 7 && (k == 9))
 		debugcucs = true;
 	    else
 		debugcucs = false;
 	    if (debugcucs)
 	    {
 		printf("In cft_update_cells_states(), before update:\n");
-		printf("vel at (%d, %d, %d): (%e, %e, %e).\n",
-			i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+		printf("(%d, %d, %d): dens = %e, vel = (%e, %e, %e).\n",
+			i, j, k, dens[index], 
+			momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
 	    }
 	    */
 	    //debugdan	FIXME
 
+	    tvol = 0.0;
 	    state.dens = 0.0;
 	    for (int ii = 0; ii < 2; ii++)
 		state.pdens[ii] = 0.0;
 	    for (int ii = 0; ii < 3; ii++)
 		state.momn[ii] = 0.0;
+	    state.engy = 0.0;
 	    polyh = c->polyhs;
 	    while (polyh)
 	    {
+		if (debugcucs)
+		{
+		    printf("polyh vol = %e, dens = %e.\n", 
+			    polyh->vol, polyh->state.dens);
+		}
+		tvol += polyh->vol;
 		state.dens += polyh->state.dens * polyh->vol;
 		for (int ii = 0; ii < 2; ii++)
 		{
@@ -830,29 +1500,56 @@ void G_CARTESIAN::cft_update_cells_states()
 		}
 		for (int ii = 0; ii < 3; ii++)
 		    state.momn[ii] += polyh->state.momn[ii] * polyh->vol;
+		state.engy += polyh->state.engy * polyh->vol;
 		polyh = polyh->next;
 	    }
-	    state.dens /= vol_cell;
+	    //state.dens /= vol_cell;
+	    state.dens /= tvol;
 	    for (int ii = 0; ii < 2; ii++)
-		state.pdens[ii] /= vol_cell;
+		//state.pdens[ii] /= vol_cell;
+		state.pdens[ii] /= tvol;
 	    for (int ii = 0; ii < 3; ii++)
-		state.momn[ii] /= vol_cell;
+		//state.momn[ii] /= vol_cell;
+		state.momn[ii] /= tvol;
+	    state.engy /= tvol;
 
 	    dens[index] = state.dens;
 	    for (int ii = 0; ii < 2; ii++)
 		pdens[ii][index] = state.pdens[ii];
 	    for (int ii = 0; ii < 3; ii++)
 		momn[ii][index] = state.momn[ii];
+	    engy[index] = state.engy;
 
 	    //debugdan	FIXME
+	    
 	    if (debugcucs)
 	    {
 		printf("In cft_update_cells_states(), after update:\n");
-		printf("vel at (%d, %d, %d): (%e, %e, %e).\n",
-			i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+		printf("(%d, %d, %d): dens = %e, vel = (%e, %e, %e).\n",
+			i, j, k, dens[index], 
+			momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
 	    }
+	    
 	    //debugdan	FIXME
 	}
+
+	//debugdan	FIXME
+	/*
+	printf("In cft_update_cells_states(), after update:\n");
+	i = 4;
+	j = 4;
+	//k = 20;
+	for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    printf("(%d, %d, %d): dens = %e, vel = (%e, %e, %e).\n",
+		    i, j, k, dens[index], 
+		    momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
+	}
+	*/
+	//debugdan	FIXME
 
 	return;
 }
@@ -873,6 +1570,7 @@ void G_CARTESIAN::cft_update_polyhs_states()
 	CPAM *pam;
 	CPOLYHEDRON *polyh;
 	COMPONENT comp;
+	bool debugcups = false;
 
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
@@ -880,6 +1578,20 @@ void G_CARTESIAN::cft_update_polyhs_states()
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells_new[index]);
+
+	    //debugdan	FIXME
+	    /*
+	    //if (front->step == 22 || front->step == 23)
+	    if (i == 8 && j == 7 && k == 9)
+		debugcups = true;
+	    else
+		debugcups = false;
+	    if (debugcups)
+	    {
+		printf("%d %d %d: debug in cft_update_polyhs_states().\n", i, j, k);
+	    }
+	    */
+	    //debugdan	FIXME
 
 	    if (c->merged == false)
 	    {
@@ -909,9 +1621,33 @@ void G_CARTESIAN::cft_update_polyhs_states()
 		dens_new = cftc->mass_new / cftc->vol_new;
 		comp = cftc->pams->polyh->comp;
 		pam = cftc->pams;
+		//debugdan	FIXME
+		
+		if (debugcups)
+		//if (debugcups && pam->polyh->comp == GAS_COMP2)
+		{
+		    printf("%d %d %d comp %d: dens_old = %e, vol_old = %e.\n", 
+			    i, j, k, pam->polyh->comp, 
+			    cftc->mass_old/cftc->vol_old, cftc->vol_old);
+		    printf("%d %d %d comp %d: dens_new = %e, vol_new = %e.\n", 
+			    i, j, k, pam->polyh->comp, 
+			    dens_new, cftc->vol_new);
+		}
+		
+		//debugdan	FIXME
 		while (pam)
 		{
 		    polyh = pam->polyh;
+
+		    //debugdan	FIXME
+		    /*
+		    if (debugcups)
+		    {
+			printf("%d %d %d: comp = %d, polyh with vol = %e.\n", 
+				i, j, k, polyh->comp, polyh->vol);
+		    }
+		    */
+		    //debugdan	FIXME
 
 		    //cell index
 		    ii = pam->polyh->cell->icrds[0];
@@ -2032,10 +2768,11 @@ void G_CARTESIAN::cft_check_mass()
 {
 	int i, j, k, index;
 	CELL *c;
-	double cvol, tm1, tm2;
+	double cvol, tm1, tm2, tvol;
+	bool debugccm = false;
 
+	printf("Calling cft_check_mass():\n");
 	printf("This function is for test ONLY.\n");
-	printf("cft_check_mass():\n");
 
 	cells = cells_new;
 	tm1 = 0.0;
@@ -2049,6 +2786,18 @@ void G_CARTESIAN::cft_check_mass()
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
 
+	    //debugdan	FIXME
+	    /*
+	    if (i == 4 && j == 4 && 
+		(front->step >= 127 && front->step <= 130))
+	    //if (i == 4 && j == 4)
+		debugccm = true;
+	    else
+		debugccm = false;
+	    */
+	    //debugdan	FIXME
+
+	    /*
 	    if (c->merged == FALSE)
 	    {
 		if (top_comp[index] == GAS_COMP1)
@@ -2058,10 +2807,16 @@ void G_CARTESIAN::cft_check_mass()
 		else if (top_comp[index] == GAS_COMP2)
 		{
 		    tm2 += cvol * field.dens[index];
+		    if (debugccm)
+		    {
+			printf("%d %d %d: + %e.\n", 
+				i, j, k, cvol * field.dens[index]);
+		    }
 		}
 		continue;
 	    }
 	    else
+	    */
 	    {
 		CPOLYHEDRON *polyh = c->polyhs;
 		while (polyh)
@@ -2073,6 +2828,13 @@ void G_CARTESIAN::cft_check_mass()
 		    else if (polyh->comp == GAS_COMP2)
 		    {
 			tm2 += polyh->state.dens * polyh->vol;
+			if (debugccm)
+			{
+			    printf("%d %d %d: vol = %e, dens = %e. + %e.\n", 
+				    i, j, k, 
+				    polyh->vol, polyh->state.dens,
+				    polyh->state.dens*polyh->vol);
+			}
 		    }
 		    polyh = polyh->next;
 		}
@@ -2082,6 +2844,120 @@ void G_CARTESIAN::cft_check_mass()
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);
 
+	//debugdan	FIXME
+	/*
+	if (front->step >= 127 && front->step <= 130)
+	//if (true)
+	    debugccm = true;
+	else
+	    debugccm = false;
+	if (debugccm)
+	{
+	    i = 4;
+	    j = 4;
+	    //k = 11;
+	    for (k = 31; k <= imax[2]; k++)
+	    //for (j = imin[1]; j <= imax[1]; j++)
+	    //for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		//if (cells[index].polyhs->next)
+		{
+		    double vel[3];
+		    for (int ii = 0; ii < 3; ii++)
+		    {
+			vel[ii] = field.momn[ii][index]/field.dens[index];
+		    }
+		    printf("%d %d %d: dens %lf, p %lf, v (%e, %e, %e).\n",
+			    i, j, k, 
+			    field.dens[index], field.pres[index], vel[0], vel[1], vel[2]);
+		}
+		if (cells[index].polyhs->next)
+		{
+		    printf("interface***********************************************\n");
+		}
+	    }
+	}
+	*/
+	//debugdan	FIXME
+
+	return;
+}
+
+void G_CARTESIAN::cft_check_mass_oldts()
+{
+	int i, j, k, index;
+	CELL *c;
+	double cvol, tm1, tm2;
+	bool debugccm = false;
+
+	printf("This function is for test ONLY.\n");
+	printf("cft_check_mass_oldts():\n");
+
+	cells = cells_old;
+	tm1 = 0;
+	tm2 = 0;
+	cvol = top_h[0]*top_h[1]*top_h[2];
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells[index]);
+
+	    //debugdan	FIXME
+	    /*
+	    if (i == 4 && j == 4)
+		debugccm = true;
+	    else
+		debugccm = false;
+	    */
+	    //debugdan	FIXME
+
+	    /*
+	    if (c->merged == FALSE)
+	    {
+		if (top_comp[index] == GAS_COMP1)
+		{
+		    tm1 += cvol * field.dens[index];
+		}
+		else if (top_comp[index] == GAS_COMP2)
+		{
+		    tm2 += cvol * field.dens[index];
+		    if (debugccm)
+		    {
+			printf("%d %d %d: + %e.\n", 
+				i, j, k, cvol * field.dens[index]);
+		    }
+		}
+		continue;
+	    }
+	    else
+	    */
+	    {
+		CPOLYHEDRON *polyh = c->polyhs;
+		while (polyh)
+		{
+		    if (polyh->comp == GAS_COMP1)
+		    {
+			tm1 += polyh->state.dens * polyh->vol;
+		    }
+		    else if (polyh->comp == GAS_COMP2)
+		    {
+			tm2 += polyh->state.dens * polyh->vol;
+			if (debugccm)
+			{
+			    printf("%d %d %d: + %e.\n", 
+				    i, j, k, polyh->state.dens*polyh->vol);
+			}
+		    }
+		    polyh = polyh->next;
+		}
+	    }
+	}
+	printf("At old ts, total mass for comp 2 = %e.\n", tm2);
+
 	return;
 }
 
@@ -2090,6 +2966,7 @@ void G_CARTESIAN::ncft_check_mass()
 	int i, j, k, index;
 	CELL *c;
 	double cvol, tm1, tm2;
+	bool debugncm = false;
 
 	printf("This function is for test ONLY.\n");
 	printf("ncft_check_mass():\n");
@@ -2116,6 +2993,49 @@ void G_CARTESIAN::ncft_check_mass()
 
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);
+
+	//debugdan	FIXME
+	/*
+	i = 4;
+	j = 4;
+	k = 20;
+	index = d_index3d(i,j,k,top_gmax);
+	double vel[3];
+	for (int ii = 0; ii < 3; ii++)
+	{
+	    vel[ii] = field.momn[ii][index]/field.dens[index];
+	}
+	printf("%d %d %d: vel = (%e, %e, %e).\n",
+		i, j, k, vel[0], vel[1], vel[2]);
+	*/
+	//if (front->step == 127 || front->step == 128 || front->step == 129)
+	/*
+	if (true)
+	    debugncm = true;
+	else
+	    debugncm = false;
+	if (debugncm)
+	{
+	    //i = 5;
+	    //j = 5;
+	    k = 13;
+	    //for (k = imin[2]; k <= imax[2]; k++)
+	    for (j = imin[1]; j <= imax[1]; j++)
+	    for (i = imin[0]; i <= imax[0]; i++)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		double vel[3];
+		for (int ii = 0; ii < 3; ii++)
+		{
+		    vel[ii] = field.momn[ii][index]/field.dens[index];
+		}
+		printf("%d %d %d: dens %lf, p %lf, v (%e, %e, %e).\n",
+			i, j, k, 
+			field.dens[index], field.pres[index], vel[0], vel[1], vel[2]);
+	    }
+	}
+	*/
+	//debugdan	FIXME
 
 	return;
 }

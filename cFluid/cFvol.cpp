@@ -5272,8 +5272,6 @@ void G_CARTESIAN::cft_set_polyhs_comps()
 		polyh->comp = comp;
 		c->cut = FALSE;
 		c->comp = comp;
-		//set polyh for empty cell
-		//set comp
 		continue;
 	    }
 	    

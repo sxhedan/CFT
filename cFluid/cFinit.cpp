@@ -1346,6 +1346,88 @@ void G_CARTESIAN::setVSTRMParams(char *inname)
 	fclose(infile);
 }	/* end setVSTRMParams */
 
+void G_CARTESIAN::initCFTTestStates()
+{
+	int i,j,k,l,index;
+	EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+	double coords[MAXD];
+	COMPONENT comp;
+	STATE *sl,*sr,state;
+        POINT *p;
+        HYPER_SURF *hs;
+        HYPER_SURF_ELEMENT *hse;
+	INTERFACE *intfc = front->interf;
+	double *dens = field.dens;
+	double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+
+        next_point(intfc,NULL,NULL,NULL);
+        while (next_point(intfc,&p,&hse,&hs))
+        {
+	    FT_GetStatesAtPoint(p,hse,hs,(POINTER*)&sl,(POINTER*)&sr);
+	    getRMState(sl,eqn_params,Coords(p),negative_component(hs));
+	    getRMState(sr,eqn_params,Coords(p),positive_component(hs));
+	}
+	FT_MakeGridIntfc(front);
+	setDomain();
+
+	switch (dim)
+	{
+	case 2:
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index2d(i,j,top_gmax);
+		comp = top_comp[index];
+		getRectangleCenter(index,coords);
+	    	getRMState(&state,eqn_params,coords,comp);
+		dens[index] = state.dens;
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        pdens[ii][index] = state.pdens[ii];
+                    }
+                }
+		pres[index] = state.pres;
+		engy[index] = state.engy;
+		for (l = 0; l < dim; ++l)
+		    momn[l][index] = state.momn[l];
+	    }
+	    break;
+	case 3:
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		comp = top_comp[index];
+		getRectangleCenter(index,coords);
+	    	getRMState(&state,eqn_params,coords,comp);
+		//set test state
+	    	//getTESTState(&state,eqn_params,coords,comp);
+		dens[index] = state.dens;
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        pdens[ii][index] = state.pdens[ii];
+                    }
+                }
+		pres[index] = state.pres;
+		engy[index] = state.engy;
+		for (l = 0; l < dim; ++l)
+		    momn[l][index] = state.momn[l];
+	    }
+	    break;
+	}
+	scatMeshStates();
+}	/* end initCFTTestStates */
+
 void G_CARTESIAN::initRichtmyerMeshkovStates()
 {
 	int i,j,k,l,index;

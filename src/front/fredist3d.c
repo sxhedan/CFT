@@ -1189,7 +1189,8 @@ EXPORT int redistribute3d(
 	if (debugging("redistribute"))
 	    printf("intfc_recon %d\n", interface_reconstructed(fr->interf));
 
-	if ((do_redist && fr->step > 0) || fr->step == 1 || do_auto_redist)
+	//if ((do_redist && fr->step > 0) || fr->step == 1 || do_auto_redist)
+	if ((do_redist && fr->step > 0) || do_auto_redist)	//debugdan	FIXME
 	{
 	    if (debugging("redistribute"))
 	    	printf("#redist inside\n");

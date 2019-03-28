@@ -53,6 +53,8 @@ extern void read_cFluid_params(
 	    else if (string[4] == '3')
 		eqn_params->prob_type = SOD_3D;
 	}
+	else if (string[0] == 'C' || string[0] == 'c')
+	    eqn_params->prob_type = CFT_TEST;
 	CursorAfterString(infile,"Enter numerical scheme for interior solver:");
 	fscanf(infile,"%s",string);
 	(void) printf("%s\n",string);
