@@ -121,7 +121,9 @@ int main(int argc, char **argv)
 	{
 	    g_cartesian.setInitialIntfc(&level_func_pack,in_name);
 	    if (f_basic.dim == 3) level_func_pack.set_3d_bdry = YES;
+	    printf("Before FT_InitIntfc().\n");	//debugdan	FIXME
 	    FT_InitIntfc(&front,&level_func_pack);
+	    printf("After FT_InitIntfc().\n");	//debugdan	FIXME
 
 	    FT_PromptSetMixedTypeBoundary2d(in_name,&front);
 	    read_dirichlet_bdry_data(in_name,&front);
@@ -252,7 +254,7 @@ static  void cft_driver(
 
 	    //solve
 	    g_cartesian.cft_solve(2*dt);
-	    g_cartesian.cft_set_face_flux();
+	    //g_cartesian.cft_set_face_flux();
 	    //g_cartesian.cft_update_states();
 	    g_cartesian.cft_update_states_new();
 	    //CFT
@@ -280,8 +282,17 @@ static  void cft_driver(
 	printf("\ntime = %20.14f   step = %5d   next dt = %20.14f\n",
 		g_cartesian.time, g_cartesian.step, dt);
 
+	if (!RestartRun && g_cartesian.dim != 1)
+	{
+	    g_cartesian.record_intfc_extrema();
+	    g_cartesian.print_intfc_extrema(out_name);
+	}
+
         while (true)
         {
+	    if (g_cartesian.dim != 1)
+		g_cartesian.record_intfc_extrema();
+
 	    if (front->step == 0)
             {
                 g_cartesian.initMovieVariables();
@@ -319,7 +330,7 @@ static  void cft_driver(
 
 	    //solve
 	    g_cartesian.cft_solve(2*dt);
-	    g_cartesian.cft_set_face_flux();
+	    //g_cartesian.cft_set_face_flux();
 	    g_cartesian.cft_update_states_new();
 
 	    dt = 2*dt;
@@ -352,6 +363,8 @@ static  void cft_driver(
 	    }
             if (FT_IsMovieFrameTime(front))
 	    {
+		if (g_cartesian.dim != 1)
+		    g_cartesian.print_intfc_extrema(out_name);
 	        g_cartesian.initMovieVariables();
             	FT_AddMovieFrame(front,out_name,binary);
 		if (g_cartesian.dim == 1)
@@ -406,9 +419,16 @@ static  void gas_driver(
 
 	    if (debugging("trace"))
 		printf("Calling initial FT_Propagate()\n");
+
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
 	    g_cartesian.solve(front->dt);
+
+	    //debugdan	FIXME
+	    //g_cartesian.cft_init_cut_cells(NEWTS);
+	    //g_cartesian.cft_set_cut_cells(NEWTS);
+	    //g_cartesian.cft_free_cells(NEWTS);
+	    //debugdan	FIXME
 
 	    FT_SetTimeStep(front);
 	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
@@ -435,11 +455,11 @@ static  void gas_driver(
 			Frequency_of_redistribution(front,GENERAL_WAVE));
 	}
 
-//	if (!RestartRun && g_cartesian.dim != 1)
-//	{
-//	    g_cartesian.record_intfc_extrema();
-//	    g_cartesian.print_intfc_extrema(out_name);
-//	}
+	if (!RestartRun && g_cartesian.dim != 1)
+	{
+	    g_cartesian.record_intfc_extrema();
+	    g_cartesian.print_intfc_extrema(out_name);
+	}
 
 	//Dan
 	/*
@@ -453,8 +473,8 @@ static  void gas_driver(
 	if (debugging("trace")) printf("Before time loop\n");
         for (;;)
         {
-//	    if (g_cartesian.dim != 1)
-//		g_cartesian.record_intfc_extrema();
+	    if (g_cartesian.dim != 1)
+		g_cartesian.record_intfc_extrema();
 
 	    if (front->step == 0 && g_cartesian.dim != 1)
             {
@@ -476,6 +496,11 @@ static  void gas_driver(
 		print_storage("Storage after time step","trace");
 	    }
 
+	    //debugdan	FIXME
+	    //g_cartesian.cft_init_cut_cells(NEWTS);
+	    //g_cartesian.cft_set_cut_cells(NEWTS);
+	    //debugdan	FIXME
+
 	    FT_AddTimeStepToCounter(front);
 	    ++g_cartesian.step;
 	    g_cartesian.time += dt;
@@ -484,6 +509,7 @@ static  void gas_driver(
 
 	    //debugdan	FIXME
 	    g_cartesian.ncft_check_mass();
+	    //g_cartesian.cft_free_cells(NEWTS);
 	    //debugdan	FIXME
 				
             //Next time step determined by maximum speed of previous
@@ -507,10 +533,10 @@ static  void gas_driver(
             	FT_Save(front,out_name);
 		g_cartesian.printFrontInteriorStates(out_name);
 	    }
-            //if (FT_IsMovieFrameTime(front))
+            if (FT_IsMovieFrameTime(front))
 	    {
-//		if (g_cartesian.dim != 1)
-//		    g_cartesian.print_intfc_extrema(out_name);
+		if (g_cartesian.dim != 1)
+		    g_cartesian.print_intfc_extrema(out_name);
 	    	if (debugging("trace")) 
 		    printf("Calling initMovieVariable()\n");
 	        g_cartesian.initMovieVariables();

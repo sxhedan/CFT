@@ -448,6 +448,7 @@ void G_CARTESIAN::setInitialIntfc(
 	{
 	case TWO_FLUID_RT:
 	case TWO_FLUID_RM:
+	case TWO_FLUID_IDL_RM:
 	case CFT_TEST:
 	    initSinePertIntfc(level_func_pack,inname);
 	    break;
@@ -499,6 +500,9 @@ void G_CARTESIAN::setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic
 	case CFT_TEST:
 	    setRichtmyerMeshkovParams(inname);
 	    break;
+	case TWO_FLUID_IDL_RM:
+	    setIDLRichtmyerMeshkovParams(inname);
+	    break;
 	case TWO_FLUID_VST_RM:
 //	    setRichtmyerMeshkovParams(inname);
 	    setVSTRMParams(inname);
@@ -542,6 +546,9 @@ void G_CARTESIAN::setInitialStates()
 	    break;
 	case TWO_FLUID_RM:
 	    initRichtmyerMeshkovStates();
+	    break;
+	case TWO_FLUID_IDL_RM:
+	    initIDLRichtmyerMeshkovStates();
 	    break;
 	case TWO_FLUID_VST_RM:
 //	    initRichtmyerMeshkovStates();
@@ -795,11 +802,13 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 	//Reset cflux for CFT.	Dan
 	cft_reset_cflux();
 
-	copyToMeshVst(&st_field[0]);
-	//cft_setMeshVst(&st_field[0]);	//Dan
+	//copyToMeshVst(&st_field[0]);
+	cft_setMeshVst(&st_field[0]);
 	//computeMeshFlux(st_field[0],&st_flux[0],delta_t);
-	cft_computeMeshFlux(st_field[0],&st_flux[0],delta_t);	//Dan
+	cft_computeMeshFlux(st_field[0],&st_flux[0],delta_t);
+	cft_set_face_flux();
 	
+	/*
 	for (i = 0; i < order-1; ++i)
 	{
 	    copyMeshVst(st_field[0],&st_field[i+1]);
@@ -813,11 +822,13 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 	    computeMeshFlux(st_field[i+1],&st_flux[i+1],delta_t);
 	    //cft_computeMeshFlux(st_field[i+1],&st_flux[i+1],delta_t);	//Dan
 	}
+	*/
 	for (i = 0; i < order; ++i)
 	{
 	    if (b[i] != 0.0)
 	    {
 		addMeshFluxToVst(&st_field[0],st_flux[i],b[i]);
+		//cft_addMeshFluxToVst(&st_field[0],st_flux[i],b[i]);
 	    }
 	}
 	copyFromMeshVst(st_field[0]);
@@ -898,7 +909,8 @@ void G_CARTESIAN::cft_computeMeshFlux(
         //addFluxInDirection(dir,&m_vst,m_flux,delta_t);
         cft_addFluxInDirection(dir,&m_vst,m_flux,delta_t);	//Dan
       }
-    addSourceTerm(&m_vst,m_flux,delta_t);
+    //addSourceTerm(&m_vst,m_flux,delta_t);
+    cft_addSourceTerm(&m_vst,m_flux,delta_t);
 }   /* end cft_computeMeshFlux */
 
 void G_CARTESIAN::computeMeshFluxStrang(
@@ -3377,6 +3389,49 @@ void G_CARTESIAN::scatMeshFlux(FSWEEP *m_flux)
 	    }
 	}
 }	/* end scatMeshFlux */
+
+void G_CARTESIAN::cft_addSourceTerm(
+	SWEEP *m_vst,
+	FSWEEP *m_flux,
+	double delta_t)
+{
+	int i,j,k,l,index;
+	double *gravity = eqn_params->gravity;
+
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("CFT is not implemented yet for 1D or 2D.\n");
+	    clean_up(ERROR);
+	case 3:
+            for (k = imin[2]; k <= imax[2]; k++)
+            for (j = imin[1]; j <= imax[1]; j++)
+            for (i = imin[0]; i <= imax[0]; i++)
+            {
+		index = d_index3d(i,j,k,top_gmax);
+		if (!gas_comp(top_comp[index]))
+		{
+		    for (l = 0; l < dim; ++l)
+		    {
+		    	m_flux->momn_flux[l][index] = 0.0; 
+		    	m_flux->engy_flux[index] = 0.0; 
+		    }
+		}
+		else
+		{
+		    for (l = 0; l < dim; ++l)
+		    {
+		    	m_flux->momn_flux[l][index] += 
+				delta_t*gravity[l]*m_vst->dens[index];
+		    	m_flux->engy_flux[index] += 
+				delta_t*gravity[l]*m_vst->momn[l][index];
+		    }
+		}
+	    }
+	}
+	
+}	/* end cft_addSourceTerm */
 
 void G_CARTESIAN::addSourceTerm(
 	SWEEP *m_vst,
@@ -9028,6 +9083,157 @@ void G_CARTESIAN::addMeshFluxToVst(
 	}
 }	/* end addMeshFluxToVst */
 
+void G_CARTESIAN::cft_addMeshFluxToVst(
+	SWEEP *m_vst,
+	FSWEEP m_flux,
+	double chi)
+{
+	int 		i,j,k,l,index;
+	double		ke,c,u;
+	EOS_PARAMS	*eos;
+	STATE		st;
+	int		comp;
+	double		temp;
+	CELL		*cell;
+	CPOLYHEDRON	*polyh;
+	double		tvol;
+	CFTFLUX		cflux;
+
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("ERROR: CFT is not implemented for 1D and 2D.\n");
+	    clean_up(ERROR);
+	case 3:
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+
+		comp = top_comp[index];
+                if (!gas_comp(comp))
+                {
+                    m_vst->dens[index] = 0.0;
+                    if(eqn_params->multi_comp_non_reactive == YES)
+                    {
+                        int ii;
+                        for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        {
+                            m_vst->pdens[ii][index] = 0.0;
+                        }
+                    }
+                    m_vst->engy[index] = 0.0;
+                    for (l = 0; l < dim; ++l)
+                        m_vst->momn[l][index] = 0.0;
+                    continue;
+                }
+                eos = &(eqn_params->eos[comp]);
+
+		cell = &(cells_halft[index]);
+		polyh = cell->polyhs;
+		if (!polyh->iscell)
+		{
+		    tvol = 0;
+		    cflux.dens_flux = 0;
+		    for (l = 0; l < 3; l++)
+			cflux.momn_flux[l] = 0;
+		    cflux.engy_flux = 0;
+		    u = 0;
+		    while (polyh)
+		    {
+			tvol += polyh->vol;
+			cflux.dens_flux += polyh->flux.dens_flux*polyh->vol;
+			for (l = 0; l < 3; l++)
+			    cflux.momn_flux[l] += polyh->flux.momn_flux[l]*polyh->vol;
+			cflux.engy_flux += polyh->flux.engy_flux*polyh->vol;
+			polyh = polyh->next;
+		    }
+		    cflux.dens_flux /= tvol;
+		    for (l = 0; l < 3; l++)
+			cflux.momn_flux[l] /= tvol;
+		    cflux.engy_flux /= tvol;
+		    m_vst->dens[index] += chi*cflux.dens_flux;
+		    for (l = 0; l < 3; l++)
+		    {
+			m_vst->momn[l][index] += chi*cflux.momn_flux[l];
+			u += sqr(m_vst->momn[l][index]);
+		    }
+		    m_vst->engy[index] += chi*cflux.engy_flux;
+		}
+		else
+		{
+		    m_vst->dens[index] += chi*m_flux.dens_flux[index];
+		    if(eqn_params->multi_comp_non_reactive == YES)
+		    {
+			int ii;
+			for(ii = 0; ii < eqn_params->n_comps; ii++)
+			{
+			    m_vst->pdens[ii][index] += chi*m_flux.pdens_flux[ii][index];
+			}
+		    }
+		    m_vst->engy[index] += chi*m_flux.engy_flux[index];
+		    ke = u = 0.0;
+		    for (l = 0; l < dim; ++l)
+		    {
+			m_vst->momn[l][index] += 
+				    chi*m_flux.momn_flux[l][index];
+			ke += sqr(m_vst->momn[l][index]);
+			u += sqr(m_vst->momn[l][index]);
+		    }
+		}
+
+		CovertVstToState(&st, m_vst, eos, index, dim);
+		checkCorrectForTolerance(&st);
+		m_vst->dens[index] = st.dens;
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        m_vst->pdens[ii][index] = st.pdens[ii];
+                    }
+                }
+		m_vst->pres[index] = st.pres;
+		m_vst->engy[index] = st.engy;
+		u = sqrt(u)/m_vst->dens[index];
+		c = EosSoundSpeed(&st);
+		temp = std::max((std::max(u,fabs(u-c))),(fabs(u+c)));
+                if (max_speed < temp)
+                    max_speed = temp;
+		//debugdan	FIXME
+		/*
+		if (i == 4 && j == 12 && k == 13)
+		{
+		    printf("%d %d %d %d: flux %e, %e, (%e, %e, %e).\n",
+			    i, j, k, index, 
+			    m_flux.dens_flux[index], m_flux.engy_flux[index], 
+			    m_flux.momn_flux[0][index], m_flux.momn_flux[1][index], 
+			    m_flux.momn_flux[2][index]);
+		}
+		*/
+		//debugdan	FIXME
+	    }
+            // scaling partial density
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                for (k = imin[2]; k <= imax[2]; ++k)
+                for (j = imin[1]; j <= imax[1]; ++j)
+                for (i = imin[0]; i <= imax[0]; ++i)
+                {
+                    index = d_index3d(i,j,k,top_gmax);
+                    int ii;
+                    double sum = 0.0;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        sum += m_vst->pdens[ii][index];
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                        m_vst->pdens[ii][index] *= m_vst->dens[index]/sum;
+                }
+            }
+	    scatMeshVst(m_vst);
+	}
+}	/* end cft_addMeshFluxToVst */
 
 void G_CARTESIAN::appendGhostBuffer(
 	SWEEP *vst,

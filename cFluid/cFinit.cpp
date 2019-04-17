@@ -3,6 +3,7 @@
 static double intfcPertHeight(FOURIER_POLY*,double*);
 static void getRTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
+static void getIDLRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getTESTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getBubbleState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 static void getAmbientState(STATE*,EQN_PARAMS*,double*,COMPONENT);
@@ -1097,6 +1098,152 @@ void G_CARTESIAN::setRichtmyerMeshkovParams(char *inname)
 	fclose(infile);
 }	/* end setRichtmyerMeshkovParams */
 
+void G_CARTESIAN::setIDLRichtmyerMeshkovParams(char *inname)
+{
+	FILE *infile = fopen(inname,"r");
+	EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+	char s[100], str[256];
+	double pinf,einf,gamma,et,mgamma[2],M[2],R; 
+
+        CursorAfterString(infile,"Type yes to have MULTI_COMP_NON_REACTIVE:");
+        fscanf(infile,"%s",s);
+        (void) printf("%s\n",s);
+        if (s[0] == 'y' || s[0] == 'Y')
+            eqn_params->multi_comp_non_reactive = YES;
+        else
+            eqn_params->multi_comp_non_reactive = NO;
+
+        CursorAfterString(infile,"Enter the number of components:");
+        fscanf(infile,"%d",&eqn_params->n_comps);
+        (void) printf("%d\n",eqn_params->n_comps);
+        (eqn_params->eos[GAS_COMP1]).n_comps = eqn_params->n_comps;
+        (eqn_params->eos[GAS_COMP2]).n_comps = eqn_params->n_comps;
+
+        (eqn_params->eos[GAS_COMP1]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 2:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP1]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP1]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP1]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP1]).eos_type != ERROR_EOSTYPE);
+
+	if ((eqn_params->eos[GAS_COMP1]).eos_type == MULTI_COMP_POLYTROPIC)
+	{
+	    sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
+		    GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+	    (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+	    (eqn_params->eos[GAS_COMP1]).mgamma[0] = mgamma[0];
+	    (eqn_params->eos[GAS_COMP1]).M[0] = M[0];
+	    (eqn_params->eos[GAS_COMP1]).mgamma[1] = mgamma[1];
+	    (eqn_params->eos[GAS_COMP1]).M[1] = M[1];
+	    (eqn_params->eos[GAS_COMP1]).R = R;
+	}
+	else if ((eqn_params->eos[GAS_COMP1]).eos_type == POLYTROPIC || 
+		 (eqn_params->eos[GAS_COMP1]).eos_type == STIFFENED_POLYTROPIC)
+	{
+	    sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:", 
+		    GAS_COMP1);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+	    (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+	    (eqn_params->eos[GAS_COMP1]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP1]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP1]).einf = einf;
+	    (eqn_params->eos[GAS_COMP1]).et = et;
+	}
+	else
+	{
+	    printf("Error EOS type!\n");
+	    clean_up(ERROR);
+	}
+        
+        (eqn_params->eos[GAS_COMP2]).eos_type = ERROR_EOSTYPE;
+        CursorAfterString(infile,"Enter EOS type of the fluid with comp 3:");
+        fscanf(infile,"%s",str);
+        (void) printf("%s\n",str);
+        if (str[0] == 'P' || str[0] == 'p')
+            (eqn_params->eos[GAS_COMP2]).eos_type = POLYTROPIC;
+        else if (str[0] == 'S' || str[0] == 's')
+            (eqn_params->eos[GAS_COMP2]).eos_type = STIFFENED_POLYTROPIC;
+        else if (str[0] == 'M' || str[0] == 'm')
+            (eqn_params->eos[GAS_COMP2]).eos_type = MULTI_COMP_POLYTROPIC;
+        assert((eqn_params->eos[GAS_COMP2]).eos_type != ERROR_EOSTYPE);
+
+	if ((eqn_params->eos[GAS_COMP2]).eos_type == MULTI_COMP_POLYTROPIC)
+	{
+	    sprintf(str, "Enter mgamma and molecular weight (M) and the ideal gas constant (R) of the fluid with comp %d:",
+		    GAS_COMP2);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf %lf",&mgamma[0],&M[0],&mgamma[1],&M[1],&R);
+	    (void) printf("%f %f %f %f %f\n",mgamma[0],M[0],mgamma[1],M[1],R);
+	    (eqn_params->eos[GAS_COMP2]).mgamma[0] = mgamma[0];
+	    (eqn_params->eos[GAS_COMP2]).M[0] = M[0];
+	    (eqn_params->eos[GAS_COMP2]).mgamma[1] = mgamma[1];
+	    (eqn_params->eos[GAS_COMP2]).M[1] = M[1];
+	    (eqn_params->eos[GAS_COMP2]).R = R;
+	}
+	else if ((eqn_params->eos[GAS_COMP2]).eos_type == POLYTROPIC || 
+		 (eqn_params->eos[GAS_COMP2]).eos_type == STIFFENED_POLYTROPIC)
+	{
+	    sprintf(str, "Enter gamma, pinf, einf, et of the fluid with comp %d:", 
+		    GAS_COMP2);
+	    CursorAfterString(infile,str);
+	    fscanf(infile,"%lf %lf %lf %lf",&gamma,&pinf,&einf,&et);
+	    (void) printf("%f %f %f %f\n",gamma,pinf,einf,et);
+	    (eqn_params->eos[GAS_COMP2]).gamma = gamma;
+	    (eqn_params->eos[GAS_COMP2]).pinf = pinf;
+	    (eqn_params->eos[GAS_COMP2]).einf = einf;
+	    (eqn_params->eos[GAS_COMP2]).et = et;
+	}
+	else
+	{
+	    printf("Error EOS type!\n");
+	    clean_up(ERROR);
+	}
+
+	CursorAfterString(infile,"Enter density of top fluid:");
+	fscanf(infile,"%lf",&eqn_params->rho2);
+	(void) printf("%f\n",eqn_params->rho2);
+	CursorAfterString(infile,"Enter density of bottom fluid:");
+	fscanf(infile,"%lf",&eqn_params->rho1);
+	(void) printf("%f\n",eqn_params->rho1);
+	CursorAfterString(infile,"Enter pressure at interface:");
+	fscanf(infile,"%lf",&eqn_params->p0);
+	(void) printf("%f\n",eqn_params->p0);
+	CursorAfterString(infile,"Enter Mach number of shock:");
+	fscanf(infile,"%lf",&eqn_params->Mach_number);
+	(void) printf("%f\n",eqn_params->Mach_number);
+	CursorAfterString(infile,"Enter position of shock:");
+	fscanf(infile,"%lf",&eqn_params->shock_position);
+	(void) printf("%f\n",eqn_params->shock_position);
+	CursorAfterString(infile,"Enter direction of shock:");
+	fscanf(infile,"%d",&eqn_params->shock_dir);
+	(void) printf("%d\n",eqn_params->shock_dir);
+	CursorAfterString(infile,"Enter contact velocity "
+                                 "after shock interaction:");
+        fscanf(infile,"%lf",&eqn_params->contact_vel);
+	(void) printf("%f\n",eqn_params->contact_vel);
+	CursorAfterString(infile,"Type yes to track the interface:");
+	fscanf(infile,"%s",s);
+	(void) printf("%s\n",s);
+	if (s[0] == 'y' || s[0] == 'Y')
+	    eqn_params->tracked = YES;
+	else
+	    eqn_params->tracked = NO;
+
+	CursorAfterString(infile,"Enter thickness of initial diffusion layer:");
+	fscanf(infile,"%lf",&eqn_params->thickness_idl);
+	(void) printf("%f\n",eqn_params->thickness_idl);
+
+	fclose(infile);
+}	/* end setIDLRichtmyerMeshkovParams */
+
 void G_CARTESIAN::setVSTRMParams(char *inname)
 {
 	FILE *infile = fopen(inname,"r");
@@ -1510,6 +1657,90 @@ void G_CARTESIAN::initRichtmyerMeshkovStates()
 	scatMeshStates();
 }	/* end initRichtmyerMeshkovStates */
 
+void G_CARTESIAN::initIDLRichtmyerMeshkovStates()
+{
+	int i,j,k,l,index;
+	EQN_PARAMS *eqn_params = (EQN_PARAMS*)front->extra1;
+	double coords[MAXD];
+	COMPONENT comp;
+	STATE *sl,*sr,state;
+        POINT *p;
+        HYPER_SURF *hs;
+        HYPER_SURF_ELEMENT *hse;
+	INTERFACE *intfc = front->interf;
+	double *dens = field.dens;
+	double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+
+        next_point(intfc,NULL,NULL,NULL);
+        while (next_point(intfc,&p,&hse,&hs))
+        {
+	    FT_GetStatesAtPoint(p,hse,hs,(POINTER*)&sl,(POINTER*)&sr);
+	    getIDLRMState(sl,eqn_params,Coords(p),negative_component(hs));
+	    getIDLRMState(sr,eqn_params,Coords(p),positive_component(hs));
+	}
+	FT_MakeGridIntfc(front);
+	setDomain();
+
+	switch (dim)
+	{
+	case 2:
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index2d(i,j,top_gmax);
+		comp = top_comp[index];
+		getRectangleCenter(index,coords);
+	    	//getRMState(&state,eqn_params,coords,comp);
+	    	getIDLRMState(&state,eqn_params,coords,comp);
+		dens[index] = state.dens;
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        pdens[ii][index] = state.pdens[ii];
+                    }
+                }
+		pres[index] = state.pres;
+		engy[index] = state.engy;
+		for (l = 0; l < dim; ++l)
+		    momn[l][index] = state.momn[l];
+	    }
+	    break;
+	case 3:
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		comp = top_comp[index];
+		getRectangleCenter(index,coords);
+	    	//getRMState(&state,eqn_params,coords,comp);
+	    	getIDLRMState(&state,eqn_params,coords,comp);
+		//set test state
+	    	//getTESTState(&state,eqn_params,coords,comp);
+		dens[index] = state.dens;
+                if(eqn_params->multi_comp_non_reactive == YES)
+                {
+                    int ii;
+                    for(ii = 0; ii < eqn_params->n_comps; ii++)
+                    {
+                        pdens[ii][index] = state.pdens[ii];
+                    }
+                }
+		pres[index] = state.pres;
+		engy[index] = state.engy;
+		for (l = 0; l < dim; ++l)
+		    momn[l][index] = state.momn[l];
+	    }
+	    break;
+	}
+	scatMeshStates();
+}	/* end initIDLRichtmyerMeshkovStates */
+
 void G_CARTESIAN::initVSTRMStates()
 {
 	int i,j,k,l,index;
@@ -1904,6 +2135,119 @@ static void getRMState(
 	state->engy = EosEnergy(state);
 
 }	/* end getRMState */
+
+static void getIDLRMState(
+	STATE *state,
+	EQN_PARAMS *eqn_params,
+	double *coords,
+	COMPONENT comp)
+{
+	FOURIER_POLY *wave_params;
+	EOS_PARAMS	*eos;
+	double rho1 = eqn_params->rho1;
+	double rho2 = eqn_params->rho2;
+	double p0 = eqn_params->p0;
+	double shock_position = eqn_params->shock_position;
+	double Mach_number = eqn_params->Mach_number;
+	double shock_speed;
+	double csp = eqn_params->contact_vel;
+	int shock_dir = eqn_params->shock_dir;
+	int i,dim;
+ 
+	if (debugging("rm_state"))
+	    printf("Entering getRMState(), coords = %f %f\n",
+				coords[0],coords[1]);
+	wave_params = (FOURIER_POLY*)eqn_params->level_func_params;
+	dim = wave_params->dim;
+
+	/* Constant density */
+	for (i = 0; i < dim; ++i)
+	    state->vel[i] = state->momn[i] = 0.0;
+	state->dim = dim;
+	eos = &(eqn_params->eos[comp]);
+	state->eos = eos;
+
+//	printf("In getRMState(), coords = (%lf, %lf, %lf), comp = %d.\n",
+//		coords[0], coords[1], coords[2], comp);
+	
+	switch (comp)
+	{
+	case GAS_COMP1:
+	    state->dens = rho1;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = state->dens;
+                    state->pdens[1] = 0.0;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case GAS_COMP2:
+	    state->dens = rho2;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = 0.0;
+                    state->pdens[1] = state->dens;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case EXT_COMP:
+	    state->dens = 0.0;
+	    state->pres = 0.0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                state->pdens[0] = 0.0;
+                state->pdens[1] = 0.0;
+            }
+	    state->engy = 0.0;
+	    return;	//Dan	FIXME
+//	    break;
+	default:
+	    printf("ERROR: Unknown component %d in getRMState()!\n",comp);
+	    clean_up(ERROR);
+	}
+
+	//initial diffusion layer
+	
+	double idl = eqn_params->thickness_idl;
+	double z0 = wave_params->z0;
+	double z_intfc_pert = level_wave_func(wave_params,coords);
+	if (eqn_params->multi_comp_non_reactive == YES)
+	{
+	    state->pdens[0] = 0.5*rho1 + 0.5*(0.0-rho1)*erf(z_intfc_pert/idl*4);
+	    state->pdens[1] = 0.5*rho2 + 0.5*(rho2-0.0)*erf(z_intfc_pert/idl*4);
+	}
+	state->dens = 0.5*(rho1+rho2) + 0.5*(rho2-rho1)*erf(z_intfc_pert/idl*4);
+
+	if (debugging("rm_state"))
+	{
+	    printf("Before calling behind_state()\n");
+	    printf("state = %f %f %f\n",state->dens,state->pres,
+					state->vel[0]);
+	}
+	if ((shock_dir ==  1 && coords[dim-1] < shock_position) ||
+	    (shock_dir == -1 && coords[dim-1] > shock_position))
+	{
+	    behind_state(SHOCK_MACH_NUMBER,Mach_number,
+			&shock_speed,shock_dir,state,state);	
+	    state->engy = EosEnergy(state);
+	    if (debugging("rm_state"))
+	    {
+	    	printf("After calling behind_state()\n");
+	    	printf("state = %f %f %f\n",state->dens,state->pres,
+			state->vel[0]);
+	    }
+	}
+	state->vel[dim-1] -= csp;
+	state->momn[dim-1] = state->vel[dim-1]*state->dens;
+	state->engy = EosEnergy(state);
+
+}	/* end getIDLRMState */
 
 static void behind_state(
 	int		which_parameter,

@@ -2,6 +2,8 @@
 
 void getPolyhCent(CPOLYHEDRON*,double*);
 void getRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
+void getRTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
+void getIDLRMState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 void getTESTState(STATE*,EQN_PARAMS*,double*,COMPONENT);
 void behind_state(int,double,double*,int,STATE*,STATE*);
 void behind_state_test(int,double,double*,int,STATE*,STATE*);
@@ -13,7 +15,6 @@ void print_cpolyh(CPOLYHEDRON*);
 bool corr_polyh_in_cell(CPOLYHEDRON*,CELL*,int*);
 void set_p_min_max(CPOLYHEDRON*,double*,double*);
 
-//currently for TWO_FLUID_RM only
 void G_CARTESIAN::cft_set_init_polyh_states()
 {
 	switch (eqn_params->prob_type)
@@ -21,11 +22,17 @@ void G_CARTESIAN::cft_set_init_polyh_states()
 	    case TWO_FLUID_RM:
 		cft_initRMPolyhStates();
 		break;
+	    case TWO_FLUID_IDL_RM:
+		cft_initIDLRMPolyhStates();	//TODO
+		break;
+	    case TWO_FLUID_RT:
+		cft_initRTPolyhStates();
+		break;
 	    case CFT_TEST:
 		cft_initCFTTestPolyhStates();
 		break;
 	    default:
-		printf("The initialization for CFT is currently implemented for RM only.\n");
+		printf("Problem type has not been implemented for CFT yet.\n");
 		clean_up(ERROR);
 	}
 
@@ -152,6 +159,69 @@ void G_CARTESIAN::cft_initRMPolyhStates()
 		getRMState(&(polyh->state),eqn_params,coords,polyh->comp);
 		//set test state	FIXME
 		//getTESTState(&(polyh->state),eqn_params,coords,polyh->comp);
+		update = true;
+		polyh = polyh->next;
+	    }
+
+	    //update cell states also
+	    if (update)
+	    {
+		//cft_update_cell_states(&cells[index]);
+	    }
+	}
+
+	return;
+}
+
+void G_CARTESIAN::cft_initRTPolyhStates()
+{
+	int i, j, k, index;
+	double coords[3];
+	STATE state;
+	CPOLYHEDRON *polyh;
+
+	cells = cells_old;
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
+	    polyh = cells[index].polyhs;
+	    while (polyh)
+	    {
+		getPolyhCent(polyh,coords);
+		getRTState(&(polyh->state),eqn_params,coords,polyh->comp);
+		polyh = polyh->next;
+	    }
+	}
+
+	return;
+}
+
+void G_CARTESIAN::cft_initIDLRMPolyhStates()
+{
+	int i, j, k, index;
+	double coords[3];
+	STATE state;
+	CPOLYHEDRON *polyh;
+	bool update;
+
+	cells = cells_old;	//FIXME
+
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    update = false;
+	    index = d_index3d(i,j,k,top_gmax);
+	    polyh = cells[index].polyhs;
+	    while (polyh)
+	    {
+		getPolyhCent(polyh,coords);
+		//set state
+		//getRMState(&(polyh->state),eqn_params,coords,polyh->comp);
+		getIDLRMState(&(polyh->state),eqn_params,coords,polyh->comp);
 		update = true;
 		polyh = polyh->next;
 	    }
@@ -532,6 +602,198 @@ void getRMState(
 	return;
 }	/* end getRMState */
 
+void getRTState(
+	STATE *state,
+	EQN_PARAMS *eqn_params,
+	double *coords,
+	COMPONENT comp)
+{
+	FOURIER_POLY	*wave_params;
+	EOS_PARAMS	*eos;
+	double		z_intfc;
+	double 		rho1 = eqn_params->rho1;
+	double 		rho2 = eqn_params->rho2;
+	double 		p0 = eqn_params->p0;
+	double 		*g = eqn_params->gravity;
+	double 		dz, gz, c2, gamma;
+	int    		i,dim;
+	double		tmp;
+
+	eos = &(eqn_params->eos[comp]);
+	state->eos = eos;
+	gamma = eos->gamma;
+
+	wave_params = (FOURIER_POLY*)eqn_params->level_func_params;
+	dim = wave_params->dim;
+	dz = coords[dim-1] - wave_params->z0;
+	gz = g[dim-1];
+
+	/* Constant density */
+	for (i = 0; i < dim; ++i)
+	    state->momn[i] = 0.0;
+	switch (comp)
+	{
+	case GAS_COMP1:
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+	        gamma = eos->mgamma[0];
+            }
+	    c2 = gamma*(p0+eos->pinf)/rho1;
+	    tmp = exp(gamma*gz/c2*dz);
+	    state->dens = rho1*tmp;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = state->dens;
+                    state->pdens[1] = 0.0;
+                }
+            }
+            
+	    state->pres = state->dens*c2/gamma - eos->pinf;
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case GAS_COMP2:
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+	        gamma = eos->mgamma[1];
+            }
+	    c2 = gamma*(p0+eos->pinf)/rho2;
+	    tmp = exp(gamma*gz/c2*dz);
+	    state->dens = rho2*tmp;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+		state->pdens[0] = 0.0;
+		state->pdens[1] = state->dens;
+            }
+
+	    state->pres = state->dens*c2/gamma - eos->pinf;
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case EXT_COMP:
+	    state->dens = 0.0;
+	    state->pres = 0.0;
+	    state->engy = 0.0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                state->pdens[0] = 0.0;
+                state->pdens[1] = 0.0;
+            }
+	    break;
+	default:
+	    printf("ERROR: Unknown component %d in getRTState()!\n",comp);
+	    clean_up(ERROR);
+	}
+}	/* end getRTState */
+
+void getIDLRMState(
+	STATE *state,
+	EQN_PARAMS *eqn_params,
+	double *coords,
+	COMPONENT comp)
+{
+	FOURIER_POLY *wave_params;
+	EOS_PARAMS	*eos;
+	double rho1 = eqn_params->rho1;
+	double rho2 = eqn_params->rho2;
+	double p0 = eqn_params->p0;
+	double shock_position = eqn_params->shock_position;
+	double Mach_number = eqn_params->Mach_number;
+	double shock_speed;
+	double csp = eqn_params->contact_vel;
+	int shock_dir = eqn_params->shock_dir;
+	int i,dim;
+ 
+	wave_params = (FOURIER_POLY*)eqn_params->level_func_params;
+	dim = wave_params->dim;
+
+	/* Constant density */
+	for (i = 0; i < dim; ++i)
+	    state->vel[i] = state->momn[i] = 0.0;
+	state->dim = dim;
+	eos = &(eqn_params->eos[comp]);
+	state->eos = eos;
+
+	
+	switch (comp)
+	{
+	case GAS_COMP1:
+	    state->dens = rho1;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = state->dens;
+                    state->pdens[1] = 0.0;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case GAS_COMP2:
+	    state->dens = rho2;
+	    state->pres = p0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                {
+                    state->pdens[0] = 0.0;
+                    state->pdens[1] = state->dens;
+                }
+            }
+	    state->engy = EosInternalEnergy(state);
+	    break;
+	case EXT_COMP:
+	    state->dens = 0.0;
+	    state->pres = 0.0;
+            if(eqn_params->multi_comp_non_reactive == YES)
+            {
+                state->pdens[0] = 0.0;
+                state->pdens[1] = 0.0;
+            }
+	    state->engy = 0.0;
+	    return;	//Dan	FIXME
+//	    break;
+	default:
+	    printf("ERROR: Unknown component %d in getRMState()!\n",comp);
+	    clean_up(ERROR);
+	}
+
+	//initial diffusion layer
+	
+	double idl = eqn_params->thickness_idl;
+	double z0 = wave_params->z0;
+	double z_intfc_pert = level_wave_func(wave_params,coords);
+	if (eqn_params->multi_comp_non_reactive == YES)
+	{
+	    state->pdens[0] = 0.5*rho1 + 0.5*(0.0-rho1)*erf(z_intfc_pert/idl*4);
+	    state->pdens[1] = 0.5*rho2 + 0.5*(rho2-0.0)*erf(z_intfc_pert/idl*4);
+	}
+	state->dens = 0.5*(rho1+rho2) + 0.5*(rho2-rho1)*erf(z_intfc_pert/idl*4);
+
+	if (debugging("rm_state"))
+	{
+	    printf("Before calling behind_state()\n");
+	    printf("state = %f %f %f\n",state->dens,state->pres,
+					state->vel[0]);
+	}
+	if ((shock_dir ==  1 && coords[dim-1] < shock_position) ||
+	    (shock_dir == -1 && coords[dim-1] > shock_position))
+	{
+	    behind_state(SHOCK_MACH_NUMBER,Mach_number,
+	    		&shock_speed,shock_dir,state,state);
+	    state->engy = EosEnergy(state);
+	    if (debugging("rm_state"))
+	    {
+	    	printf("After calling behind_state()\n");
+	    	printf("state = %f %f %f\n",state->dens,state->pres,
+			state->vel[0]);
+	    }
+	}
+	state->vel[dim-1] -= csp;
+	state->momn[dim-1] = state->vel[dim-1]*state->dens;
+	state->engy = EosEnergy(state);
+
+	return;
+}	/* end getIDLRMState */
+
 void behind_state_test(
 	int		which_parameter,
 	double		parameter,
@@ -642,7 +904,7 @@ void behind_state(
 
 void G_CARTESIAN::cft_set_face_flux()
 {
-	int i, j, k, index, ii, jj, kk, indexx, ic;
+	int i, j, k, index, ii, jj, kk, indexx, ic, l;
 	int dir, side, sign;
 	double cf_area, f, deltax;
 	double min_crds[3], max_crds[3], cflux_gmax[3];
@@ -697,32 +959,16 @@ void G_CARTESIAN::cft_set_face_flux()
 	    }
 	    */
 	    //debugdan	FIXME
-	    
 
-	    //if (c->merged == FALSE)
-		//continue;
-
-	    //check if this comp is the same as comp[index] or not
-	    /*
-	    comp = c->pams->polyh->comp;
-	    if (comp == GAS_COMP1)
-		ic = 0;
-	    else if (comp == GAS_COMP2)
-		ic = 1;
-	    else
-	    {
-		printf("ERROR in cft_set_face_flux(): incorrect comp.\n");
-		clean_up(ERROR);
-	    }
-	    */
-
-	    //pam = c->pams;
 	    polyh = c->polyhs;
-	    //while (pam)
 	    while (polyh)
 	    {
-		//polyh = pam->polyh;
 		polyh->mflux = 0;
+		polyh->flux.dens_flux = 0;
+		for (ii = 0; ii < 3; ii++)
+		    polyh->flux.momn_flux[ii] = 0;
+		polyh->flux.engy_flux = 0;
+
 		comp = polyh->comp;
 		if (comp == GAS_COMP1)
 		    ic = 0;
@@ -734,9 +980,9 @@ void G_CARTESIAN::cft_set_face_flux()
 		    clean_up(ERROR);
 		}
 
-		//debugdan	FIXME
 		if (debugcsff)
 		    printf("Polyh:\n");
+
 		if (polyh->iscell)
 		{
 		    if (debugcsff)
@@ -762,24 +1008,20 @@ void G_CARTESIAN::cft_set_face_flux()
 				sign = 1;
 			    indexx = d_index3d(ii,jj,kk,cflux_gmax);
 			    polyh->mflux += sign*polyh->vol*cflux[ic][dir].dens_flux[indexx];
-			    //debugdan	FIXME
+			    polyh->flux.dens_flux += sign*cflux[ic][dir].dens_flux[indexx];
+			    for (l = 0; l < 3; l++)
+				polyh->flux.momn_flux[l] += sign*cflux[ic][dir].momn_flux[l][indexx];
+			    polyh->flux.engy_flux += sign*cflux[ic][dir].engy_flux[indexx];
+
 			    if (debugcsff)
 			    {
 				printf("%d %d %d: comp = %d, cflux[%d][%d] = %e, side = %d, mflux = %e.\n",
 					i, j, k, polyh->comp, ic, dir, 
 					cflux[ic][dir].dens_flux[indexx],
 					side, polyh->mflux);
-				/*
-				printf("%d %d %d: dir = %d, side = %d, "
-					"dens_flux[%d] = %e, mflux = %e.\n",
-					i, j, k, dir, side, indexx, 
-					cflux[ic][dir].dens_flux[indexx], 
-					polyh->mflux);
-				*/
 			    }
 			}
 		    }
-		    //polyh->mflux *= polyh->vol;
 		}
 		else
 		{
@@ -788,6 +1030,7 @@ void G_CARTESIAN::cft_set_face_flux()
 			printf("polyh is not a cell. comp = %d, vol = %e\n",
 				polyh->comp, polyh->vol);
 		    }
+
 		    face = polyh->faces;
 		    while (face)
 		    {
@@ -817,42 +1060,30 @@ void G_CARTESIAN::cft_set_face_flux()
 				sign = 1;
 			    indexx = d_index3d(ii,jj,kk,cflux_gmax);
 
-			    //set dens flux
-			    //face->dens_flux = sign*face->area/cf_area*cflux[ic][dir].dens_flux[indexx];
-			    //set mass flux
-			    //face->mass_flux = face->dens_flux*polyh->vol;
 			    face->mass_flux = sign*deltax*face->area*cflux[ic][dir].dens_flux[indexx];
 			    polyh->mflux += face->mass_flux;
+			    polyh->flux.dens_flux += sign*deltax*face->area*cflux[ic][dir].dens_flux[indexx]/polyh->vol;
+			    for (l = 0; l < 3; l++)
+				polyh->flux.momn_flux[l] += sign*deltax*face->area*cflux[ic][dir].momn_flux[l][indexx]/polyh->vol;
+			    polyh->flux.engy_flux += sign*deltax*face->area*cflux[ic][dir].engy_flux[indexx]/polyh->vol;
 
-			    //debugdan	FIXME
 			    if (debugcsff)
 			    {
 				printf("%d %d %d %d %d: face area = %e, origin flux = %e.\n",
 					i, j, k, dir, side, face->area,
 					cflux[ic][dir].dens_flux[indexx]);
 			    }
-			    /*
-			    if (i == 4 && j == 4 && k == 21 && polyh->comp ==2)
-			    {
-				printf("4 4 21 vol = %e, dir = %d, side = %d, dens_flux[%d] = %e (%e).\n",
-					polyh->vol, dir, side, indexx, face->dens_flux,
-					cflux[ic][dir].dens_flux[indexx]);
-			    }
-			    */
-			    //debugdan	FIXME
 			}
 			face = face->next;
 		    }
-		    //debugdan	FIXME
+
 		    if (debugcsff)
 		    {
 			printf("%d %d %d: mflux = %e.\n", 
 				i, j, k, polyh->mflux);
 		    }
-		    //debugdan	FIXME
 		}
 
-		//pam = pam->next;
 		polyh = polyh->next;
 	    }
 	}
@@ -2772,7 +3003,6 @@ void G_CARTESIAN::cft_check_mass()
 	bool debugccm = false;
 
 	printf("Calling cft_check_mass():\n");
-	printf("This function is for test ONLY.\n");
 
 	cells = cells_new;
 	tm1 = 0.0;
@@ -2843,6 +3073,16 @@ void G_CARTESIAN::cft_check_mass()
 
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);
+
+	if (front->step == 0 || front->step == 1)
+	{
+	    init_tm1 = tm1;
+	    init_tm2 = tm2;
+	}
+	else
+	{
+	    printf("err2 = %e.\n", (tm2 - init_tm2)/init_tm2);
+	}
 
 	//debugdan	FIXME
 	/*
@@ -2963,9 +3203,12 @@ void G_CARTESIAN::cft_check_mass_oldts()
 
 void G_CARTESIAN::ncft_check_mass()
 {
-	int i, j, k, index;
-	CELL *c;
+	int i, j, k, index, indexx;
+	int icrds[3];
 	double cvol, tm1, tm2;
+	CELL *c;
+	CPOLYHEDRON *polyh;
+	bool found;
 	bool debugncm = false;
 
 	printf("This function is for test ONLY.\n");
@@ -2975,12 +3218,107 @@ void G_CARTESIAN::ncft_check_mass()
 	tm2 = 0.0;
 	cvol = top_h[0]*top_h[1]*top_h[2];
 
+	/*
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
+	    c = &(cells_new[index]);
 
+	    polyh = c->polyhs;
+	    while (polyh)
+	    {
+		if (polyh->iscell)
+		{
+		    if (top_comp[index] == GAS_COMP1)
+		    {
+			tm1 += cvol * field.dens[index];
+		    }
+		    else if (top_comp[index] == GAS_COMP2)
+		    {
+			tm2 += cvol * field.dens[index];
+
+			if (debugncm)
+			{
+			    printf("%e %e %e: add cell with vol %e, dens = %e.\n",
+				    i, j, k, cvol, field.dens[index]);
+			}
+		    }
+		    break;
+		}
+		else
+		{
+		    if (polyh->comp == GAS_COMP1)
+		    {
+			if (top_comp[index] == GAS_COMP1)
+			{
+			    tm1 += polyh->vol * field.dens[index];
+			}
+			else
+			{
+			    found = false;
+			    for (icrds[2] = k-1; icrds[2] <= k+1; icrds[2]++)
+			    for (icrds[1] = j-1; icrds[1] <= j+1; icrds[1]++)
+			    for (icrds[0] = i-1; icrds[0] <= i+1; icrds[0]++)
+			    {
+				if (found)
+				    break;
+				indexx = d_index3d(icrds[0],icrds[1],icrds[2],top_gmax);
+				if (top_comp[indexx] == GAS_COMP1)
+				{
+				    found = true;
+				    tm1 += polyh->vol * field.dens[indexx];
+				}
+			    }
+			}
+		    }
+		    else
+		    {
+			if (top_comp[index] == GAS_COMP2)
+			{
+			    tm2 += polyh->vol * field.dens[index];
+
+			    if (debugncm)
+			    {
+				printf("%e %e %e: add polyh with vol %e, dens = %e.\n",
+					i, j, k, polyh->vol, field.dens[index]);
+			    }
+			}
+			else
+			{
+			    found = false;
+			    for (icrds[2] = k-1; icrds[2] <= k+1; icrds[2]++)
+			    for (icrds[1] = j-1; icrds[1] <= j+1; icrds[1]++)
+			    for (icrds[0] = i-1; icrds[0] <= i+1; icrds[0]++)
+			    {
+				if (found)
+				    break;
+				indexx = d_index3d(icrds[0],icrds[1],icrds[2],top_gmax);
+				if (top_comp[indexx] == GAS_COMP2)
+				{
+				    found = true;
+				    tm2 += polyh->vol * field.dens[indexx];
+				    if (debugncm)
+				    {
+					printf("%e %e %e: add polyh with vol %e, dens = %e.\n",
+						i, j, k, polyh->vol, field.dens[indexx]);
+				    }
+				}
+			    }
+			}
+		    }
+		}
+		polyh = polyh->next;
+	    }
+
+	}
+*/
+	for (k = imin[2]; k <= imax[2]; k++)
+	for (j = imin[1]; j <= imax[1]; j++)
+	for (i = imin[0]; i <= imax[0]; i++)
+	{
+	    index = d_index3d(i,j,k,top_gmax);
 	    if (top_comp[index] == GAS_COMP1)
 	    {
 		tm1 += cvol * field.dens[index];
@@ -2990,6 +3328,7 @@ void G_CARTESIAN::ncft_check_mass()
 		tm2 += cvol * field.dens[index];
 	    }
 	}
+
 
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);

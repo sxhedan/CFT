@@ -26,6 +26,8 @@ extern void read_cFluid_params(
 	    }
 	    else if (string[10] == 'V' || string[10] == 'v')
 	    	eqn_params->prob_type = TWO_FLUID_VST_RM;
+	    else if (string[10] == 'I' || string[10] == 'i')
+	    	eqn_params->prob_type = TWO_FLUID_IDL_RM;
 	} 
 	else if (string[0] == 'F' || string[0] == 'f')
 	    eqn_params->prob_type = FLUID_SOLID_CIRCLE;

@@ -60,7 +60,8 @@ enum PROB_TYPE {
 	TWO_FLUID_VST_RM,
 	SOD_OBLIQ,
 	SOD_3D,
-	CFT_TEST
+	CFT_TEST,
+	TWO_FLUID_IDL_RM,
 };
 
 enum _EOS_TYPE {
@@ -429,6 +430,15 @@ struct _NBCELL
 };
 typedef struct _NBCELL NBCELL;
 
+struct _CFTFLUX
+{
+	double dens_flux;
+	double pdens_flux;
+	double momn_flux[3];
+	double engy_flux;
+};
+typedef struct _CFTFLUX CFTFLUX;
+
 struct _CPOLYHEDRON
 {
 	STATE state;
@@ -447,6 +457,7 @@ struct _CPOLYHEDRON
 	SCP_DIR scp_dir;
 
 	double mflux;
+	struct _CFTFLUX flux;
 
 //	struct _CPOLYHEDRON *prev;
 	struct _CPOLYHEDRON *next;
@@ -587,6 +598,8 @@ public:
 	void cft_set_cut_cell_vol();
 	void cft_set_init_polyh_states();
 	void cft_initRMPolyhStates();
+	void cft_initRTPolyhStates();
+	void cft_initIDLRMPolyhStates();
 	void cft_initCFTTestPolyhStates();
 	void cft_set_face_flux();
 	void cft_update_states();
@@ -643,6 +656,8 @@ public:
 	void cft_check_mass_oldts();
 	void ncft_check_mass();
 	void cft_set_comp();
+	void cft_addMeshFluxToVst(SWEEP*,FSWEEP,double);
+	void cft_addSourceTerm(SWEEP*,FSWEEP*,double);
 
 	// constructor
 	~G_CARTESIAN();
@@ -660,6 +675,7 @@ private:
 	CELL *cells;
 	CELL *cells_old, *cells_halft, *cells_new;
 	FSWEEP cflux[2][3];
+	double init_tm1, init_tm2;
 
 	int top_gmax[MAXD];
 	int lbuf[MAXD],ubuf[MAXD];
@@ -772,6 +788,7 @@ private:
 	void initSod3DProb(LEVEL_FUNC_PACK*,char*);
 	void initRayleiTaylorStates();
 	void initRichtmyerMeshkovStates();
+	void initIDLRichtmyerMeshkovStates();
 	void initVSTRMStates();
 	void initCFTTestStates();
 	void initBubbleStates();
@@ -785,6 +802,7 @@ private:
 	void setSod3DParams(char*);
 	void setRayleiTaylorParams(char*);
 	void setRichtmyerMeshkovParams(char*);
+	void setIDLRichtmyerMeshkovParams(char*);
 	void setVSTRMParams(char*);
 	void setBubbleParams(char*);
 	void setImplosionParams(char*);
