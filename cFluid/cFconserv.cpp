@@ -50,9 +50,12 @@ void G_CARTESIAN::cft_initCFTTestPolyhStates()
 
 	cells = cells_old;	//FIXME
 
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	for (k = 1; k <= top_gmax[2]-1; k++)
+	for (j = 1; j <= top_gmax[1]-1; j++)
+	for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    update = false;
 	    index = d_index3d(i,j,k,top_gmax);
@@ -130,6 +133,9 @@ void G_CARTESIAN::cft_initRMPolyhStates()
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    update = false;
 	    index = d_index3d(i,j,k,top_gmax);
@@ -170,6 +176,8 @@ void G_CARTESIAN::cft_initRMPolyhStates()
 	    }
 	}
 
+	cft_scatMeshStates();
+
 	return;
 }
 
@@ -182,9 +190,12 @@ void G_CARTESIAN::cft_initRTPolyhStates()
 
 	cells = cells_old;
 
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	for (k = 1; k <= top_gmax[2]-1; k++)
+	for (j = 1; j <= top_gmax[1]-1; j++)
+	for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    polyh = cells[index].polyhs;
@@ -209,9 +220,12 @@ void G_CARTESIAN::cft_initIDLRMPolyhStates()
 
 	cells = cells_old;	//FIXME
 
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	for (k = 1; k <= top_gmax[2]-1; k++)
+	for (j = 1; j <= top_gmax[1]-1; j++)
+	for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    update = false;
 	    index = d_index3d(i,j,k,top_gmax);
@@ -1260,7 +1274,7 @@ void G_CARTESIAN::cft_update_states_new()
 	//update cells' states
 	cft_update_cells_states();
 
-	copyMeshStates();	//for buffer zone
+	//copyMeshStates();	//for buffer zone
 
 	//printf("End of cft_update_states_new().\n");
 	//exit(0);
@@ -1666,8 +1680,8 @@ void G_CARTESIAN::cft_update_cells_states()
 	printf("In cft_update_cells_states(), before update:\n");
 	i = 4;
 	j = 4;
-	//k = 20;
-	for (k = imin[2]; k <= imax[2]; k++)
+	k = 21;
+	//for (k = imin[2]; k <= imax[2]; k++)
 	//for (j = imin[1]; j <= imax[1]; j++)
 	//for (i = imin[0]; i <= imax[0]; i++)
 	{
@@ -1769,8 +1783,8 @@ void G_CARTESIAN::cft_update_cells_states()
 	printf("In cft_update_cells_states(), after update:\n");
 	i = 4;
 	j = 4;
-	//k = 20;
-	for (k = imin[2]; k <= imax[2]; k++)
+	k = 21;
+	//for (k = imin[2]; k <= imax[2]; k++)
 	//for (j = imin[1]; j <= imax[1]; j++)
 	//for (i = imin[0]; i <= imax[0]; i++)
 	{
@@ -3086,8 +3100,8 @@ void G_CARTESIAN::cft_check_mass()
 
 	//debugdan	FIXME
 	/*
-	if (front->step >= 127 && front->step <= 130)
-	//if (true)
+	//if (front->step >= 127 && front->step <= 130)
+	if (true)
 	    debugccm = true;
 	else
 	    debugccm = false;
@@ -3096,7 +3110,7 @@ void G_CARTESIAN::cft_check_mass()
 	    i = 4;
 	    j = 4;
 	    //k = 11;
-	    for (k = 31; k <= imax[2]; k++)
+	    for (k = imin[2]; k <= imax[2]; k++)
 	    //for (j = imin[1]; j <= imax[1]; j++)
 	    //for (i = imin[0]; i <= imax[0]; i++)
 	    {
@@ -3114,6 +3128,14 @@ void G_CARTESIAN::cft_check_mass()
 		}
 		if (cells[index].polyhs->next)
 		{
+		    printf("interface***********************************************\n");
+		    CPOLYHEDRON *polyh = cells[index].polyhs;
+		    while (polyh)
+		    {
+			printf("polyh with comp %d: vol = %e, dens = %e.\n", 
+				polyh->comp, polyh->vol, polyh->state.dens);
+			polyh = polyh->next;
+		    }
 		    printf("interface***********************************************\n");
 		}
 	    }

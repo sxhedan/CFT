@@ -1963,6 +1963,10 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 	    for (k = imin[2]; k <= imax[2]; k++)
 	    for (j = imin[1]; j <= imax[1]; j++)
 	    {
+		//debugdan	FIXME
+		if (j == 4 && k == 21)
+		    printf("Break here.\n");
+		//debugdan	FIXME
 		seg_min = imin[0];
 		while (seg_min <= imax[0])
 		{
@@ -2067,7 +2071,7 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 
 		    //debugdan	FIXME
 		    /*
-		    if (j == 4 && k == 13)
+		    if (j == 4 && k == 21)
 		    {
 			printf("In cft_addFluxInDirection3d(), dir = %d, j = %d, k = %d:\n", 
 				dir, j, k);
@@ -3794,6 +3798,23 @@ void G_CARTESIAN::allocMeshVst(
 	FT_MatrixMemoryAlloc((POINTER*)&vst->momn,MAXD,size,sizeof(double));
 	FT_VectorMemoryAlloc((POINTER*)&vst->comp,size,sizeof(COMPONENT));
 	FT_VectorMemoryAlloc((POINTER*)&vst->gamma,size,sizeof(double));
+
+}	/* end allocMeshVstFlux */
+
+void G_CARTESIAN::cft_allocMeshVst(
+	SWEEP *vst)
+{
+	int i,size;
+
+	size = 1;
+        for (i = 0; i < dim; ++i)
+	    size *= (top_gmax[i]+1);
+
+	//for CFT	Dan
+        FT_MatrixMemoryAlloc((POINTER*)&vst->cft_dens,2,size,sizeof(double));
+	FT_MatrixMemoryAlloc((POINTER*)&vst->cft_vel,MAXD,size,sizeof(double));
+	FT_VectorMemoryAlloc((POINTER*)&vst->cft_pres,size,sizeof(double));
+
 }	/* end allocMeshVstFlux */
 
 void G_CARTESIAN::allocMeshFlux(
@@ -7923,6 +7944,86 @@ void G_CARTESIAN::scatMeshVst(SWEEP *m_vst)
 	}
 }	/* end scatMeshStates */
 
+void G_CARTESIAN::cft_scatMeshVst(SWEEP *m_vst)
+{
+	int i,j,k,l,index;
+
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("ERROR in cft_scatMeshVs: CFT is not implemented for 1D or 2D.\n");
+	    clean_up(ERROR);
+	case 3:
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+                array[index] = m_vst->cft_dens[0][index];
+	    }
+	    scatMeshArray();
+            for (k = 0; k <= top_gmax[2]; k++)
+            for (j = 0; j <= top_gmax[1]; j++)
+            for (i = 0; i <= top_gmax[0]; i++)
+            {
+		index = d_index3d(i,j,k,top_gmax);
+                m_vst->cft_dens[0][index] = array[index];
+	    }
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+                array[index] = m_vst->cft_dens[1][index];
+	    }
+	    scatMeshArray();
+            for (k = 0; k <= top_gmax[2]; k++)
+            for (j = 0; j <= top_gmax[1]; j++)
+            for (i = 0; i <= top_gmax[0]; i++)
+            {
+		index = d_index3d(i,j,k,top_gmax);
+                m_vst->cft_dens[1][index] = array[index];
+	    }
+
+	    for (k = imin[2]; k <= imax[2]; ++k)
+	    for (j = imin[1]; j <= imax[1]; ++j)
+	    for (i = imin[0]; i <= imax[0]; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+                array[index] = m_vst->cft_pres[index];
+	    }
+	    scatMeshArray();
+            for (k = 0; k <= top_gmax[2]; k++)
+            for (j = 0; j <= top_gmax[1]; j++)
+            for (i = 0; i <= top_gmax[0]; i++)
+            {
+                index  = d_index3d(i,j,k,top_gmax);
+                m_vst->cft_pres[index] = array[index];
+	    }
+
+	    for (l = 0; l < dim; ++l)
+	    {
+	    	for (k = imin[2]; k <= imax[2]; ++k)
+	    	for (j = imin[1]; j <= imax[1]; ++j)
+	    	for (i = imin[0]; i <= imax[0]; ++i)
+	    	{
+		    index = d_index3d(i,j,k,top_gmax);
+                    array[index] = m_vst->cft_vel[l][index];
+	    	}
+	    	scatMeshArray();
+		state_reflect(l,array);	//Dan
+            	for (k = 0; k <= top_gmax[2]; k++)
+            	for (j = 0; j <= top_gmax[1]; j++)
+            	for (i = 0; i <= top_gmax[0]; i++)
+            	{
+		    index = d_index3d(i,j,k,top_gmax);
+                    m_vst->cft_vel[l][index] = array[index];
+	    	}
+	    }
+	}
+}	/* end scatMeshStates */
+
 void G_CARTESIAN::copyMeshVst(
 	SWEEP m_vst_orig,
 	SWEEP *m_vst)
@@ -8070,10 +8171,79 @@ void G_CARTESIAN::copyToMeshVst(
 	}
 }	/* end copyToMeshVst */
 
+void G_CARTESIAN::cft_copyToMeshVst(
+	SWEEP *m_vst)
+{
+	int i,j,k,l,index;
+	double m0, v0, m1, v1;
+	CELL *c;
+	CPOLYHEDRON *polyh;
+	double tol = 1e-8;
+
+	double *dens = field.dens;
+	double *pres = field.pres;
+	double **momn = field.momn;
+
+	cells = cells_old;
+
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("ERROR: CFT is not implemented for 1D or 2D.\n");
+	    clean_up(ERROR);
+	case 3:
+	    for (k = 1; k <= top_gmax[2]-1; ++k)
+	    for (j = 1; j <= top_gmax[1]-1; ++j)
+	    for (i = 1; i <= top_gmax[0]-1; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		c = &(cells[index]);
+
+		//dens
+		m0 = 0;
+		m1 = 0;
+		v0 = 0;
+		v1 = 0;
+		polyh = c->polyhs;
+		while (polyh)
+		{
+		    if (polyh->comp == GAS_COMP1)
+		    {
+			m0 += polyh->state.dens*polyh->vol;
+			v0 += polyh->vol;
+		    }
+		    else
+		    {
+			m1 += polyh->state.dens*polyh->vol;
+			v1 += polyh->vol;
+		    }
+		    polyh = polyh->next;
+		}
+		if (v0 > tol)
+		    m_vst->cft_dens[0][index] = m0/v0;
+		else
+		    m_vst->cft_dens[0][index] = 0;
+		if (v1 > tol)
+		    m_vst->cft_dens[1][index] = m1/v1;
+		else
+		    m_vst->cft_dens[1][index] = 0;
+
+		//pres
+		m_vst->cft_pres[index] = pres[index];
+
+		//vel
+		for (l = 0; l < dim; ++l)
+		    m_vst->cft_vel[l][index] = momn[l][index]/dens[index];
+	    }
+	}
+}	/* end copyToMeshVst */
+
 void G_CARTESIAN::cft_setMeshVst(
 	SWEEP *m_vst)
 {
 	int i,j,k,l,index;
+	double vel[3];
 	double *dens = field.dens;
         double **pdens = field.pdens;
 	double *engy = field.engy;
@@ -8084,46 +8254,9 @@ void G_CARTESIAN::cft_setMeshVst(
 	switch (dim)
 	{
 	case 1:
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    {
-		index = d_index1d(i,top_gmax);
-		m_vst->dens[index] = dens[index];
-                if(eqn_params->multi_comp_non_reactive == YES)
-                {
-                    int ii;
-                    for(ii = 0; ii < eqn_params->n_comps; ii++)
-                    {
-                        m_vst->pdens[ii][index] = pdens[ii][index];
-                    }
-                }
-		m_vst->engy[index] = engy[index];
-		m_vst->pres[index] = pres[index];
-//		m_vst->gamma[index] = gamma[index];
-		for (l = 0; l < dim; ++l)
-		    m_vst->momn[l][index] = momn[l][index];
-	    }
-	    break;
 	case 2:
-	    for (j = 0; j <= top_gmax[1]; ++j)
-	    for (i = 0; i <= top_gmax[0]; ++i)
-	    {
-		index = d_index2d(i,j,top_gmax);
-		m_vst->dens[index] = dens[index];
-                if(eqn_params->multi_comp_non_reactive == YES)
-                {
-                    int ii;
-                    for(ii = 0; ii < eqn_params->n_comps; ii++)
-                    {
-                        m_vst->pdens[ii][index] = pdens[ii][index];
-                    }
-                }
-		m_vst->engy[index] = engy[index];
-		m_vst->pres[index] = pres[index];
-//		m_vst->gamma[index] = gamma[index];
-		for (l = 0; l < dim; ++l)
-		    m_vst->momn[l][index] = momn[l][index];
-	    }
-	    break;
+	    printf("ERROR in cft_setMeshVst(): CFT is not implemented in 1D or 2D.\n");
+	    clean_up(ERROR);
 	case 3:
 	    //CFT	Dan
 	    //use polyh states instead of field states
@@ -8136,7 +8269,8 @@ void G_CARTESIAN::cft_setMeshVst(
 	    for (i = 0; i <= top_gmax[0]; ++i)
 	    {
 		index = d_index3d(i,j,k,top_gmax);
-		if (cells[index].merged == FALSE)
+		
+		if (cells[index].polyhs == NULL || cells[index].polyhs->next == NULL)
 		{
 		    m_vst->dens[index] = dens[index];
 		    if(eqn_params->multi_comp_non_reactive == YES)
@@ -8171,7 +8305,10 @@ void G_CARTESIAN::cft_setMeshVst(
 				}
 			    }
 			    for (l = 0; l < dim; l++)
+			    {
+				//vel[l] = momn[l][index]/dens[index];
 				m_vst->momn[l][index] = polyh->state.momn[l];
+			    }
 			    m_vst->engy[index] = polyh->state.engy;
 			    m_vst->pres[index] = polyh->state.pres;
 			    found = true;
@@ -8351,6 +8488,81 @@ void G_CARTESIAN::copyFromMeshVst(
 		pres[index] = state.pres;
 		for (l = 0; l < dim; ++l)
 		    momn[l][index] = state.momn[l];
+	    }
+	}
+}	/* end copyFromMeshVst */
+
+void G_CARTESIAN::cft_copyFromMeshVst(
+	SWEEP m_vst)
+{
+	int i,j,k,l,index;
+	double vel[3];
+	CELL *c;
+	CPOLYHEDRON *polyh;
+
+	STATE state;
+	COMPONENT comp;
+	double *dens = field.dens;
+        double **pdens = field.pdens;
+	double *engy = field.engy;
+	double *pres = field.pres;
+	double **momn = field.momn;
+	
+	//GFM
+	/*
+	if(eqn_params->tracked)
+	{
+	    get_ghost_state(m_vst, 2, 0);
+	    get_ghost_state(m_vst, 3, 1);
+	    scatMeshGhost();
+	}
+	*/
+
+	cells = cells_old;
+	state.dim = dim;
+	switch (dim)
+	{
+	case 1:
+	case 2:
+	    printf("ERROR in cft_copyFromMeshVst(): CFT is not implemented for 1D or 2D.\n");
+	    clean_up(ERROR);
+	case 3:
+	    for (k = 1; k <= top_gmax[2]-1; ++k)
+	    for (j = 1; j <= top_gmax[1]-1; ++j)
+	    for (i = 1; i <= top_gmax[0]-1; ++i)
+	    {
+		index = d_index3d(i,j,k,top_gmax);
+		c = &(cells[index]);
+
+		polyh = c->polyhs;
+		while (polyh)
+		{
+		    //dens
+		    if (polyh->comp == GAS_COMP1)
+			polyh->state.dens = m_vst.cft_dens[0][index];
+		    else
+			polyh->state.dens = m_vst.cft_dens[1][index];
+		    state.dens = polyh->state.dens;
+
+		    //pres
+		    polyh->state.pres = pres[index];
+		    state.pres = pres[index];
+
+		    //momn
+		    for (l = 0; l < dim; l++)
+		    {
+			vel[l] = momn[l][index]/dens[index];
+			polyh->state.momn[l] = vel[l]*polyh->state.dens;
+			state.momn[l] = polyh->state.momn[l];
+		    }
+
+		    //engy
+		    comp = polyh->comp;
+		    state.eos = &(eqn_params->eos[comp]);
+		    polyh->state.engy = EosEnergy(&state);
+
+		    polyh = polyh->next;
+		}
 	    }
 	}
 }	/* end copyFromMeshVst */
@@ -8806,10 +9018,30 @@ void G_CARTESIAN::scatMeshStates()
 	freeVst(&vst);
 }	/* end scatMeshStates */
 
+void G_CARTESIAN::cft_scatMeshStates()
+{
+	scatMeshStates();
+
+	SWEEP vst;
+	cft_allocMeshVst(&vst);
+	cft_copyToMeshVst(&vst);
+	cft_scatMeshVst(&vst);
+	cft_copyFromMeshVst(vst);
+	cft_freeVst(&vst);
+
+}	/* end scatMeshStates */
+
+void G_CARTESIAN::cft_freeVst(
+	SWEEP *vst)
+{
+        FT_FreeThese(3,vst->cft_dens,vst->cft_pres,vst->cft_vel);	//Dan
+}	/* end freeVstFlux */
+
 void G_CARTESIAN::freeVst(
 	SWEEP *vst)
 {
-        FT_FreeThese(5,vst->dens,vst->pdens,vst->engy,vst->pres,vst->momn);
+        //FT_FreeThese(5,vst->dens,vst->pdens,vst->engy,vst->pres,vst->momn);
+        FT_FreeThese(7,vst->dens,vst->pdens,vst->engy,vst->pres,vst->momn,vst->comp,vst->gamma);	//Dan
 }	/* end freeVstFlux */
 
 void G_CARTESIAN::freeFlux(
@@ -9013,6 +9245,17 @@ void G_CARTESIAN::addMeshFluxToVst(
                 }
                 eos = &(eqn_params->eos[comp]);
 
+		//debugdan	FIXME
+		/*
+		if (i == 4 && j == 4 && k == 21)
+		{
+		    printf("Before adding mesh flux:\n");
+		    printf("%d %d %d: dens = %e, momn = (%e, %e, %e)\n",
+			    i, j, k, m_vst->dens[index], 
+			    m_vst->momn[0][index], m_vst->momn[1][index], m_vst->momn[2][index]);
+		}
+		*/
+		//debugdan	FIXME
 		m_vst->dens[index] += chi*m_flux.dens_flux[index];
                 if(eqn_params->multi_comp_non_reactive == YES)
                 {
@@ -9052,13 +9295,17 @@ void G_CARTESIAN::addMeshFluxToVst(
                     max_speed = temp;
 		//debugdan	FIXME
 		/*
-		if (i == 4 && j == 12 && k == 13)
+		if (i == 4 && j == 4 && k == 21)
 		{
 		    printf("%d %d %d %d: flux %e, %e, (%e, %e, %e).\n",
 			    i, j, k, index, 
 			    m_flux.dens_flux[index], m_flux.engy_flux[index], 
 			    m_flux.momn_flux[0][index], m_flux.momn_flux[1][index], 
 			    m_flux.momn_flux[2][index]);
+		    printf("After adding mesh flux:\n");
+		    printf("%d %d %d: dens = %e, momn = (%e, %e, %e)\n",
+			    i, j, k, m_vst->dens[index], 
+			    m_vst->momn[0][index], m_vst->momn[1][index], m_vst->momn[2][index]);
 		}
 		*/
 		//debugdan	FIXME

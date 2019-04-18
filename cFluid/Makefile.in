@@ -47,11 +47,17 @@ cFgriemann.o: cFluid.h cFgriemann.cpp
 cFvol.o : cFluid.h cFvol.cpp
 	${CXX} -c cFvol.cpp $(incsloc) $(incs) ${Petsc_Include}
 
-cFluid: cFluid.h cFluid.cpp cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFgriemann.o cFvol.o
-	${CXX} -c cFluid.cpp -I../include $(incs) ${Petsc_Include}
-	$(CXX) -o cFluid cFluid.o -g -I../include -L../lib/${build_cpu}  cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFgriemann.o cFvol.o ${Petsc_Lib} -L../lib/${build_cpu} -lFronTier $(libincs)  $(libs) ${F77_LIBS}
+cFconserv.o : cFluid.h cFconserv.cpp
+	${CXX} -c cFconserv.cpp $(incsloc) $(incs) ${Petsc_Include}
 
-../lib/libcF.a: cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFvol.o
+cFcftweno.o : cFluid.h cFcftweno.cpp
+	${CXX} -c cFcftweno.cpp $(incsloc) $(incs) ${Petsc_Include}
+
+cFluid: cFluid.h cFluid.cpp cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFgriemann.o cFvol.o cFconserv.o cFcftweno.o
+	${CXX} -c cFluid.cpp -I../include $(incs) ${Petsc_Include}
+	$(CXX) -o cFluid cFluid.o -g -I../include -L../lib/${build_cpu}  cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFgriemann.o cFvol.o cFconserv.o cFcftweno.o ${Petsc_Lib} -L../lib/${build_cpu} -lFronTier $(libincs)  $(libs) ${F77_LIBS}
+
+../lib/libcF.a: cFtvd.o cFweno.o cFsub.o cFcartsn.o cFphys.o cFinit.o cFeos.o cFvol.o cFconserv.o cFcftweno.o
 	$(AR) cru libcF.a $<
 	ranlib libcF.a; mv libcF.a ../lib/$(build_cpu)/libcF.a
 

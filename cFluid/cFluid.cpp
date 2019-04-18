@@ -121,9 +121,7 @@ int main(int argc, char **argv)
 	{
 	    g_cartesian.setInitialIntfc(&level_func_pack,in_name);
 	    if (f_basic.dim == 3) level_func_pack.set_3d_bdry = YES;
-	    printf("Before FT_InitIntfc().\n");	//debugdan	FIXME
 	    FT_InitIntfc(&front,&level_func_pack);
-	    printf("After FT_InitIntfc().\n");	//debugdan	FIXME
 
 	    FT_PromptSetMixedTypeBoundary2d(in_name,&front);
 	    read_dirichlet_bdry_data(in_name,&front);
@@ -238,6 +236,10 @@ static  void cft_driver(
 	    //initialization
 	    g_cartesian.cft_set_init_polyh_states();
 
+	    //scatter states
+	    g_cartesian.cft_scatMeshStates();
+	    //g_cartesian.copyMeshStates();	???	FIXME
+
 	    //first propagation
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
@@ -311,6 +313,9 @@ static  void cft_driver(
 	    dt = 0.5*dt;
 	    front->dt = dt;
 
+	    //scatter states
+	    g_cartesian.cft_scatMeshStates();
+	    //g_cartesian.copyMeshStates();	???	FIXME
 
 	    //first propagation
 	    //printf("First propagate.\n");

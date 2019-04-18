@@ -328,6 +328,11 @@ struct SWEEP
         double *c;
         COMPONENT *comp;
 	double *gamma;	//Dan
+	
+	//for CFT
+	double **cft_dens;
+	double *cft_pres;
+	double **cft_vel;
 };
 
 struct FSWEEP
@@ -658,6 +663,12 @@ public:
 	void cft_set_comp();
 	void cft_addMeshFluxToVst(SWEEP*,FSWEEP,double);
 	void cft_addSourceTerm(SWEEP*,FSWEEP*,double);
+	void cft_scatMeshStates();
+	void cft_allocMeshVst(SWEEP*);
+	void cft_freeVst(SWEEP*);
+	void cft_copyToMeshVst(SWEEP*);
+	void cft_scatMeshVst(SWEEP*);
+	void cft_copyFromMeshVst(SWEEP);
 
 	// constructor
 	~G_CARTESIAN();
