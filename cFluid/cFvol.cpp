@@ -360,11 +360,24 @@ bool debugmerge = false;
 void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 {
 	int i, j, k, index;
+	int nmin[3], nmax[3];
 	CELL *c, *nb_cell;
 	CPOLYHEDRON *polyh, *nb_polyh;
 	CPOLYGON *max_face;
 	NBCELL *nbc;
 	bool merged, unmerged;
+
+	INTERFACE *intfc = front->grid_intfc;
+	int nbuf[3][2];
+	for (i = 0; i < 3; i++)
+	for (j = 0; j < 2; j++)
+	{
+	    if (rect_boundary_type(intfc,i,j) == SUBDOMAIN_BOUNDARY || 
+		rect_boundary_type(intfc,i,j) == REFLECTION_BOUNDARY)
+		nbuf[i][j] = 4;
+	    else
+		nbuf[i][j] = 1;
+	}
 
 	switch (ts)
 	{
@@ -389,9 +402,12 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
 	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
 	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = imin[2]-nbuf[2][0]+1; k <= imax[2]+nbuf[2][1]-1; k++)
+	for (j = imin[1]-nbuf[1][0]+1; j <= imax[1]+nbuf[1][1]-1; j++)
+	for (i = imin[0]-nbuf[0][0]+1; i <= imax[0]+nbuf[0][1]-1; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -401,11 +417,30 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	    //polyh->merged is set in initialization
 	}
 
+	for (i = 0; i < 3; i++)
+	{
+	    if (nbuf[i][0] == 1)
+		nmin[i] = imin[i];
+	    else
+		nmin[i] = imin[i]-nbuf[i][0]+2;
+
+	    if (nbuf[i][1] == 1)
+		nmax[i] = imax[i];
+	    else
+		nmax[i] = imax[i]+nbuf[i][1]-2;
+	}
+
 	//first merge
 	unmerged = false;
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = 2; k <= top_gmax[2]-2; k++)
+	//for (j = 2; j <= top_gmax[1]-2; j++)
+	//for (i = 2; i <= top_gmax[0]-2; i++)
+	for (k = nmin[2]; k <= nmax[2]; k++)
+	for (j = nmin[1]; j <= nmax[1]; j++)
+	for (i = nmin[0]; i <= nmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -466,9 +501,12 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	{
 	    unmerged = false;
 
-	    for (k = imin[2]; k <= imax[2]; k++)
-	    for (j = imin[1]; j <= imax[1]; j++)
-	    for (i = imin[0]; i <= imax[0]; i++)
+	    //for (k = imin[2]; k <= imax[2]; k++)
+	    //for (j = imin[1]; j <= imax[1]; j++)
+	    //for (i = imin[0]; i <= imax[0]; i++)
+	    for (k = nmin[2]; k <= nmax[2]; k++)
+	    for (j = nmin[1]; j <= nmax[1]; j++)
+	    for (i = nmin[0]; i <= nmax[0]; i++)
 	    {
 		index = d_index3d(i,j,k,top_gmax);
 		c = &(cells[index]);

@@ -1963,10 +1963,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 	    for (k = imin[2]; k <= imax[2]; k++)
 	    for (j = imin[1]; j <= imax[1]; j++)
 	    {
-		//debugdan	FIXME
-		if (j == 4 && k == 21)
-		    printf("Break here.\n");
-		//debugdan	FIXME
 		seg_min = imin[0];
 		while (seg_min <= imax[0])
 		{

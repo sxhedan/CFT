@@ -1174,41 +1174,19 @@ void G_CARTESIAN::cft_update_states_new()
 	CPOLYHEDRON *polyh;
 
 	//set CFTCELLs
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	for (k = 1; k <= top_gmax[2]-1; k++)
+	for (j = 1; j <= top_gmax[1]-1; j++)
+	for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells_new[index]);
 
-	    //debugdan	FIXME
-	    /*
-	    if (i == 7 && j == 4 && k == 19)
-		debugdan = true;
-	    else
-		debugdan = false;
-	    if (debugdan)
-	    {
-		printf("%d %d %d index = %d, comp = %d.\n",
-			i, j, k, index, c->pams->polyh->comp);
-		
-		polyh = c->polyhs;
-		while (polyh)
-		{
-		    printf("comp = %d:\n", polyh->comp);
-		    //print_cpolyh(polyh);
-		    polyh = polyh->next;
-		}
-		
-	    }
-	    */
-	    //debugdan	FIXME
-
 	    cft_init_cftcell(c);
 	    c->cftcell->pams = c->pams;
 
-	    //set indices based on the direction of velocity
-	    //cft_set_indices_cftcell(c);
 	}
 
 	// set links from new time step to old time step and half time step
@@ -1276,7 +1254,6 @@ void G_CARTESIAN::cft_update_states_new()
 
 	//copyMeshStates();	//for buffer zone
 
-	//printf("End of cft_update_states_new().\n");
 	//exit(0);
 }
 
