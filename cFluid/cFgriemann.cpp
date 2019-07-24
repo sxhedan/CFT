@@ -74,7 +74,7 @@ extern bool find_mid_state(
 	return status;
 }
 
-extern	void midstate(
+extern	bool midstate(
 	STATE				*ahead,
 	STATE				*ans,
 	double				m,
@@ -107,9 +107,12 @@ extern	void midstate(
 
 	default:
 	    screen("ERROR: unknown wave %d in midstate()\n",wave);
-	    clean_up(ERROR);
+	    return false;
+	    //clean_up(ERROR);
 	    break;
 	}
+
+	return true;
 
 }	/*end midstate*/
 

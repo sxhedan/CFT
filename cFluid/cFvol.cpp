@@ -139,6 +139,11 @@ void G_CARTESIAN::cft_init_cut_cells(TS_LEVEL ts)
 	    num_cells *= (top_gmax[i]+1);
 	FT_VectorMemoryAlloc((POINTER*)&cells, num_cells, sizeof(CELL));
 
+	//for cflux
+	int cfsize = (top_gmax[0]+2)*(top_gmax[1]+2)*(top_gmax[2]+2);
+	FT_TriArrayMemoryAlloc((POINTER*)&cvisited,2,dim,cfsize,sizeof(int));
+	FT_TriArrayMemoryAlloc((POINTER*)&cscat,2,dim,cfsize,sizeof(int));
+
 	switch (ts)
 	{
 	    case OLDTS:
@@ -162,15 +167,9 @@ void G_CARTESIAN::cft_init_cut_cells(TS_LEVEL ts)
 	//FT_VectorMemoryAlloc((POINTER*)&cells_halft, num_cells, sizeof(CELL));
 	//FT_VectorMemoryAlloc((POINTER*)&cells_new, num_cells, sizeof(CELL));
 
-	//for (k = 0; k <= top_gmax[2]; k++)
-	//for (j = 0; j <= top_gmax[1]; j++)
-	//for (i = 0; i <= top_gmax[0]; i++)
-	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
-	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
-	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 
@@ -221,104 +220,6 @@ void G_CARTESIAN::cft_init_cut_cells(TS_LEVEL ts)
 	    c->faces[5].side = 1;
 	    c->faces[5].l[2] = c->cellu[2];
 	    init_cf_pts_and_edges(&(c->faces[5]));
-
-	    /*
-	    c = &(cells_halft[index]);
-	    c->icrds[0] = i;
-	    c->icrds[1] = j;
-	    c->icrds[2] = k;
-	    c->ctri_polygs = NULL;
-	    c->cf_polygs = NULL;
-	    c->scpocs = NULL;
-	    c->scpics = NULL;
-	    for (l = 0; l < 3; l++)
-	    {
-		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
-		c->cellu[l] = c->celll[l] + top_grid->h[l];
-	    }
-
-	    //initialize cell faces
-	    for (l = 0; l < 6; l++)
-	    {
-		for (ll = 0; ll < 3; ll++)
-		{
-		    c->faces[l].l[ll] = c->celll[ll];
-		    c->faces[l].u[ll] = c->cellu[ll];
-		}
-	    }
-	    c->faces[0].dir = 2;
-	    c->faces[0].side = -1;
-	    c->faces[0].u[2] = c->celll[2];
-	    init_cf_pts_and_edges(&(c->faces[0]));
-	    c->faces[1].dir = 1;
-	    c->faces[1].side = -1;
-	    c->faces[1].u[1] = c->celll[1];
-	    init_cf_pts_and_edges(&(c->faces[1]));
-	    c->faces[2].dir = 0;
-	    c->faces[2].side = 1;
-	    c->faces[2].l[0] = c->cellu[0];
-	    init_cf_pts_and_edges(&(c->faces[2]));
-	    c->faces[3].dir = 1;
-	    c->faces[3].side = 1;
-	    c->faces[3].l[1] = c->cellu[1];
-	    init_cf_pts_and_edges(&(c->faces[3]));
-	    c->faces[4].dir = 0;
-	    c->faces[4].side = -1;
-	    c->faces[4].u[0] = c->celll[0];
-	    init_cf_pts_and_edges(&(c->faces[4]));
-	    c->faces[5].dir = 2;
-	    c->faces[5].side = 1;
-	    c->faces[5].l[2] = c->cellu[2];
-	    init_cf_pts_and_edges(&(c->faces[5]));
-
-	    c = &(cells_new[index]);
-	    c->icrds[0] = i;
-	    c->icrds[1] = j;
-	    c->icrds[2] = k;
-	    c->ctri_polygs = NULL;
-	    c->cf_polygs = NULL;
-	    c->scpocs = NULL;
-	    c->scpics = NULL;
-	    for (l = 0; l < 3; l++)
-	    {
-		c->celll[l] = top_grid->L[l] + (c->icrds[l]-0.5)*top_grid->h[l];
-		c->cellu[l] = c->celll[l] + top_grid->h[l];
-	    }
-
-	    //initialize cell faces
-	    for (l = 0; l < 6; l++)
-	    {
-		for (ll = 0; ll < 3; ll++)
-		{
-		    c->faces[l].l[ll] = c->celll[ll];
-		    c->faces[l].u[ll] = c->cellu[ll];
-		}
-	    }
-	    c->faces[0].dir = 2;
-	    c->faces[0].side = -1;
-	    c->faces[0].u[2] = c->celll[2];
-	    init_cf_pts_and_edges(&(c->faces[0]));
-	    c->faces[1].dir = 1;
-	    c->faces[1].side = -1;
-	    c->faces[1].u[1] = c->celll[1];
-	    init_cf_pts_and_edges(&(c->faces[1]));
-	    c->faces[2].dir = 0;
-	    c->faces[2].side = 1;
-	    c->faces[2].l[0] = c->cellu[0];
-	    init_cf_pts_and_edges(&(c->faces[2]));
-	    c->faces[3].dir = 1;
-	    c->faces[3].side = 1;
-	    c->faces[3].l[1] = c->cellu[1];
-	    init_cf_pts_and_edges(&(c->faces[3]));
-	    c->faces[4].dir = 0;
-	    c->faces[4].side = -1;
-	    c->faces[4].u[0] = c->celll[0];
-	    init_cf_pts_and_edges(&(c->faces[4]));
-	    c->faces[5].dir = 2;
-	    c->faces[5].side = 1;
-	    c->faces[5].l[2] = c->cellu[2];
-	    init_cf_pts_and_edges(&(c->faces[5]));
-	    */
 	}
 
 	return;
@@ -405,9 +306,12 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	//for (k = 1; k <= top_gmax[2]-1; k++)
 	//for (j = 1; j <= top_gmax[1]-1; j++)
 	//for (i = 1; i <= top_gmax[0]-1; i++)
-	for (k = imin[2]-nbuf[2][0]+1; k <= imax[2]+nbuf[2][1]-1; k++)
-	for (j = imin[1]-nbuf[1][0]+1; j <= imax[1]+nbuf[1][1]-1; j++)
-	for (i = imin[0]-nbuf[0][0]+1; i <= imax[0]+nbuf[0][1]-1; i++)
+	//for (k = imin[2]-nbuf[2][0]+1; k <= imax[2]+nbuf[2][1]-1; k++)
+	//for (j = imin[1]-nbuf[1][0]+1; j <= imax[1]+nbuf[1][1]-1; j++)
+	//for (i = imin[0]-nbuf[0][0]+1; i <= imax[0]+nbuf[0][1]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -422,12 +326,14 @@ void G_CARTESIAN::cft_merge_polyhs(TS_LEVEL ts)
 	    if (nbuf[i][0] == 1)
 		nmin[i] = imin[i];
 	    else
-		nmin[i] = imin[i]-nbuf[i][0]+2;
+		//nmin[i] = imin[i]-nbuf[i][0]+2;
+		nmin[i] = imin[i]-1;
 
 	    if (nbuf[i][1] == 1)
 		nmax[i] = imax[i];
 	    else
-		nmax[i] = imax[i]+nbuf[i][1]-2;
+		//nmax[i] = imax[i]+nbuf[i][1]-2;
+		nmax[i] = imax[i]+1;
 	}
 
 	//first merge
@@ -885,12 +791,12 @@ void G_CARTESIAN::cft_set_comp()
 	CELL *c;
 	CPOLYHEDRON *polyh;
 
-	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
-	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
-	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -909,8 +815,15 @@ void G_CARTESIAN::cft_set_comp()
 
 	    if (c->vol[0] >= 0.5*cvol)
 		c->comp = GAS_COMP1;
-	    else
+	    else if (c->vol[1] >= 0.5*cvol)
 		c->comp = GAS_COMP2;
+	    else
+		c->comp = EXT_COMP;
+
+	    /*
+	    if (k > 0 && fabs(c->vol[0]+c->vol[1]-cvol) > 1e-8)
+		printf("Error in cft_set_comp(): incorrect vol setup.\n");
+	    */
 	}
 
 	return;
@@ -1214,9 +1127,9 @@ void G_CARTESIAN::cft_init_tris_in_cells()
 		    maxcrds[i] = max(max(pt0[i], pt1[i]), pt2[i]);
 		    minicrds[i] = floor((mincrds[i]-top_grid->L[i])/top_grid->h[i]+0.5-tol);
 		    maxicrds[i] = floor((maxcrds[i]-top_grid->L[i])/top_grid->h[i]+0.5+tol);
-		    if (minicrds[i] < 0)	//check if this happens	TODO
+		    if (minicrds[i] < 0)
 			minicrds[i] = 0;
-		    if (maxicrds[i] > top_gmax[i])	//check if this happens	TODO
+		    if (maxicrds[i] > top_gmax[i])
 			maxicrds[i] = top_gmax[i];
 		}
 
@@ -1238,15 +1151,9 @@ void G_CARTESIAN::cft_set_cell_polygons()
 	int i, j, k, index;
 	CELL *c;
 
-	//for (k = 0; k <= top_gmax[2]; k++)
-	//for (j = 0; j <= top_gmax[2]; j++)
-	//for (i = 0; i <= top_gmax[2]; i++)
-	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
-	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
-	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -4192,12 +4099,12 @@ void G_CARTESIAN::cft_construct_cell_polyhedrons()
 	CELL *c;
 	CPOLYHEDRON *polyh;
 
-	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
-	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
-	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -5136,9 +5043,12 @@ void G_CARTESIAN::cft_set_cut_cell_vol()
 	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
 	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
 	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -5309,12 +5219,12 @@ void G_CARTESIAN::cft_set_polyhs_comps()
 
 	setDomain();
 
-	//for (k = imin[2]-bufsize; k <= imax[2]+bufsize; k++)
-	//for (j = imin[1]-bufsize; j <= imax[1]+bufsize; j++)
-	//for (i = imin[0]-bufsize; i <= imax[0]+bufsize; i++)
-	for (k = 1; k <= top_gmax[2]-1; k++)
-	for (j = 1; j <= top_gmax[1]-1; j++)
-	for (i = 1; i <= top_gmax[0]-1; i++)
+	//for (k = 1; k <= top_gmax[2]-1; k++)
+	//for (j = 1; j <= top_gmax[1]-1; j++)
+	//for (i = 1; i <= top_gmax[0]-1; i++)
+	for (k = 0; k <= top_gmax[2]; k++)
+	for (j = 0; j <= top_gmax[1]; j++)
+	for (i = 0; i <= top_gmax[0]; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);

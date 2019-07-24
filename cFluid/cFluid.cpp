@@ -186,8 +186,10 @@ int main(int argc, char **argv)
 
 	/* Propagate the front */
 
-	//gas_driver(&front, g_cartesian);
-	cft_driver(&front, g_cartesian);
+	if (g_cartesian.call_cft())
+	    cft_driver(&front, g_cartesian);
+	else
+	    gas_driver(&front, g_cartesian);
 
 	//PetscFinalize();
 	clean_up(0);
@@ -197,9 +199,9 @@ static  void cft_driver(
         Front *front,
 	G_CARTESIAN &g_cartesian)
 {
-	printf("\nCalling cft_driver.\n");
+	printf("\nCalling cft_driver().\n");
 	printf("Conservative front tracking is now for RM only.\n");
-	printf("Delta h in 3 directions should be equivalent to each other.\n");
+	printf("Delta h in 3 directions should be equivalent to each other.\n\n");
 
 	if (g_cartesian.dim != 3)
 	{
@@ -219,11 +221,6 @@ static  void cft_driver(
 	{
 	    FT_ResetTime(front);
 
-	    //debugdan	FIXME
-	    //g_cartesian.printInteriorVtk(out_name);
-	    //vtk_interface_plot("debug-intfc/intfc0",front->interf,FALSE,0,0);
-	    //debugdan	FIXME
-
 	    //CFT
 	    dt = 0.5*front->dt;
 	    front->dt = dt;
@@ -238,7 +235,6 @@ static  void cft_driver(
 
 	    //scatter states
 	    g_cartesian.cft_scatMeshStates();
-	    //g_cartesian.copyMeshStates();	???	FIXME
 
 	    //first propagation
 	    FrontPreAdvance(front);
@@ -260,9 +256,6 @@ static  void cft_driver(
 	    //g_cartesian.cft_update_states();
 	    g_cartesian.cft_update_states_new();
 	    //CFT
-
-	    //g_cartesian.printInteriorVtk(out_name);
-	    //vtk_interface_plot("debug-intfc/intfc1",front->interf,FALSE,0,0);
 
 	    FT_SetTimeStep(front);
 	    dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
@@ -306,19 +299,13 @@ static  void cft_driver(
 	    //new cells to old cells
 	    g_cartesian.cft_newts_cut_cells();
 
-	    //debugdan	FIXME
-	    //g_cartesian.cft_check_mass_oldts();
-	    //debugdan	FIXME
-
 	    dt = 0.5*dt;
 	    front->dt = dt;
 
 	    //scatter states
 	    g_cartesian.cft_scatMeshStates();
-	    //g_cartesian.copyMeshStates();	???	FIXME
 
 	    //first propagation
-	    //printf("First propagate.\n");
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
 	    g_cartesian.cft_init_cut_cells(HALFTS);
@@ -326,7 +313,6 @@ static  void cft_driver(
 	    g_cartesian.cft_merge_polyhs(HALFTS);
 
 	    //second propagation
-	    //printf("Second propagate.\n");
 	    FrontPreAdvance(front);
 	    FT_Propagate(front);
 	    g_cartesian.cft_init_cut_cells(NEWTS);
@@ -353,10 +339,6 @@ static  void cft_driver(
 	    ++g_cartesian.step;
 	    g_cartesian.time += dt;
 
-	    //debugdan	FIXME
-	    g_cartesian.cft_check_mass();
-	    //debugdan	FIXME
-				
 	    FT_SetTimeStep(front);
             dt = front->dt = std::min(front->dt,CFL*g_cartesian.max_dt);
 	
@@ -513,7 +495,7 @@ static  void gas_driver(
 	    assert(g_cartesian.step==front->step);
 
 	    //debugdan	FIXME
-	    g_cartesian.ncft_check_mass();
+	    //g_cartesian.ncft_check_mass();
 	    //g_cartesian.cft_free_cells(NEWTS);
 	    //debugdan	FIXME
 				

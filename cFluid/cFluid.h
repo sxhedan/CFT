@@ -62,6 +62,7 @@ enum PROB_TYPE {
 	SOD_3D,
 	CFT_TEST,
 	TWO_FLUID_IDL_RM,
+	CFT_TWO_FLUID_RM
 };
 
 enum _EOS_TYPE {
@@ -592,6 +593,7 @@ public:
 	void solve(double dt);
 
 	//conservative front tracking
+	bool call_cft();
 	void cft_init_cut_cells(TS_LEVEL);
 	void cft_set_cut_cells(TS_LEVEL);
 	void cft_merge_polyhs(TS_LEVEL);
@@ -606,7 +608,8 @@ public:
 	void cft_initRTPolyhStates();
 	void cft_initIDLRMPolyhStates();
 	void cft_initCFTTestPolyhStates();
-	void cft_set_face_flux();
+	void cft_scatFlux();
+	void cft_setFaceFlux();
 	void cft_update_states();
 	void cft_update_states_new();
 	void cft_update_polyhs_states();
@@ -653,6 +656,7 @@ public:
 	void cft_free_bdry(CBOUNDARY**);
 	void cft_free_polyh(CPOLYHEDRON**);
 	void cft_free_pam(CPAM**);
+	void cft_free_cftcell(CFTCELL**);
 	void cft_free_cells(TS_LEVEL);
 	void cft_update_cell_states(CELL*);
 	void cft_appendGhostBuffer(SWEEP*,SWEEP*,int,int*,int,int);
@@ -686,6 +690,7 @@ private:
 	CELL *cells;
 	CELL *cells_old, *cells_halft, *cells_new;
 	FSWEEP cflux[2][3];
+	int ***cvisited, ***cscat;
 	double init_tm1, init_tm2;
 
 	int top_gmax[MAXD];
@@ -958,7 +963,7 @@ extern void state_on_adiabat_with_pr(STATE*,double,STATE*);
 extern void state_on_adiabat_with_pr(STATE,double,STATE*);
 extern bool find_mid_state(STATE*,STATE*,double,double*,double*,double*,double*,double*,double*,
 			   RIEMANN_SOLVER_WAVE_TYPE*,RIEMANN_SOLVER_WAVE_TYPE*);
-extern void midstate(STATE*,STATE*,double,double,double,RIEMANN_SOLVER_WAVE_TYPE,int);
+extern bool midstate(STATE*,STATE*,double,double,double,RIEMANN_SOLVER_WAVE_TYPE,int);
 
 	/* Structures and functions for TVD scheme */
 

@@ -415,7 +415,11 @@ void G_CARTESIAN::setRPGhost(
             stl->vel[i] = str->vel[i] = 0.0;
 
         find_mid_state(stl,str,0.0/*pjump*/,&pml,&pmr,&uml,&umr,&ml,&mr,&l_wave,&r_wave);
-        midstate(stl,ansl,ml,uml,pml,l_wave,1);
+        if (!midstate(stl,ansl,ml,uml,pml,l_wave,1))
+	{
+	    printf("Error in setRPGhost().\n");
+	    clean_up(ERROR);
+	}
 
         state->pres = ansl->pres;
         state->dens = ansl->dens;
@@ -448,6 +452,7 @@ void G_CARTESIAN::setInitialIntfc(
 	{
 	case TWO_FLUID_RT:
 	case TWO_FLUID_RM:
+	case CFT_TWO_FLUID_RM:
 	case TWO_FLUID_IDL_RM:
 	case CFT_TEST:
 	    initSinePertIntfc(level_func_pack,inname);
@@ -497,6 +502,7 @@ void G_CARTESIAN::setProbParams(EQN_PARAMS *in_eqn_params, F_BASIC_DATA &f_basic
 	    setRayleiTaylorParams(inname);
 	    break;
 	case TWO_FLUID_RM:
+	case CFT_TWO_FLUID_RM:
 	case CFT_TEST:
 	    setRichtmyerMeshkovParams(inname);
 	    break;
@@ -545,6 +551,7 @@ void G_CARTESIAN::setInitialStates()
 	    initRayleiTaylorStates();
 	    break;
 	case TWO_FLUID_RM:
+	case CFT_TWO_FLUID_RM:
 	    initRichtmyerMeshkovStates();
 	    break;
 	case TWO_FLUID_IDL_RM:
@@ -657,7 +664,7 @@ void G_CARTESIAN::cft_computeAdvection(void)
 	 default:
 	      order = -1;
 	 }
-	order = 1;	//for CFT. FIXME???
+	order = 1;	//for CFT
 	cft_solveRungeKutta(order);	//Dan
    }
 }	/* end cft_computeAdvection */
@@ -806,7 +813,8 @@ void G_CARTESIAN::cft_solveRungeKutta(int order)
 	cft_setMeshVst(&st_field[0]);
 	//computeMeshFlux(st_field[0],&st_flux[0],delta_t);
 	cft_computeMeshFlux(st_field[0],&st_flux[0],delta_t);
-	cft_set_face_flux();
+	cft_scatFlux();
+	cft_setFaceFlux();
 	
 	/*
 	for (i = 0; i < order-1; ++i)
@@ -904,6 +912,22 @@ void G_CARTESIAN::cft_computeMeshFlux(
     }
     */
     resetFlux(m_flux);
+
+    //reset cvisited
+    int cflux_gmax[3];
+    int i, j;
+    for (i = 0; i < 3; i++)
+	cflux_gmax[i] = top_gmax[i] + 1;
+    int size = (cflux_gmax[0]+1)*(cflux_gmax[1]+1)*(cflux_gmax[2]+1);
+    for (i = 0; i < size; i++)
+    {
+	for (j = 0; j < 3; j++)
+	{
+	    cvisited[0][j][i] = 0;
+	    cvisited[1][j][i] = 0;
+	}
+    }
+
     for (dir = 0; dir < dim; ++dir)
       {
         //addFluxInDirection(dir,&m_vst,m_flux,delta_t);
@@ -1953,7 +1977,7 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 
 	for (i = 0; i < 3; i++)
 	    cflux_gmax[i] = top_gmax[i] + 1;
-	
+
 	scheme_params.lambda = delta_t/top_h[dir];
 	scheme_params.beta = 0.0;
 	
@@ -2043,7 +2067,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    icoords[0] = seg_max;
 		    appendGhostBuffer(&vst,m_vst,n,icoords,0,1);
 		    
-		    //Dan	FIXME
 		    for (i = 0; i <= n+2*nrad-1; i++)
 		    {
 			st.eos = &(eqn_params->eos[comp]);
@@ -2058,43 +2081,11 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			}
 			vst.gamma[i] = EosGamma(&st);
 		    }
-		    //Dan	FIXME
 
 		    eos = &(eqn_params->eos[comp]);
 		    EosSetTVDParams(&scheme_params, eos);
 		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
 		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
-
-		    //debugdan	FIXME
-		    /*
-		    if (j == 4 && k == 21)
-		    {
-			printf("In cft_addFluxInDirection3d(), dir = %d, j = %d, k = %d:\n", 
-				dir, j, k);
-			
-			for (i = 0; i <= n+2*nrad-1; i++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("dens stencil %d (%d): %.18e.\n", 
-				    i, index, vst.dens[i]); 
-			}
-			for (i = 0; i <= n+2*nrad-1; i++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("pres stencil %d (%d): %.18e.\n", 
-				    i, index, vst.pres[i]);
-			}
-			for (i = 0; i <= n+2*nrad-1; i++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("momn %d (%d): (%.18e, %.18e, %.18e).\n", 
-				    i, index, 
-				    vst.momn[0][i]/vst.dens[i], vst.momn[1][i]/vst.dens[i], 
-				    vst.momn[2][i]/vst.dens[i]);
-			}
-		    }
-		    */
-		    //debugdan	FIXME
 
 		    //For CFT.	Dan
 		    n = 0;
@@ -2106,24 +2097,26 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			    cflux[0][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[0][dir][index] = 1;
 			}
 			else
 			{
 			    cflux[1][dir].dens_flux[index] = cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[1][dir][index] = 1;
 			}
 			n++;
 		    }
@@ -2148,18 +2141,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[1][n+nrad];
 		    	m_flux->momn_flux[2][index] +=
 					vflux.momn_flux[2][n+nrad];
-			//debugdan	FIXME
-			/*
-			if (i == 4 && j == 4 && k == 13)
-			{
-			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
-				    i, j, k, dir,
-				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
-				    vflux.momn_flux[0][n+nrad], vflux.momn_flux[1][n+nrad],
-				    vflux.momn_flux[2][n+nrad]);
-			}
-			*/
-			//debugdan	FIXME
 			n++;
 		    }
 
@@ -2251,7 +2232,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    icoords[1] = seg_max;
 		    appendGhostBuffer(&vst,m_vst,n,icoords,1,1);
 		    
-		    //Dan	FIXME
 		    for (j = 0; j <= n+2*nrad-1; j++)
 		    {
 			st.eos = &(eqn_params->eos[comp]);
@@ -2266,60 +2246,11 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			}
 			vst.gamma[j] = EosGamma(&st);
 		    }
-		    //Dan	FIXME
 
 		    eos = &(eqn_params->eos[comp]);
 		    EosSetTVDParams(&scheme_params, eos);
 		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
 		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);
-
-		    //debugdan	FIXME
-		    /*
-		    if (i == 4 && k == 20 && seg_min == 4)
-		    {
-			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
-			for (j = 0; j <= n+2*nrad-1; j++)
-			{
-			    printf("stencil %d: %e, (%e, %e, %e).\n", 
-				    j, vst.dens[j], 
-				    vst.momn[2][j], vst.momn[0][j], vst.momn[1][j]);
-			}
-			for (j = seg_min; j <= seg_max+1; j++)
-			{
-			    printf("momn flux %d = (%e, %e, %e).\n", 
-				    j, cvflux.momn_flux[2][j-4+nrad], cvflux.momn_flux[0][j-4+nrad], cvflux.momn_flux[1][j-4+nrad]);
-			}
-		    }
-		    */
-		    /*
-		    if (i == 4 && k == 13)
-		    {
-			printf("In cft_addFluxInDirection3d(), dir = %d, i = %d, k = %d:\n", 
-				dir, i, k);
-			
-			for (j = 0; j <= n+2*nrad-1; j++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("dens stencil %d (%d): %.18e.\n", 
-				    j, index, vst.dens[j]); 
-			}
-			for (j = 0; j <= n+2*nrad-1; j++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("pres stencil %d (%d): %.18e.\n", 
-				    j, index, vst.pres[j]);
-			}
-			for (j = 0; j <= n+2*nrad-1; j++)
-			{
-			    index = d_index3d(i,j,k,top_gmax);
-			    printf("momn %d (%d): (%.18e, %.18e, %.18e).\n", 
-				    j, index, 
-				    vst.momn[0][j]/vst.dens[j], vst.momn[1][j]/vst.dens[j], 
-				    vst.momn[2][j]/vst.dens[j]);
-			}
-		    }
-		    */
-		    //debugdan	FIXME
 
 		    //For CFT.	Dan
 		    n = 0;
@@ -2331,24 +2262,26 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[0][dir][index] = 1;
 			}
 			else
 			{
 			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[1][dir][index] = 1;
 			}
 			n++;
 		    }
@@ -2373,18 +2306,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[2][n+nrad];
 		    	m_flux->momn_flux[2][index] += 
 					vflux.momn_flux[1][n+nrad];
-			//debugdan	FIXME
-			/*
-			if (i == 4 && j == 4 && k == 13)
-			{
-			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
-				    i, j, k, dir,
-				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
-				    vflux.momn_flux[2][n+nrad], vflux.momn_flux[0][n+nrad],
-				    vflux.momn_flux[1][n+nrad]);
-			}
-			*/
-			//debugdan	FIXME
 			n++;
 		    }
 		    seg_min = seg_max + 1;
@@ -2443,7 +2364,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    index = d_index3d(i,j,k,top_gmax);
 		    comp = top_comp[index];
 		    n = 0;
-		    //states should come from polyhs instead of m_vst	TODO
 		    vst.dens[n+nrad] = m_vst->dens[index];
                     if(eqn_params->multi_comp_non_reactive == YES)
                     {
@@ -2497,7 +2417,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 		    //appendGhostBuffer(&vst,m_vst,n,icoords,2,1);
 		    cft_appendGhostBuffer(&vst,m_vst,n,icoords,2,1);
 		    
-		    //Dan	FIXME
 		    for (k = 0; k <= n+2*nrad-1; k++)
 		    {
 			st.eos = &(eqn_params->eos[comp]);
@@ -2512,57 +2431,11 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			}
 			vst.gamma[k] = EosGamma(&st);
 		    }
-		    //Dan	FIXME
 
 		    eos = &(eqn_params->eos[comp]);
 		    EosSetTVDParams(&scheme_params, eos);
 		    //numericalFlux((POINTER)&scheme_params,&vst,&vflux,n);
 		    cft_WENO_flux((POINTER)&scheme_params,&vst,&vflux,&cvflux,n);	//Dan
-
-		    //debugdan	FIXME
-		    /*
-		    if (i == 4 && j == 4)
-		    {
-			printf("\nseg_min = %d, seg_max = %d.\n", seg_min, seg_max);
-			for (k = 0; k <= n+2*nrad-1; k++)
-			{
-			    printf("WENO stencil %d: "
-				   "vel = %e, dens = %lf, pres = %e, engy = %e.\n",
-				    k, 
-				    vst.momn[0][k]/vst.dens[k], vst.dens[k],
-				    vst.pres[k], vst.engy[k]);
-			}
-			printf("\n");
-		    }
-		    */
-		    /*
-		    if (i == 4 && j == 4 && seg_min == 1)
-		    {
-			printf("(4, 4, 20) dens flux = %e, cvflux = [%d] %e [%d] %e.\n",
-				vflux.dens_flux[20-1+3],
-				d_index3d(4,4,20,cflux_gmax), cvflux.dens_flux[20-1+3],
-				d_index3d(4,4,21,cflux_gmax),cvflux.dens_flux[21-1+3]);
-		    }
-		    */
-		    //debugdan	FIXME
-		    /*
-		    if (i == 4 && j == 4 && seg_min == 1)
-		    {
-			printf("In cft_addFluxInDirection3d(), dir = %d:\n", dir);
-			for (k = 0; k <= n+2*nrad-1; k++)
-			{
-			    printf("stencil %d: %e, (%e, %e, %e).\n", 
-				    k, vst.dens[k], 
-				    vst.momn[1][k], vst.momn[2][k], vst.momn[0][k]);
-			}
-			for (k = seg_min; k <= seg_max+1; k++)
-			{
-			    printf("momn flux %d = (%e, %e, %e).\n", 
-				    k, cvflux.momn_flux[1][k-4+nrad], cvflux.momn_flux[2][k-4+nrad], cvflux.momn_flux[0][k-4+nrad]);
-			}
-		    }
-		    */
-		    //debugdan	FIXME
 
 		    //For CFT.	Dan
 		    n = 0;
@@ -2574,24 +2447,26 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 			    cflux[0][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[0][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[0][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[0][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[0][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[0][dir][index] = 1;
 			}
 			else
 			{
 			    cflux[1][dir].dens_flux[index] += cvflux.dens_flux[n+nrad];
 			    if (eqn_params->multi_comp_non_reactive == YES)
 			    {
-				;	//TODO
+				;	//should not use pdens
 			    }
 			    cflux[1][dir].engy_flux[index] = cvflux.engy_flux[n+nrad];
 			    cflux[1][dir].momn_flux[2][index] = cvflux.momn_flux[0][n+nrad];
 			    cflux[1][dir].momn_flux[0][index] = cvflux.momn_flux[1][n+nrad];
 			    cflux[1][dir].momn_flux[1][index] = cvflux.momn_flux[2][n+nrad];
+			    cvisited[1][dir][index] = 1;
 			}
 			n++;
 		    }
@@ -2616,18 +2491,6 @@ void G_CARTESIAN::cft_addFluxInDirection3d(
 					vflux.momn_flux[1][n+nrad];
 		    	m_flux->momn_flux[1][index] += 
 					vflux.momn_flux[2][n+nrad];
-			//debugdan	FIXME
-			/*
-			if (i == 4 && j == 4 && k == 13)
-			{
-			    printf("%d %d %d dir %d: f %e, %e, (%e, %e, %e).\n",
-				    i, j, k, dir,
-				    vflux.dens_flux[n+nrad], vflux.engy_flux[n+nrad],
-				    vflux.momn_flux[1][n+nrad], vflux.momn_flux[2][n+nrad],
-				    vflux.momn_flux[0][n+nrad]);
-			}
-			*/
-			//debugdan	FIXME
 			n++;
 		    }
 		    seg_min = seg_max + 1;
@@ -11613,8 +11476,26 @@ void G_CARTESIAN::GFMGhostState(
 	FT_ScalarMemoryAlloc((POINTER*)&ansr,sizeof(STATE));
 
 	find_mid_state(stl2,str2,0.0/*pjump*/,&pml,&pmr,&uml,&umr,&ml,&mr,&l_wave,&r_wave);
-	midstate(stl2,ansl,ml,uml,pml,l_wave,1);
-	midstate(str2,ansr,mr,umr,pmr,r_wave,-1);
+	//midstate(stl2,ansl,ml,uml,pml,l_wave,1);
+	//midstate(str2,ansr,mr,umr,pmr,r_wave,-1);
+	if (!midstate(stl2,ansl,ml,uml,pml,l_wave,1))
+	{
+	    printf("Error in GFMGhostStat().\n");
+	    printf("stl2: dens = %e, pres = %e, vel = %e.\n", 
+		    stl2->dens, stl2->pres, stl2->vel[0]);
+	    printf("str2: dens = %e, pres = %e, vel = %e.\n", 
+		    str2->dens, str2->pres, str2->vel[0]);
+	    clean_up(ERROR);
+	}
+	if (!midstate(str2,ansr,mr,umr,pmr,r_wave,-1))
+	{
+	    printf("Error in GFMGhostStat().\n");
+	    printf("stl2: dens = %e, pres = %e, vel = %e.\n", 
+		    stl2->dens, stl2->pres, stl2->vel[0]);
+	    printf("str2: dens = %e, pres = %e, vel = %e.\n", 
+		    str2->dens, str2->pres, str2->vel[0]);
+	    clean_up(ERROR);
+	}
 
 	if (dir==1)
 	{

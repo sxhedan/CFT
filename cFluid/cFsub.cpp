@@ -877,8 +877,18 @@ static  void contact_point_propagate(
 		    str2->dens, str2->pres, str2->vel[0]);
 	    clean_up(ERROR);
 	}
-	midstate(stl2,ansl,ml,uml,pml,l_wave,1);
-	midstate(str2,ansr,mr,umr,pmr,r_wave,-1);	//1 for left, -1 for right
+	//midstate(stl2,ansl,ml,uml,pml,l_wave,1);
+	//midstate(str2,ansr,mr,umr,pmr,r_wave,-1);	//1 for left, -1 for right
+	if (!midstate(stl2,ansl,ml,uml,pml,l_wave,1))
+	{
+	    printf("Error in contact_point_propagat().\n");
+	    clean_up(ERROR);
+	}
+	if (!midstate(str2,ansr,mr,umr,pmr,r_wave,-1))
+	{
+	    printf("Error in contact_point_propagat().\n");
+	    clean_up(ERROR);
+	}
 
         for (i=0; i<dim; i++)
             velp[i] = ansl->vel[0]*nor[i] + lvtang[i];

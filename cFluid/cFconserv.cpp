@@ -15,11 +15,20 @@ void print_cpolyh(CPOLYHEDRON*);
 bool corr_polyh_in_cell(CPOLYHEDRON*,CELL*,int*);
 void set_p_min_max(CPOLYHEDRON*,double*,double*);
 
+bool G_CARTESIAN::call_cft()
+{
+	if (eqn_params->prob_type == CFT_TWO_FLUID_RM)
+	    return true;
+	else
+	    return false;
+}
+
 void G_CARTESIAN::cft_set_init_polyh_states()
 {
 	switch (eqn_params->prob_type)
 	{
 	    case TWO_FLUID_RM:
+	    case CFT_TWO_FLUID_RM:
 		cft_initRMPolyhStates();
 		break;
 	    case TWO_FLUID_IDL_RM:
@@ -916,7 +925,149 @@ void behind_state(
 	behind_state->momn[dim-1] = r1*u1*shock_dir;
 }		/*end behind_state */
 
-void G_CARTESIAN::cft_set_face_flux()
+void G_CARTESIAN::cft_scatFlux()
+{
+	int i, j, k, index, dir, ic, ii, jj, kk, indexx, n;
+	CELL *c, *cells;
+	CPOLYHEDRON *polyh;
+	CPOLYGON *face;
+
+	//reset cscat
+	int cflux_gmax[3];
+	for (i = 0; i < 3; i++)
+	    cflux_gmax[i] = top_gmax[i] + 1;
+	int size = (cflux_gmax[0]+1)*(cflux_gmax[1]+1)*(cflux_gmax[2]+1);
+	for (i = 0; i < size; i++)
+	{
+	    for (dir = 0; dir < 3; dir++)
+	    {
+		for (ic = 0; ic < 2; ic++)
+		    cscat[ic][dir][i] = 0;
+	    }
+	}
+
+	for (k = imin[2]; k <= imax[2]+1; k++)
+	for (j = imin[1]; j <= imax[1]+1; j++)
+	for (i = imin[0]; i <= imax[0]+1; i++)
+	{
+	    index = d_index3d(i,j,k,cflux_gmax);
+	    for (dir = 0; dir < 3; dir++)
+	    {
+		for (ic = 0; ic < 2; ic++)
+		{
+		    if (cvisited[ic][dir][index])
+			continue;
+		    n = 0;
+		    switch (dir)
+		    {
+			case 0:
+			    for (kk = k-1; kk <= k+1; kk++)
+			    for (jj = j-1; jj <= j+1; jj++)
+			    {
+				if (kk == 0 && jj == 0 ||
+				    kk < imin[2] || kk > imax[2]+1 ||
+				    jj < imin[1] || jj > imax[1]+1)
+				    continue;
+				indexx = d_index3d(i,jj,kk,cflux_gmax);
+				if (cvisited[ic][dir][indexx])
+				{
+				    n++;
+				    cflux[ic][dir].dens_flux[index] += cflux[ic][dir].dens_flux[indexx];
+				    cflux[ic][dir].engy_flux[index] += cflux[ic][dir].engy_flux[indexx];
+				    cflux[ic][dir].momn_flux[0][index] += cflux[ic][dir].momn_flux[0][indexx];
+				    cflux[ic][dir].momn_flux[1][index] += cflux[ic][dir].momn_flux[1][indexx];
+				    cflux[ic][dir].momn_flux[2][index] += cflux[ic][dir].momn_flux[2][indexx];
+				}
+			    }
+			    if (n > 0)
+			    {
+				cflux[ic][dir].dens_flux[index] /= n;
+				cflux[ic][dir].engy_flux[index] /= n;
+				cflux[ic][dir].momn_flux[0][index] /= n;
+				cflux[ic][dir].momn_flux[1][index] /= n;
+				cflux[ic][dir].momn_flux[2][index] /= n;
+				cscat[ic][dir][index] = 1;
+			    }
+			    break;
+			case 1:
+			    for (kk = k-1; kk <= k+1; kk++)
+			    for (ii = i-1; ii <= i+1; ii++)
+			    {
+				if (kk == 0 && ii == 0 ||
+				    kk < imin[2] || kk > imax[2]+1 ||
+				    ii < imin[0] || ii > imax[0]+1)
+				    continue;
+				indexx = d_index3d(ii,j,kk,cflux_gmax);
+				if (cvisited[ic][dir][indexx])
+				{
+				    n++;
+				    cflux[ic][dir].dens_flux[index] += cflux[ic][dir].dens_flux[indexx];
+				    cflux[ic][dir].engy_flux[index] += cflux[ic][dir].engy_flux[indexx];
+				    cflux[ic][dir].momn_flux[0][index] += cflux[ic][dir].momn_flux[0][indexx];
+				    cflux[ic][dir].momn_flux[1][index] += cflux[ic][dir].momn_flux[1][indexx];
+				    cflux[ic][dir].momn_flux[2][index] += cflux[ic][dir].momn_flux[2][indexx];
+				}
+			    }
+			    if (n > 0)
+			    {
+				cflux[ic][dir].dens_flux[index] /= n;
+				cflux[ic][dir].engy_flux[index] /= n;
+				cflux[ic][dir].momn_flux[0][index] /= n;
+				cflux[ic][dir].momn_flux[1][index] /= n;
+				cflux[ic][dir].momn_flux[2][index] /= n;
+				cscat[ic][dir][index] = 1;
+			    }
+			    break;
+			case 2:
+			    for (jj = j-1; jj <= j+1; jj++)
+			    for (ii = i-1; ii <= i+1; ii++)
+			    {
+				if (ii == 0 && jj == 0 ||
+				    ii < imin[0] || ii > imax[0]+1 ||
+				    jj < imin[1] || jj > imax[1]+1)
+				    continue;
+				indexx = d_index3d(ii,jj,k,cflux_gmax);
+				if (cvisited[ic][dir][indexx])
+				{
+				    n++;
+				    cflux[ic][dir].dens_flux[index] += cflux[ic][dir].dens_flux[indexx];
+				    cflux[ic][dir].engy_flux[index] += cflux[ic][dir].engy_flux[indexx];
+				    cflux[ic][dir].momn_flux[0][index] += cflux[ic][dir].momn_flux[0][indexx];
+				    cflux[ic][dir].momn_flux[1][index] += cflux[ic][dir].momn_flux[1][indexx];
+				    cflux[ic][dir].momn_flux[2][index] += cflux[ic][dir].momn_flux[2][indexx];
+				}
+			    }
+			    if (n > 0)
+			    {
+				cflux[ic][dir].dens_flux[index] /= n;
+				cflux[ic][dir].engy_flux[index] /= n;
+				cflux[ic][dir].momn_flux[0][index] /= n;
+				cflux[ic][dir].momn_flux[1][index] /= n;
+				cflux[ic][dir].momn_flux[2][index] /= n;
+				cscat[ic][dir][index] = 1;
+			    }
+			    break;
+		    }
+		}
+	    }
+	}
+
+	for (i = 0; i < size; i++)
+	{
+	    for (dir = 0; dir < 3; dir++)
+	    {
+		for (ic = 0; ic < 2; ic++)
+		{
+		    if (cscat[ic][dir][i])
+			cvisited[ic][dir][i] = 1;
+		}
+	    }
+	}
+
+	return;
+}
+
+void G_CARTESIAN::cft_setFaceFlux()
 {
 	int i, j, k, index, ii, jj, kk, indexx, ic, l;
 	int dir, side, sign;
@@ -928,6 +1079,7 @@ void G_CARTESIAN::cft_set_face_flux()
 	CPOLYGON *face;
 	COMPONENT comp;
 	bool debugcsff = false;
+	bool checkcell = false;
 
 	//debugdan	FIXME
 	double *dens = field.dens;
@@ -935,17 +1087,6 @@ void G_CARTESIAN::cft_set_face_flux()
 	double *engy = field.engy;
 	double *pres = field.pres;
 	double **momn = field.momn;
-	/*
-	//vel at (4, 4, 21)
-	i = 4;
-	j = 4;
-	k = 21;
-	index = d_index3d(i,j,k,top_gmax);
-	printf("In cft_set_face_flux().\n");
-	printf("vel at (%d, %d, %d): (%e, %e, %e).\n", 
-		i, j, k, momn[0][index]/dens[index], momn[1][index]/dens[index], momn[2][index]/dens[index]);
-	*/
-	//debugdan	FIXME
 
 	cells = cells_halft;
 	for (i = 0; i < 3; i++)
@@ -959,20 +1100,6 @@ void G_CARTESIAN::cft_set_face_flux()
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
-
-	    //debugdan	FIXME
-	    /*
-	    if (i == 4 && j == 4 && (k == 31 || k == 32) &&
-		(front->step >= 127 && front->step <= 130))
-		debugcsff = true;
-	    else
-		debugcsff = false;
-	    if (debugcsff)
-	    {
-		printf("%d %d %d: debug in cft_set_face_flux().\n", i, j, k);
-	    }
-	    */
-	    //debugdan	FIXME
 
 	    polyh = c->polyhs;
 	    while (polyh)
@@ -990,7 +1117,7 @@ void G_CARTESIAN::cft_set_face_flux()
 		    ic = 1;
 		else
 		{
-		    printf("ERROR in cft_set_face_flux(): incorrect comp.\n");
+		    printf("ERROR in cft_setFaceFlux(): incorrect comp.\n");
 		    clean_up(ERROR);
 		}
 
@@ -1065,7 +1192,7 @@ void G_CARTESIAN::cft_set_face_flux()
 				kk = (side==0) ? kk : kk+1;
 			    else
 			    {
-				printf("ERROR in cft_set_face_flux(): incorrect dir.\n");
+				printf("ERROR in cft_setFaceFlux(): incorrect dir.\n");
 				clean_up(ERROR);
 			    }
 			    if (side == 0)
@@ -2701,9 +2828,12 @@ void G_CARTESIAN::cft_free_cells(TS_LEVEL ts)
 	int i, j, k, index;
 	CELL *c;
 
-	for (k = imin[2]; k <= imax[2]; k++)
-	for (j = imin[1]; j <= imax[1]; j++)
-	for (i = imin[0]; i <= imax[0]; i++)
+	//for (k = imin[2]; k <= imax[2]; k++)
+	//for (j = imin[1]; j <= imax[1]; j++)
+	//for (i = imin[0]; i <= imax[0]; i++)
+	for (k = 1; k <= top_gmax[2]-1; k++)
+	for (j = 1; j <= top_gmax[1]-1; j++)
+	for (i = 1; i <= top_gmax[0]-1; i++)
 	{
 	    index = d_index3d(i,j,k,top_gmax);
 	    c = &(cells[index]);
@@ -2749,6 +2879,7 @@ void G_CARTESIAN::cft_reset_cell(CELL *c)
 	cft_free_scp_list(&c->scpics);
 	cft_free_polyh_list(&c->polyhs);
 	cft_free_pam_list(&c->pams);
+	cft_free_cftcell(&c->cftcell);
 
 	return;
 }
@@ -2897,6 +3028,14 @@ void G_CARTESIAN::cft_free_pam_list(CPAM **pam)
 	}
 
 	*pam = NULL;
+	return;
+}
+
+void G_CARTESIAN::cft_free_cftcell(CFTCELL **cftc)
+{
+	if (!*cftc)
+	    return;
+	free(*cftc);
 	return;
 }
 
@@ -3062,6 +3201,12 @@ void G_CARTESIAN::cft_check_mass()
 	    }
 	}
 
+	if (pp_numnodes() > 1)
+	{
+	    pp_global_sum(&tm1, 1);
+	    pp_global_sum(&tm2, 1);
+	}
+
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);
 
@@ -3070,10 +3215,12 @@ void G_CARTESIAN::cft_check_mass()
 	    init_tm1 = tm1;
 	    init_tm2 = tm2;
 	}
+	/*
 	else
 	{
 	    printf("err2 = %e.\n", (tm2 - init_tm2)/init_tm2);
 	}
+	*/
 
 	//debugdan	FIXME
 	/*
@@ -3084,8 +3231,8 @@ void G_CARTESIAN::cft_check_mass()
 	    debugccm = false;
 	if (debugccm)
 	{
-	    i = 4;
-	    j = 4;
+	    i = 9;
+	    j = 9;
 	    //k = 11;
 	    for (k = imin[2]; k <= imax[2]; k++)
 	    //for (j = imin[1]; j <= imax[1]; j++)
@@ -3217,7 +3364,7 @@ void G_CARTESIAN::ncft_check_mass()
 	tm2 = 0.0;
 	cvol = top_h[0]*top_h[1]*top_h[2];
 
-	/*
+	
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
@@ -3312,7 +3459,8 @@ void G_CARTESIAN::ncft_check_mass()
 	    }
 
 	}
-*/
+
+	/*
 	for (k = imin[2]; k <= imax[2]; k++)
 	for (j = imin[1]; j <= imax[1]; j++)
 	for (i = imin[0]; i <= imax[0]; i++)
@@ -3327,40 +3475,28 @@ void G_CARTESIAN::ncft_check_mass()
 		tm2 += cvol * field.dens[index];
 	    }
 	}
+	*/
 
 
 	printf("total mass for comp 1 = %e.\n", tm1);
 	printf("total mass for comp 2 = %e.\n", tm2);
 
 	//debugdan	FIXME
-	/*
-	i = 4;
-	j = 4;
-	k = 20;
-	index = d_index3d(i,j,k,top_gmax);
-	double vel[3];
-	for (int ii = 0; ii < 3; ii++)
-	{
-	    vel[ii] = field.momn[ii][index]/field.dens[index];
-	}
-	printf("%d %d %d: vel = (%e, %e, %e).\n",
-		i, j, k, vel[0], vel[1], vel[2]);
-	*/
-	//if (front->step == 127 || front->step == 128 || front->step == 129)
-	/*
+	
 	if (true)
 	    debugncm = true;
 	else
 	    debugncm = false;
 	if (debugncm)
 	{
-	    //i = 5;
-	    //j = 5;
-	    k = 13;
-	    //for (k = imin[2]; k <= imax[2]; k++)
-	    for (j = imin[1]; j <= imax[1]; j++)
-	    for (i = imin[0]; i <= imax[0]; i++)
+	    i = 9;
+	    j = 9;
+	    //k = 13;
+	    for (k = imin[2]; k <= imax[2]; k++)
+	    //for (j = imin[1]; j <= imax[1]; j++)
+	    //for (i = imin[0]; i <= imax[0]; i++)
 	    {
+		/*
 		index = d_index3d(i,j,k,top_gmax);
 		double vel[3];
 		for (int ii = 0; ii < 3; ii++)
@@ -3370,9 +3506,34 @@ void G_CARTESIAN::ncft_check_mass()
 		printf("%d %d %d: dens %lf, p %lf, v (%e, %e, %e).\n",
 			i, j, k, 
 			field.dens[index], field.pres[index], vel[0], vel[1], vel[2]);
+		*/
+		index = d_index3d(i,j,k,top_gmax);
+		//if (cells[index].polyhs->next)
+		{
+		    double vel[3];
+		    for (int ii = 0; ii < 3; ii++)
+		    {
+			vel[ii] = field.momn[ii][index]/field.dens[index];
+		    }
+		    printf("%d %d %d: dens %lf, p %lf, v (%e, %e, %e).\n",
+			    i, j, k, 
+			    field.dens[index], field.pres[index], vel[0], vel[1], vel[2]);
+		}
+		if (cells[index].polyhs->next)
+		{
+		    printf("interface***********************************************\n");
+		    CPOLYHEDRON *polyh = cells[index].polyhs;
+		    while (polyh)
+		    {
+			printf("polyh with comp %d: vol = %e, dens = %e.\n", 
+				polyh->comp, polyh->vol, polyh->state.dens);
+			polyh = polyh->next;
+		    }
+		    printf("interface***********************************************\n");
+		}
 	    }
 	}
-	*/
+	
 	//debugdan	FIXME
 
 	return;
